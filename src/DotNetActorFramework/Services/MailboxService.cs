@@ -174,7 +174,10 @@ public class Mailbox
         if (envelope == null)
             throw new ArgumentNullException(nameof(envelope));
 
-        if (!await _availableSemaphore.WaitAsync(0))
+        // Hotfix: Use WaitAsync with timeout instead of non-blocking check to prevent race conditions
+        // under burst traffic where multiple threads could simultaneously pass the WaitAsync(0) check
+        // before the semaphore count is properly decremented
+        if (!await _availableSemaphore.WaitAsync(100))
             return false;
 
         _queue.Enqueue(envelope);
