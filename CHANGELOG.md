@@ -17,6 +17,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Integration with .NET libraries (Polly, MediatR)
 - Actor replay and debugging tools
 
+## [2.0.2] - 2026-05-20
+
+### Fixed
+- Fix mailbox overflow causing message loss under burst traffic
+- Added regression test for the fix
+
+## [2.0.1] - 2026-05-19
+
+### Changed
+- Minor internal improvements and dependency updates
+
 ## [1.0.0] - 2025-11-03
 
 ### Added
