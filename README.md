@@ -1,3 +1,7 @@
+[![Build](https://github.com/sarmkadan/dotnet-actor-framework/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/dotnet-actor-framework/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
 # DotNet Actor Framework
 
 A lightweight, production-ready actor model framework for .NET with mailboxes, supervision trees, clustering support, and message persistence. Built on modern .NET 10 with async/await throughout.
