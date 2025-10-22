@@ -68,44 +68,44 @@ public class MessagePersistenceRepository
     /// <summary>
     /// Gets messages for a specific actor.
     /// </summary>
-    public async Task<IReadOnlyList<PersistedMessage>> GetActorMessagesAsync(Guid actorId)
+    public Task<IReadOnlyList<PersistedMessage>> GetActorMessagesAsync(Guid actorId)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
+        IReadOnlyList<PersistedMessage> messages;
         lock (_lockObject)
         {
-            var messages = _messageLog
+            messages = _messageLog
                 .Where(m => m.RecipientId == actorId)
                 .ToList()
                 .AsReadOnly();
-
-            await Task.CompletedTask;
-            return messages;
         }
+
+        return Task.FromResult(messages);
     }
 
     /// <summary>
     /// Gets undelivered messages.
     /// </summary>
-    public async Task<IReadOnlyList<PersistedMessage>> GetUndeliveredMessagesAsync()
+    public Task<IReadOnlyList<PersistedMessage>> GetUndeliveredMessagesAsync()
     {
+        IReadOnlyList<PersistedMessage> messages;
         lock (_lockObject)
         {
-            var messages = _messageLog
+            messages = _messageLog
                 .Where(m => !m.IsDelivered)
                 .ToList()
                 .AsReadOnly();
-
-            await Task.CompletedTask;
-            return messages;
         }
+
+        return Task.FromResult(messages);
     }
 
     /// <summary>
     /// Gets messages between two sequence numbers.
     /// </summary>
-    public async Task<IReadOnlyList<PersistedMessage>> GetMessagesAsync(long fromSequence, long toSequence)
+    public Task<IReadOnlyList<PersistedMessage>> GetMessagesAsync(long fromSequence, long toSequence)
     {
         if (fromSequence < 0)
             throw new ArgumentException("From sequence cannot be negative.", nameof(fromSequence));
@@ -113,16 +113,16 @@ public class MessagePersistenceRepository
         if (toSequence < fromSequence)
             throw new ArgumentException("To sequence must be greater than or equal to from sequence.", nameof(toSequence));
 
+        IReadOnlyList<PersistedMessage> messages;
         lock (_lockObject)
         {
-            var messages = _messageLog
+            messages = _messageLog
                 .Where(m => m.SequenceNumber >= fromSequence && m.SequenceNumber <= toSequence)
                 .ToList()
                 .AsReadOnly();
-
-            await Task.CompletedTask;
-            return messages;
         }
+
+        return Task.FromResult(messages);
     }
 
     /// <summary>

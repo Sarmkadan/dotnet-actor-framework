@@ -191,7 +191,7 @@ public class MessageCacheService
                 _cache.TryRemove(oldest.Key, out _);
         }
 
-        _cache[message.Id] = new CachedMessage(message);
+        _cache[message.MessageId] = new CachedMessage(message);
     }
 
     /// <summary>

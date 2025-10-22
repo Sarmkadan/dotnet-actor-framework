@@ -22,7 +22,6 @@ public class Program
         var services = new ServiceCollection();
         services.AddLogging(config =>
         {
-            config.AddConsole();
             config.SetMinimumLevel(LogLevel.Information);
         });
 

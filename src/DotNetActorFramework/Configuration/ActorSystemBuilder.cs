@@ -116,7 +116,7 @@ public class ActorSystemBuilder
     /// </summary>
     public ActorSystemBuilder WithMailboxCapacity(int capacity)
     {
-        _options.MailboxCapacity = capacity;
+        _options.DefaultMailboxCapacity = capacity;
         return this;
     }
 

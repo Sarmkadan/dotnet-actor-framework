@@ -66,14 +66,15 @@ public class MiddlewarePipeline
         }
 
         var index = 0;
-        Func<Task> executeMiddleware = async () =>
+        Func<Task>? executeMiddleware = null;
+        executeMiddleware = async () =>
         {
             if (index < _middleware.Count)
             {
                 var middleware = _middleware[index++];
                 await middleware.InvokeAsync(envelope, async (_) =>
                 {
-                    await executeMiddleware();
+                    await executeMiddleware!();
                 });
             }
             else

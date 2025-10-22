@@ -106,7 +106,7 @@ public class ActorRegistry
             {
                 return children
                     .Select(path => _pathIndex.TryGetValue(path, out var actorRef) ? actorRef : null)
-                    .Where(ref => ref != null)
+                    .Where(actorRef => actorRef != null)
                     .Cast<ActorRef>()
                     .ToList()
                     .AsReadOnly();

@@ -31,7 +31,7 @@ public class RateLimitingMiddleware : IActorMiddleware
             throw new ArgumentNullException(nameof(envelope));
 
         // Check if the actor has rate limit tokens available
-        if (!_rateLimiter.TryConsumeToken(envelope.RecipientPath))
+        if (!_rateLimiter.TryConsumeToken(envelope.Recipient.Path))
         {
             // Rate limit exceeded - drop the message
             return false;

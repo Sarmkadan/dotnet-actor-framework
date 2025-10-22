@@ -11,18 +11,10 @@ namespace DotNetActorFramework.Serialization;
 
 /// <summary>
 /// Interface for formatting messages into different output formats.
-/// Supports multiple output formats for different use cases (logs, APIs, exports).
 /// </summary>
 public interface IMessageFormatter
 {
-    /// <summary>
-    /// Formats a message into a string representation.
-    /// </summary>
     string Format(Message message);
-
-    /// <summary>
-    /// Gets the content type for the formatted output.
-    /// </summary>
     string ContentType { get; }
 }
 
@@ -35,16 +27,13 @@ public class JsonMessageFormatter : IMessageFormatter
 
     public string Format(Message message)
     {
-        if (message == null)
-            return "null";
-
+        if (message == null) return "null";
         return message.ToJsonPretty();
     }
 }
 
 /// <summary>
 /// Human-readable text formatter for messages.
-/// Produces formatted output suitable for logs and displays.
 /// </summary>
 public class TextMessageFormatter : IMessageFormatter
 {
@@ -52,34 +41,16 @@ public class TextMessageFormatter : IMessageFormatter
 
     public string Format(Message message)
     {
-        if (message == null)
-            return "null";
+        if (message == null) return "null";
 
         var sb = new StringBuilder();
         sb.AppendLine("=== Message ===");
-        sb.AppendLine($"ID:        {message.Id:N}");
-        sb.AppendLine($"Type:      {message.Type}");
+        sb.AppendLine($"ID:        {message.MessageId:N}");
+        sb.AppendLine($"Type:      {message.GetType().Name}");
         sb.AppendLine($"Priority:  {message.Priority}");
         sb.AppendLine($"Created:   {message.CreatedAt:O}");
         sb.AppendLine($"Age:       {message.GetAge()}ms");
-        sb.AppendLine($"Payload:   {FormatPayload(message.Payload)}");
-
-        if (message.Metadata != null && message.Metadata.Count > 0)
-        {
-            sb.AppendLine("Metadata:");
-            foreach (var kvp in message.Metadata)
-                sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
-        }
-
         return sb.ToString();
-    }
-
-    private static string FormatPayload(object? payload)
-    {
-        if (payload == null) return "null";
-        if (payload is string str) return str;
-        try { return payload.ToJson(); }
-        catch { return payload.ToString() ?? "unknown"; }
     }
 }
 
@@ -93,27 +64,22 @@ public class CsvMessageFormatter : IMessageFormatter
 
     public string Format(Message message)
     {
-        if (message == null)
-            return string.Empty;
+        if (message == null) return string.Empty;
 
         var sb = new StringBuilder();
-
         if (IncludeHeaders)
-        {
-            sb.AppendLine("MessageId,Type,Priority,CreatedAt,Age,PayloadLength");
-        }
+            sb.AppendLine("MessageId,Type,Priority,CreatedAt,Age");
 
-        var payloadStr = message.Payload?.ToString() ?? "";
         sb.AppendLine(
-            $"\"{message.Id:N}\",\"{message.Type}\",\"{message.Priority}\"," +
-            $"\"{message.CreatedAt:O}\",{message.GetAge()},{payloadStr.Length}");
+            $"\"{message.MessageId:N}\",\"{message.GetType().Name}\",\"{message.Priority}\"," +
+            $"\"{message.CreatedAt:O}\",{message.GetAge()}");
 
         return sb.ToString();
     }
 }
 
 /// <summary>
-/// Formatter factory for creating formatters by type.
+/// Factory for creating message formatters by type or content type key.
 /// </summary>
 public class MessageFormatterFactory
 {
@@ -121,7 +87,6 @@ public class MessageFormatterFactory
 
     public MessageFormatterFactory()
     {
-        // Register default formatters
         _formatters["json"] = new JsonMessageFormatter();
         _formatters["text"] = new TextMessageFormatter();
         _formatters["csv"] = new CsvMessageFormatter();
@@ -130,9 +95,6 @@ public class MessageFormatterFactory
         _formatters["text/csv"] = new CsvMessageFormatter();
     }
 
-    /// <summary>
-    /// Registers a custom formatter.
-    /// </summary>
     public void Register(string key, IMessageFormatter formatter)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -141,9 +103,6 @@ public class MessageFormatterFactory
         _formatters[key.ToLowerInvariant()] = formatter ?? throw new ArgumentNullException(nameof(formatter));
     }
 
-    /// <summary>
-    /// Gets a formatter by name or content type.
-    /// </summary>
     public IMessageFormatter? GetFormatter(string key)
     {
         if (string.IsNullOrEmpty(key)) return null;
@@ -151,9 +110,6 @@ public class MessageFormatterFactory
         return formatter;
     }
 
-    /// <summary>
-    /// Formats a message using the specified formatter.
-    /// </summary>
     public string Format(Message message, string formatterKey)
     {
         var formatter = GetFormatter(formatterKey) ?? new JsonMessageFormatter();

@@ -47,8 +47,8 @@ public class MetricsCollectionMiddleware : IActorMiddleware
         {
             stopwatch.Stop();
             _collector.RecordMessageProcessed(
-                envelope.RecipientPath.ToString(),
-                message.Type,
+                envelope.Recipient.Path.ToString(),
+                message.GetType().Name,
                 stopwatch.ElapsedMilliseconds,
                 success);
         }

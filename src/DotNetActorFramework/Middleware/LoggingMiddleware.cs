@@ -5,18 +5,16 @@
 
 using Microsoft.Extensions.Logging;
 using DotNetActorFramework.Models;
-using DotNetActorFramework.Utilities;
 
 namespace DotNetActorFramework.Middleware;
 
 /// <summary>
 /// Middleware that logs all message processing activity.
-/// Provides visibility into message flow and helps with debugging and monitoring.
 /// </summary>
 public class LoggingMiddleware : IActorMiddleware
 {
     public string Name => "LoggingMiddleware";
-    public int Order => 0; // Runs first to capture full lifecycle
+    public int Order => 0;
 
     private readonly ILogger<LoggingMiddleware> _logger;
     private readonly LogLevel _logLevel;
@@ -40,9 +38,9 @@ public class LoggingMiddleware : IActorMiddleware
             _logger.Log(
                 _logLevel,
                 "Processing {MessageType} (Id={MessageId}) for actor {ActorPath}",
-                message.Type,
-                message.Id.ToString("N")[..8],
-                envelope.RecipientPath);
+                message.GetType().Name,
+                message.MessageId.ToString("N")[..8],
+                envelope.Recipient.Path);
 
             await next(envelope);
 
@@ -50,8 +48,8 @@ public class LoggingMiddleware : IActorMiddleware
             _logger.Log(
                 _logLevel,
                 "Completed {MessageType} for {ActorPath} in {ElapsedMs}ms",
-                message.Type,
-                envelope.RecipientPath,
+                message.GetType().Name,
+                envelope.Recipient.Path,
                 elapsed.TotalMilliseconds);
 
             return true;
@@ -62,9 +60,9 @@ public class LoggingMiddleware : IActorMiddleware
             _logger.LogError(
                 ex,
                 "Error processing {MessageType} (Id={MessageId}) for {ActorPath} after {ElapsedMs}ms",
-                message.Type,
-                message.Id.ToString("N")[..8],
-                envelope.RecipientPath,
+                message.GetType().Name,
+                message.MessageId.ToString("N")[..8],
+                envelope.Recipient.Path,
                 elapsed.TotalMilliseconds);
 
             return false;
