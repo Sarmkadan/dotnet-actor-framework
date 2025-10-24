@@ -23,6 +23,7 @@ A lightweight, production-ready actor model framework for .NET with mailboxes, s
 - [Troubleshooting](#troubleshooting)
 - [Performance](#performance)
 - [Related Projects](#related-projects)
+- [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -1032,6 +1033,24 @@ eventBus.Subscribe<PaymentReceivedEvent>(async evt =>
 });
 ```
 
+## Testing
+
+```bash
+# Run all tests
+dotnet test
+
+# Run with coverage
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
+
+# Run a specific test project
+dotnet test tests/dotnet-actor-framework.Tests/dotnet-actor-framework.Tests.csproj
+
+# Run with verbose output
+dotnet test --logger "console;verbosity=detailed"
+```
+
+The test suite covers actor lifecycle, path resolution, metrics collection, and the middleware pipeline. Target minimum 80% code coverage for contributions.
+
 ## Contributing
 
 Contributions are welcome! Please follow these guidelines:
@@ -1073,16 +1092,6 @@ Types: feat, fix, docs, style, refactor, test, chore
 5. Push to your fork
 6. Open a Pull Request with clear description
 
-### Testing
-
-All contributions must include tests:
-
-```bash
-dotnet test /p:CollectCoverage=true
-```
-
-Target minimum 80% code coverage.
-
 ## License
 
 MIT License - Copyright (c) 2026 Vladyslav Zaiets
@@ -1101,4 +1110,4 @@ The above copyright notice and this permission notice shall be included in all c
 
 ---
 
-Built with ❤️ for the .NET community
+Built by [Vladyslav Zaiets](https://sarmkadan.com)
