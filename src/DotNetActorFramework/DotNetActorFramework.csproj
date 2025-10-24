@@ -7,13 +7,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Zaiets.dotnet.actor.framework</PackageId>
     <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
-    <Description>Lightweight actor model framework for .NET with mailboxes, supervision trees, clustering, and persistence</Description>
+    <Description>Lightweight actor model framework for .NET - mailboxes, supervision trees, clustering, persistence</Description>
+    <PackageTags>actor dotnet framework clustering supervision persistence</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/sarmkadan/dotnet-actor-framework</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/dotnet-actor-framework</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +28,7 @@
 
   <ItemGroup>
     <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
