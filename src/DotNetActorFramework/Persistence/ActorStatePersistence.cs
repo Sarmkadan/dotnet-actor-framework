@@ -124,7 +124,7 @@ public class FileActorStatePersistence : IActorStatePersistence
             Directory.CreateDirectory(directoryPath!);
 
         var serialized = _serializer.Serialize(state);
-        await File.WriteAllBytesAsync(fileName, serialized);
+        await File.WriteAllBytesAsync(fileName, serialized).ConfigureAwait(false);
     }
 
     public async Task<object?> LoadAsync(Guid actorId, ActorPath actorPath)
@@ -136,7 +136,7 @@ public class FileActorStatePersistence : IActorStatePersistence
 
         try
         {
-            var data = await File.ReadAllBytesAsync(fileName);
+            var data = await File.ReadAllBytesAsync(fileName).ConfigureAwait(false);
             // Note: returning dynamic object as we don't know the type
             return data;
         }

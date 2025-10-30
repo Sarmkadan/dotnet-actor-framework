@@ -57,7 +57,7 @@ public class SupervisorActor : Actor
         for (int i = 0; i < 3; i++)
         {
             var workerPath = new ActorPath($"{Path}/worker-{i}");
-            var workerRef = await ActorSystem.CreateActorAsync(workerPath, Ref);
+            var workerRef = await ActorSystem.CreateActorAsync(workerPath, Ref).ConfigureAwait(false);
             _workers.Add(workerRef);
         }
 
@@ -73,7 +73,7 @@ public class SupervisorActor : Actor
             foreach (var worker in _workers)
             {
                 var workMsg = new ControlMessage("risky-operation");
-                await _dispatcher.SendAsync(worker, workMsg);
+                await _dispatcher.SendAsync(worker, workMsg).ConfigureAwait(false);
             }
         }
         await Task.CompletedTask;
@@ -97,7 +97,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine("Actor system initialized with Restart supervision strategy.\n");
 
@@ -107,16 +107,16 @@ class Program
 
             // Create supervisor
             var supervisorPath = new ActorPath("/user/supervisor");
-            var supervisorRef = await config.CreateActorAsync(supervisorPath);
+            var supervisorRef = await config.CreateActorAsync(supervisorPath).ConfigureAwait(false);
 
             Console.WriteLine("Supervisor created with worker actors.\n");
 
             // Distribute work
             var workMsg = new ControlMessage("distribute-work");
-            await dispatcher.SendAsync(supervisorRef, workMsg);
+            await dispatcher.SendAsync(supervisorRef, workMsg).ConfigureAwait(false);
 
             // Wait for recovery process
-            await Task.Delay(3000);
+            await Task.Delay(3000).ConfigureAwait(false);
 
             // Check health
             var health = config.GetHealthSummary();
@@ -128,7 +128,7 @@ class Program
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

@@ -42,7 +42,7 @@ class Program
 
         // Initialize the actor system
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(serviceProvider);
-        var actorSystem = await config.InitializeAsync();
+        var actorSystem = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine($"Actor system '{config.Options.SystemName}' initialized.\n");
 
@@ -53,7 +53,7 @@ class Program
 
             // Create an actor
             var actorPath = new ActorPath("/user/hello");
-            var helloRef = await config.CreateActorAsync(actorPath);
+            var helloRef = await config.CreateActorAsync(actorPath).ConfigureAwait(false);
 
             Console.WriteLine($"Created actor: {actorPath}\n");
 
@@ -67,11 +67,11 @@ class Program
                     { "name", name }
                 });
 
-                await dispatcher.SendAsync(helloRef, message);
+                await dispatcher.SendAsync(helloRef, message).ConfigureAwait(false);
             }
 
             // Give actors time to process
-            await Task.Delay(500);
+            await Task.Delay(500).ConfigureAwait(false);
 
             // Display system health
             var health = config.GetHealthSummary();
@@ -84,7 +84,7 @@ class Program
         {
             // Graceful shutdown
             Console.WriteLine("\nShutting down actor system...");
-            await actorSystem.ShutdownAsync();
+            await actorSystem.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("Done!");
         }
     }

@@ -37,7 +37,7 @@ public class BatchProcessorActor : Actor
 
             if (_batch.Count >= _batchSize)
             {
-                await FlushBatchAsync();
+                await FlushBatchAsync().ConfigureAwait(false);
             }
         }
         await Task.CompletedTask;
@@ -51,7 +51,7 @@ public class BatchProcessorActor : Actor
         Console.WriteLine($"[{Path}] Processing batch of {_batch.Count} items...");
 
         // Simulate batch processing
-        await Task.Delay(100);
+        await Task.Delay(100).ConfigureAwait(false);
 
         _totalProcessed += _batch.Count;
         Console.WriteLine($"[{Path}] Batch complete. Total processed: {_totalProcessed}");
@@ -62,7 +62,7 @@ public class BatchProcessorActor : Actor
     public override async Task OnStopAsync()
     {
         _flushTimer?.Dispose();
-        await FlushBatchAsync();
+        await FlushBatchAsync().ConfigureAwait(false);
         Console.WriteLine($"[{Path}] Batch processor stopped. Total items: {_totalProcessed}");
     }
 }
@@ -81,7 +81,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine("System initialized.\n");
 
@@ -91,7 +91,7 @@ class Program
 
             // Create batch processor
             var batchPath = new ActorPath("/user/batch-processor");
-            var batchRef = await config.CreateActorAsync(batchPath);
+            var batchRef = await config.CreateActorAsync(batchPath).ConfigureAwait(false);
 
             Console.WriteLine("Batch processor created.\n");
 
@@ -106,15 +106,15 @@ class Program
                     { "data", $"Item {i}" }
                 });
 
-                await dispatcher.SendAsync(batchRef, msg);
+                await dispatcher.SendAsync(batchRef, msg).ConfigureAwait(false);
 
                 // Simulate item arrival intervals
                 if (i % 10 == 9)
-                    await Task.Delay(500);
+                    await Task.Delay(500).ConfigureAwait(false);
             }
 
             // Wait for last batch to flush
-            await Task.Delay(3000);
+            await Task.Delay(3000).ConfigureAwait(false);
 
             var health = config.GetHealthSummary();
             Console.WriteLine($"\nFinal Status:");
@@ -122,7 +122,7 @@ class Program
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

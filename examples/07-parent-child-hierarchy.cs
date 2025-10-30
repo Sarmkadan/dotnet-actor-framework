@@ -25,7 +25,7 @@ public class WorkerActor : Actor
             var duration = (int)cm.Parameters["duration"];
 
             Console.WriteLine($"[{Path}] Processing work item #{_workItems} (duration: {duration}ms)");
-            await Task.Delay(duration);
+            await Task.Delay(duration).ConfigureAwait(false);
 
             Console.WriteLine($"[{Path}] Work item #{_workItems} completed");
             Metrics.RecordSuccess();
@@ -56,7 +56,7 @@ public class SupervisorActor : Actor
         for (int i = 0; i < 3; i++)
         {
             var workerPath = new ActorPath($"{Path}/worker-{i}");
-            var workerRef = await ActorSystem.CreateActorAsync(workerPath, Ref);
+            var workerRef = await ActorSystem.CreateActorAsync(workerPath, Ref).ConfigureAwait(false);
             _workers.Add(workerRef);
         }
 
@@ -83,7 +83,7 @@ public class SupervisorActor : Actor
                     { "item-id", i }
                 });
 
-                await _dispatcher.SendAsync(_workers[workerIndex], workMsg);
+                await _dispatcher.SendAsync(_workers[workerIndex], workMsg).ConfigureAwait(false);
             }
 
             Console.WriteLine($"\n[{Path}] All work items distributed");
@@ -112,7 +112,7 @@ public class RootActor : Actor
     {
         // Create the supervisor
         var supervisorPath = new ActorPath($"{Path}/supervisor");
-        _supervisor = await ActorSystem.CreateActorAsync(supervisorPath, Ref);
+        _supervisor = await ActorSystem.CreateActorAsync(supervisorPath, Ref).ConfigureAwait(false);
 
         Console.WriteLine($"[{Path}] Root actor created supervisor\n");
     }
@@ -126,7 +126,7 @@ public class RootActor : Actor
                 var distributeMsg = new ControlMessage("distribute",
                     new Dictionary<string, object> { { "count", 20 } });
 
-                await _dispatcher.SendAsync(_supervisor, distributeMsg);
+                await _dispatcher.SendAsync(_supervisor, distributeMsg).ConfigureAwait(false);
             }
         }
         await Task.CompletedTask;
@@ -154,7 +154,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine("Actor system initialized.\n");
 
@@ -164,23 +164,23 @@ class Program
 
             // Create root actor
             var rootPath = new ActorPath("/user/root");
-            var rootRef = await config.CreateActorAsync(rootPath);
+            var rootRef = await config.CreateActorAsync(rootPath).ConfigureAwait(false);
 
             Console.WriteLine("Root actor created with supervisor and workers.\n");
 
             // Trigger work distribution
             var startMsg = new ControlMessage("start-work");
-            await dispatcher.SendAsync(rootRef, startMsg);
+            await dispatcher.SendAsync(rootRef, startMsg).ConfigureAwait(false);
 
             // Wait for work to complete
-            await Task.Delay(5000);
+            await Task.Delay(5000).ConfigureAwait(false);
 
             // Display hierarchy
             Console.WriteLine("\nActor Hierarchy:");
             PrintActorHierarchy("/user", config);
 
             // Show stats
-            var stats = await config.GetStatisticsAsync();
+            var stats = await config.GetStatisticsAsync().ConfigureAwait(false);
             Console.WriteLine($"\nStatistics:");
             Console.WriteLine($"  Actors Created: {stats.ActorRegistryStats?.TotalCreated}");
             Console.WriteLine($"  Messages Processed: {stats.DispatcherStats?.TotalProcessed}");
@@ -188,7 +188,7 @@ class Program
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

@@ -84,7 +84,7 @@ public class MailboxService
         if (mailbox == null)
             throw new MailboxException($"Mailbox not found for actor: {actorId}");
 
-        return await mailbox.DequeueAsync();
+        return await mailbox.DequeueAsync().ConfigureAwait(false);
     }
 
     /// <summary>

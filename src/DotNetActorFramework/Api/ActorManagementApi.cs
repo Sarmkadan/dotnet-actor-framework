@@ -116,7 +116,7 @@ public class ActorManagementApi
             if (actorRef == null)
                 return new ApiResponse { Success = false, Message = "Actor not found." };
 
-            await _actorSystem.TerminateActorAsync(actorRef);
+            await _actorSystem.TerminateActorAsync(actorRef).ConfigureAwait(false);
             return new ApiResponse { Success = true, Message = "Actor terminated successfully." };
         }
         catch (Exception ex)

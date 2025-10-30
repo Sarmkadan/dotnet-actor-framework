@@ -66,7 +66,7 @@ public class IntegrationEventPublisher
                 try
                 {
                     envelope.Attempts++;
-                    await _webhookDispatcher.DispatchEventAsync(envelope.Event);
+                    await _webhookDispatcher.DispatchEventAsync(envelope.Event).ConfigureAwait(false);
                     envelope.ProcessedAt = DateTime.UtcNow;
                 }
                 catch (Exception ex)
@@ -135,7 +135,7 @@ public class DuplicateEventFilteringPublisher
             _processedEventIds.Add(@event.EventId);
         }
 
-        await _eventBus.PublishAsync(@event);
+        await _eventBus.PublishAsync(@event).ConfigureAwait(false);
     }
 
     /// <summary>

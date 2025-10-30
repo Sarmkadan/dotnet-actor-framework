@@ -66,10 +66,10 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker
 
         try
         {
-            var response = await _client.SendMessageAsync(remoteActorPath, message);
+            var response = await _client.SendMessageAsync(remoteActorPath, message).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return content.FromJson<T>();
             }
             return default;
@@ -87,7 +87,7 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker
 
         try
         {
-            await _client.SendMessageAsync(remoteActorPath, message);
+            await _client.SendMessageAsync(remoteActorPath, message).ConfigureAwait(false);
         }
         catch
         {
@@ -102,7 +102,7 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker
 
         try
         {
-            var health = await _client.GetActorHealthAsync(remoteActorPath);
+            var health = await _client.GetActorHealthAsync(remoteActorPath).ConfigureAwait(false);
             return health != null && health.IsHealthy;
         }
         catch

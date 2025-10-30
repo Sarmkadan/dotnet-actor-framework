@@ -118,7 +118,7 @@ public class EventBus
                 .Select(h => h(@event))
                 .ToList();
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
     }
 

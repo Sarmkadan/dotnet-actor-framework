@@ -68,7 +68,7 @@ public class ActorSystemConfiguration
             if (!string.IsNullOrWhiteSpace(_options.DatabaseConnectionString))
             {
                 _connectionManager.Initialize(_options.DatabaseConnectionString);
-                var isConnected = await _connectionManager.ValidateConnectionAsync();
+                var isConnected = await _connectionManager.ValidateConnectionAsync().ConfigureAwait(false);
                 if (!isConnected)
                 {
                     _logger?.LogWarning("Database connection validation failed");
@@ -105,7 +105,7 @@ public class ActorSystemConfiguration
 
         try
         {
-            var actorRef = await _actorSystem.CreateActorAsync(path, supervisor);
+            var actorRef = await _actorSystem.CreateActorAsync(path, supervisor).ConfigureAwait(false);
             var mailbox = _mailboxService.CreateMailbox(actorRef.Id, _options.DefaultMailboxCapacity);
 
             _registry.Register(actorRef);
@@ -148,12 +148,12 @@ public class ActorSystemConfiguration
 
         try
         {
-            await _dispatcher.SendAsync(sender, recipient, message);
+            await _dispatcher.SendAsync(sender, recipient, message).ConfigureAwait(false);
 
             if (_options.EnableMessagePersistence)
             {
                 var envelope = new Envelope(message, recipient, sender);
-                await _messageRepository.PersistAsync(envelope);
+                await _messageRepository.PersistAsync(envelope).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -193,7 +193,7 @@ public class ActorSystemConfiguration
         {
             _logger?.LogInformation("Shutting down actor system");
 
-            await _actorSystem.ShutdownAsync();
+            await _actorSystem.ShutdownAsync().ConfigureAwait(false);
             _registry.Clear();
             _mailboxService.Clear();
             _stateRepository.Clear();

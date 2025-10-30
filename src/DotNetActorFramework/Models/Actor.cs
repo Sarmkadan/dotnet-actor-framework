@@ -105,7 +105,7 @@ public class Actor
         State = ActorState.Initializing;
         try
         {
-            await OnInitializeAsync();
+            await OnInitializeAsync().ConfigureAwait(false);
             State = ActorState.Started;
         }
         catch (Exception ex)
@@ -135,14 +135,14 @@ public class Actor
         try
         {
             Metrics.RecordMessageReceived();
-            await OnReceiveAsync(message);
+            await OnReceiveAsync(message).ConfigureAwait(false);
             var elapsed = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
             Metrics.RecordProcessingTime(elapsed);
         }
         catch (Exception ex)
         {
             Metrics.RecordError();
-            await OnErrorAsync(message, ex);
+            await OnErrorAsync(message, ex).ConfigureAwait(false);
         }
     }
 
@@ -211,7 +211,7 @@ public class Actor
         State = ActorState.Stopping;
         try
         {
-            await OnStopAsync();
+            await OnStopAsync().ConfigureAwait(false);
             State = ActorState.Terminated;
             TerminatedAt = DateTime.UtcNow;
             Ref.MarkAsDead();

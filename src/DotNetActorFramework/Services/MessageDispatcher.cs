@@ -50,7 +50,7 @@ public class MessageDispatcher
             {
                 try
                 {
-                    await _mailboxService.EnqueueAsync(envelope.Recipient.Id, envelope);
+                    await _mailboxService.EnqueueAsync(envelope.Recipient.Id, envelope).ConfigureAwait(false);
                     envelope.MarkAsDelivered();
                     IncrementDelivered();
                     return true;
@@ -58,7 +58,7 @@ public class MessageDispatcher
                 catch (MailboxException) when (attempt < maxRetries)
                 {
                     envelope.IncrementRetryCount();
-                    await Task.Delay(backoffDelay);
+                    await Task.Delay(backoffDelay).ConfigureAwait(false);
                     backoffDelay = (int)Math.Min(
                         backoffDelay * ActorConstants.BackoffMultiplier,
                         ActorConstants.MaxBackoffDelayMs
@@ -94,7 +94,7 @@ public class MessageDispatcher
             throw new ArgumentNullException(nameof(message));
 
         var envelope = new Envelope(message, recipient, sender);
-        await DispatchAsync(envelope);
+        await DispatchAsync(envelope).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public class MessageDispatcher
             throw new ArgumentNullException(nameof(message));
 
         var envelope = new Envelope(message, recipient);
-        await DispatchAsync(envelope);
+        await DispatchAsync(envelope).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -127,7 +127,7 @@ public class MessageDispatcher
             .Select(recipient => new Envelope(message, recipient, sender))
             .Select(envelope => DispatchAsync(envelope));
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class MessageDispatcher
             throw new ArgumentException("Command cannot be null or empty.", nameof(command));
 
         var controlMessage = new ControlMessage(command, parameters ?? []);
-        await SendAsync(recipient, controlMessage);
+        await SendAsync(recipient, controlMessage).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ public class MessageDispatcher
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        return await _mailboxService.DequeueAsync(actorId);
+        return await _mailboxService.DequeueAsync(actorId).ConfigureAwait(false);
     }
 
     /// <summary>

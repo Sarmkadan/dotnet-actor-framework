@@ -42,23 +42,23 @@ public class SupervisionService
         switch (strategy)
         {
             case SupervisionStrategy.Restart:
-                await HandleRestartAsync(actor, exception);
+                await HandleRestartAsync(actor, exception).ConfigureAwait(false);
                 break;
 
             case SupervisionStrategy.Stop:
-                await HandleStopAsync(actor, exception);
+                await HandleStopAsync(actor, exception).ConfigureAwait(false);
                 break;
 
             case SupervisionStrategy.Resume:
-                await HandleResumeAsync(actor, exception);
+                await HandleResumeAsync(actor, exception).ConfigureAwait(false);
                 break;
 
             case SupervisionStrategy.Escalate:
-                await HandleEscalateAsync(actor, exception);
+                await HandleEscalateAsync(actor, exception).ConfigureAwait(false);
                 break;
 
             case SupervisionStrategy.Backoff:
-                await HandleBackoffAsync(actor, exception);
+                await HandleBackoffAsync(actor, exception).ConfigureAwait(false);
                 break;
 
             default:
@@ -77,12 +77,12 @@ public class SupervisionService
         if (context.RestartCount > 5)
         {
             // Too many restarts, escalate instead
-            await HandleEscalateAsync(actor, exception);
+            await HandleEscalateAsync(actor, exception).ConfigureAwait(false);
             return;
         }
 
         var controlMessage = new ControlMessage(MessageConstants.RestartCommand);
-        await _dispatcher.SendAsync(actor, controlMessage);
+        await _dispatcher.SendAsync(actor, controlMessage).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public class SupervisionService
             }
         );
 
-        await _dispatcher.SendAsync(actor, controlMessage);
+        await _dispatcher.SendAsync(actor, controlMessage).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class SupervisionService
     private async Task HandleResumeAsync(ActorRef actor, Exception exception)
     {
         var controlMessage = new ControlMessage(MessageConstants.ResumeCommand);
-        await _dispatcher.SendAsync(actor, controlMessage);
+        await _dispatcher.SendAsync(actor, controlMessage).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -123,12 +123,12 @@ public class SupervisionService
                 exception
             );
 
-            await _dispatcher.SendAsync(parent, failureMessage);
+            await _dispatcher.SendAsync(parent, failureMessage).ConfigureAwait(false);
         }
         else
         {
             // No supervisor, stop the actor
-            await HandleStopAsync(actor, exception);
+            await HandleStopAsync(actor, exception).ConfigureAwait(false);
         }
     }
 
@@ -141,10 +141,10 @@ public class SupervisionService
         context.FailureCount++;
 
         var backoffDelay = CalculateBackoffDelay(context.FailureCount);
-        await Task.Delay(backoffDelay);
+        await Task.Delay(backoffDelay).ConfigureAwait(false);
 
         var controlMessage = new ControlMessage(MessageConstants.ResumeCommand);
-        await _dispatcher.SendAsync(actor, controlMessage);
+        await _dispatcher.SendAsync(actor, controlMessage).ConfigureAwait(false);
     }
 
     /// <summary>

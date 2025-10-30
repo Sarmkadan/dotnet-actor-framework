@@ -20,7 +20,7 @@ public class ProcessorActor : Actor
         {
             // Simulate processing delay
             var delay = (int)cm.Parameters["delay"];
-            await Task.Delay(delay);
+            await Task.Delay(delay).ConfigureAwait(false);
 
             Metrics.RecordSuccess();
             Console.WriteLine($"[{Path}] Processed message (delayed {delay}ms)");
@@ -122,7 +122,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         try
         {
@@ -130,13 +130,13 @@ class Program
 
             // Create monitor actor
             var monitorPath = new ActorPath("/user/monitor");
-            await config.CreateActorAsync(monitorPath);
+            await config.CreateActorAsync(monitorPath).ConfigureAwait(false);
 
             // Create processor actors
             for (int i = 0; i < 5; i++)
             {
                 var procPath = new ActorPath($"/user/processor-{i}");
-                await config.CreateActorAsync(procPath);
+                await config.CreateActorAsync(procPath).ConfigureAwait(false);
             }
 
             // Send messages to processors
@@ -153,18 +153,18 @@ class Program
                     var msg = new ControlMessage("process",
                         new Dictionary<string, object> { { "delay", delay } });
 
-                    await dispatcher.SendAsync(procRef, msg);
+                    await dispatcher.SendAsync(procRef, msg).ConfigureAwait(false);
                 }
 
-                await Task.Delay(100);
+                await Task.Delay(100).ConfigureAwait(false);
             }
 
             // Let monitoring run for a bit
-            await Task.Delay(15000);
+            await Task.Delay(15000).ConfigureAwait(false);
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

@@ -95,7 +95,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine("Banking system initialized.\n");
 
@@ -105,7 +105,7 @@ class Program
 
             // Create account
             var accountPath = new ActorPath("/user/account-001");
-            var accountRef = await config.CreateActorAsync(accountPath);
+            var accountRef = await config.CreateActorAsync(accountPath).ConfigureAwait(false);
 
             Console.WriteLine("Account created.\n");
 
@@ -121,17 +121,17 @@ class Program
 
             foreach (var op in operations)
             {
-                await dispatcher.SendAsync(accountRef, op);
+                await dispatcher.SendAsync(accountRef, op).ConfigureAwait(false);
             }
 
-            await Task.Delay(500);
+            await Task.Delay(500).ConfigureAwait(false);
 
             var health = config.GetHealthSummary();
             Console.WriteLine($"\nSystem Health: {health.GetHealthPercentage()}%");
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

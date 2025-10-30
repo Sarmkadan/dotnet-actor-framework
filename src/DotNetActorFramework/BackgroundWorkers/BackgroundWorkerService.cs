@@ -93,7 +93,7 @@ public class BackgroundWorkerService : IDisposable
 
             try
             {
-                await worker.OnStartAsync();
+                await worker.OnStartAsync().ConfigureAwait(false);
                 ExecuteWorkerLoop(kvp.Key, worker, cts.Token);
             }
             catch (Exception ex)
@@ -126,14 +126,14 @@ public class BackgroundWorkerService : IDisposable
             .ToList();
 
         if (completionTasks.Count > 0)
-            await Task.WhenAll(completionTasks);
+            await Task.WhenAll(completionTasks).ConfigureAwait(false);
 
         // Call stop handlers
         foreach (var kvp in _workers)
         {
             try
             {
-                await kvp.Value.Worker.OnStopAsync();
+                await kvp.Value.Worker.OnStopAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -172,12 +172,12 @@ public class BackgroundWorkerService : IDisposable
         {
             try
             {
-                await worker.ExecuteAsync(ct);
+                await worker.ExecuteAsync(ct).ConfigureAwait(false);
                 workerTask.LastExecutedAt = DateTime.UtcNow;
                 workerTask.ExecutionCount++;
                 workerTask.LastError = null;
 
-                await Task.Delay(worker.Interval, ct);
+                await Task.Delay(worker.Interval, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -191,7 +191,7 @@ public class BackgroundWorkerService : IDisposable
                 System.Diagnostics.Debug.WriteLine($"Worker {workerId} error: {ex.Message}");
 
                 // Wait before retry
-                try { await Task.Delay(worker.Interval, ct); }
+                try { await Task.Delay(worker.Interval, ct).ConfigureAwait(false); }
                 catch (OperationCanceledException) { break; }
             }
         }

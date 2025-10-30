@@ -40,7 +40,7 @@ public class MailboxOverflowTests
         {
             tasks.Add(Task.Run(async () =>
             {
-                var result = await mailboxService.EnqueueAsync(actorId, envelope);
+                var result = await mailboxService.EnqueueAsync(actorId, envelope).ConfigureAwait(false);
                 lock (successfulEnqueues)
                 {
                     successfulEnqueues.Add(result);
@@ -48,7 +48,7 @@ public class MailboxOverflowTests
             }));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Assert - Should not lose messages under burst traffic
         // With the hotfix, we expect some messages to fail (those beyond capacity)
@@ -90,11 +90,11 @@ public class MailboxOverflowTests
             int index = i;
             tasks[i] = Task.Run(async () =>
             {
-                results[index] = await mailboxService.EnqueueAsync(actorId, envelopes[index]);
+                results[index] = await mailboxService.EnqueueAsync(actorId, envelopes[index]).ConfigureAwait(false);
             });
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Assert - Should handle concurrent access without race conditions
         var successfulCount = results.Count(r => r);
@@ -122,7 +122,7 @@ public class MailboxOverflowTests
             var actorPath = new ActorPath("/user/test-actor");
             var actorRef = new ActorRef(actorPath, Guid.NewGuid());
             var envelope = new Envelope(message, actorRef);
-            await mailboxService.EnqueueAsync(actorId, envelope);
+            await mailboxService.EnqueueAsync(actorId, envelope).ConfigureAwait(false);
         }
 
         // Assert - Mailbox should be full
@@ -134,7 +134,7 @@ public class MailboxOverflowTests
         var actorRef4 = new ActorRef(actorPath4, Guid.NewGuid());
         var envelope4 = new Envelope(message4, actorRef4);
 
-        Func<Task> act = async () => await mailboxService.EnqueueAsync(actorId, envelope4);
+        Func<Task> act = async () => await mailboxService.EnqueueAsync(actorId, envelope4).ConfigureAwait(false);
         act.Should().Throw<MailboxException>();
     }
 

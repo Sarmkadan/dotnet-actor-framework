@@ -143,7 +143,7 @@ public class ActorSystemCliHandler
         if (args.Length == 0)
             return "Usage: terminate <actor-path>";
 
-        var result = await _managementApi.TerminateActorAsync(args[0]);
+        var result = await _managementApi.TerminateActorAsync(args[0]).ConfigureAwait(false);
         return result.Message;
     }
 

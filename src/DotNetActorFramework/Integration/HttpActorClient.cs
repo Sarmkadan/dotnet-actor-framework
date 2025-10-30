@@ -49,7 +49,7 @@ public class HttpActorClient
         var json = message.ToJson();
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        return await _httpClient.PostAsync(url, content);
+        return await _httpClient.PostAsync(url, content).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -64,10 +64,10 @@ public class HttpActorClient
 
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return content.FromJson<T>();
             }
             return default;
@@ -90,10 +90,10 @@ public class HttpActorClient
 
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return content.FromJson<ActorHealthStatus>();
             }
             return null;
@@ -113,10 +113,10 @@ public class HttpActorClient
 
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return content.FromJson<SystemHealthStatus>();
             }
             return null;

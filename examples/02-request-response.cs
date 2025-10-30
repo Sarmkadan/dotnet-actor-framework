@@ -71,7 +71,7 @@ public class RequestorActor : Actor
                 var calculatorRef = Ref.System.GetActor(path);
                 if (calculatorRef != null)
                 {
-                    await _dispatcher.SendAsync(calculatorRef, calc);
+                    await _dispatcher.SendAsync(calculatorRef, calc).ConfigureAwait(false);
                 }
             }
 
@@ -95,7 +95,7 @@ class Program
 
         var sp = services.BuildServiceProvider();
         var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
-        var system = await config.InitializeAsync();
+        var system = await config.InitializeAsync().ConfigureAwait(false);
 
         Console.WriteLine("Actor system initialized.\n");
 
@@ -105,22 +105,22 @@ class Program
 
             // Create calculator actor
             var calcPath = new ActorPath("/user/calculator");
-            var calcRef = await config.CreateActorAsync(calcPath);
+            var calcRef = await config.CreateActorAsync(calcPath).ConfigureAwait(false);
 
             // Create requestor actor
             var reqPath = new ActorPath("/user/requestor");
-            var reqRef = await config.CreateActorAsync(reqPath);
+            var reqRef = await config.CreateActorAsync(reqPath).ConfigureAwait(false);
 
             Console.WriteLine("Actors created.\n");
 
             // Send start request
             var startMsg = new ControlMessage("start");
-            await dispatcher.SendAsync(reqRef, startMsg);
+            await dispatcher.SendAsync(reqRef, startMsg).ConfigureAwait(false);
 
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
 
             // Show metrics
-            var stats = await config.GetStatisticsAsync();
+            var stats = await config.GetStatisticsAsync().ConfigureAwait(false);
             Console.WriteLine($"\nStatistics:");
             Console.WriteLine($"  Messages Processed: {stats.DispatcherStats?.TotalProcessed}");
             Console.WriteLine($"  Success Rate: {stats.DispatcherStats?.SuccessRate}%");
@@ -128,7 +128,7 @@ class Program
         }
         finally
         {
-            await system.ShutdownAsync();
+            await system.ShutdownAsync().ConfigureAwait(false);
             Console.WriteLine("\nShutdown complete.");
         }
     }

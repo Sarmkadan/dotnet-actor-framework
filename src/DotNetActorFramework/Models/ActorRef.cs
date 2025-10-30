@@ -58,7 +58,7 @@ public class ActorRef : IEquatable<ActorRef>
         using var cts = new CancellationTokenSource(timeout);
         try
         {
-            await Task.Delay(timeout, cts.Token);
+            await Task.Delay(timeout, cts.Token).ConfigureAwait(false);
             throw new TimeoutException($"Actor {Path} did not respond within {timeout.TotalSeconds} seconds.");
         }
         catch (OperationCanceledException)

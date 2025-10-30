@@ -51,7 +51,7 @@ public class ActorSystem
         }
 
         var actor = new Actor(path, supervisor);
-        await actor.InitializeAsync();
+        await actor.InitializeAsync().ConfigureAwait(false);
 
         lock (_lockObject)
         {
@@ -131,7 +131,7 @@ public class ActorSystem
 
         if (actor != null)
         {
-            await actor.TerminateAsync();
+            await actor.TerminateAsync().ConfigureAwait(false);
         }
     }
 
@@ -205,7 +205,7 @@ public class ActorSystem
         {
             try
             {
-                await actor.TerminateAsync();
+                await actor.TerminateAsync().ConfigureAwait(false);
             }
             catch (Exception)
             {

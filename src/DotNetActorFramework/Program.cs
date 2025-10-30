@@ -47,7 +47,7 @@ public class Program
             var configuration = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(serviceProvider);
             var actorSystem = await configuration.InitializeAsync();
 
-            logger.LogInformation($"Actor system started: {actorSystem.Name}");
+            logger.LogInformation("Actor system started: {Name}", actorSystem.Name);
 
             // Create sample actors
             var rootPath = new ActorPath("/user");
@@ -67,7 +67,7 @@ public class Program
             {
                 var message = new ControlMessage($"process-{i}");
                 await messageDispatcher.SendAsync(counterRef, loggerRef, message);
-                logger.LogInformation($"Message {i} sent from counter to logger");
+                logger.LogInformation("Message {I} sent from counter to logger", i);
             }
 
             // Get health summary

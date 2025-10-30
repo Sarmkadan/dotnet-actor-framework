@@ -91,7 +91,7 @@ public class WebhookDispatcher
             .Select(w => SendWebhookAsync(w, @event))
             .ToList();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -117,20 +117,20 @@ public class WebhookDispatcher
                 var json = @event.ToJson();
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync(config.Url, content);
+                var response = await _httpClient.PostAsync(config.Url, content).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                     return; // Success
 
                 if (attempt < maxRetries)
-                    await Task.Delay(retryDelay);
+                    await Task.Delay(retryDelay).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Webhook dispatch failed: {ex.Message}");
 
                 if (attempt < maxRetries)
-                    await Task.Delay(retryDelay);
+                    await Task.Delay(retryDelay).ConfigureAwait(false);
             }
         }
     }

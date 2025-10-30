@@ -94,7 +94,7 @@ public class ConnectionManager : IDisposable
         {
             var connection = GetConnection();
             // Simulate validation
-            await Task.Delay(10);
+            await Task.Delay(10).ConfigureAwait(false);
             return connection != null;
         }
         catch

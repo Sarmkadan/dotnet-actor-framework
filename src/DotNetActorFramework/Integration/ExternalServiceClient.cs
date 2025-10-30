@@ -41,10 +41,10 @@ public class ExternalServiceClient
         var url = CombineUrl(endpoint);
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return content.FromJson<T>();
         });
     }
@@ -63,10 +63,10 @@ public class ExternalServiceClient
 
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.PostAsync(url, content);
+            var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return responseContent.FromJson<T>();
         });
     }
@@ -85,10 +85,10 @@ public class ExternalServiceClient
 
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.PutAsync(url, content);
+            var response = await _httpClient.PutAsync(url, content).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return responseContent.FromJson<T>();
         });
     }
@@ -104,7 +104,7 @@ public class ExternalServiceClient
         var url = CombineUrl(endpoint);
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.DeleteAsync(url);
+            var response = await _httpClient.DeleteAsync(url).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             return true;
         });
@@ -121,15 +121,15 @@ public class ExternalServiceClient
         {
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (HttpRequestException) when (attempt < _maxRetries)
             {
-                await Task.Delay(_retryDelay);
+                await Task.Delay(_retryDelay).ConfigureAwait(false);
             }
         }
 
-        return await operation(); // Final attempt without catch
+        return await operation().ConfigureAwait(false); // Final attempt without catch
     }
 
     private string CombineUrl(string endpoint)

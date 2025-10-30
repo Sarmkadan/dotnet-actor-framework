@@ -77,7 +77,7 @@ public sealed class LoadBasedRouter
             return false;
 
         var routed = new Envelope(envelope.Message, target, envelope.Sender);
-        return await _dispatcher.DispatchAsync(routed);
+        return await _dispatcher.DispatchAsync(routed).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public sealed class LoadBasedRouter
         var target = actors[index % actors.Count];
 
         var routed = new Envelope(envelope.Message, target, envelope.Sender);
-        return await _dispatcher.DispatchAsync(routed);
+        return await _dispatcher.DispatchAsync(routed).ConfigureAwait(false);
     }
 
     /// <summary>
