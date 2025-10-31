@@ -40,7 +40,7 @@ public static class DependencyInjectionSetup
 
         // Register services
         services.AddSingleton<ActorRegistry>();
-        services.AddSingleton<MailboxService>();
+        services.AddSingleton<MailboxService>(sp => new MailboxService(sp.GetRequiredService<ActorSystemOptions>()));
         services.AddSingleton<MessageDispatcher>();
         services.AddSingleton<SupervisionService>();
 
