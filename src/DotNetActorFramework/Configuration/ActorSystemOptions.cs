@@ -35,6 +35,8 @@ public class ActorSystemOptions
 
     public int SnapshotIntervalSeconds { get; set; } = 300;
 
+    public PersistenceBackend DefaultPersistenceBackend { get; set; } = PersistenceBackend.InMemory;
+
     public string? DatabaseConnectionString { get; set; }
 
     public bool EnableClusterMode { get; set; } = false;

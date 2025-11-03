@@ -1,64 +1,49 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
-
 using System.Text.Json;
 using DotNetActorFramework.Models;
+using DotNetActorFramework.Persistence;
+using DotNetActorFramework.Persistence.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetActorFramework.Repository;
 
 /// <summary>
 /// Repository for persisting and retrieving actor state.
-/// Provides CRUD operations for actor state snapshots.
+/// Provides CRUD operations for actor state snapshots via PersistenceService.
 /// </summary>
 public class ActorStateRepository
 {
-    private readonly ConnectionManager _connectionManager;
-    private readonly Dictionary<string, ActorStateSnapshot> _stateCache = [];
-    private readonly object _lockObject = new();
+    private readonly PersistenceService _persistenceService;
+    private readonly ILogger<ActorStateRepository>? _logger;
 
-    public ActorStateRepository(ConnectionManager connectionManager)
+    public ActorStateRepository(PersistenceService persistenceService, ILogger<ActorStateRepository>? logger = null)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
+        _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
+        _logger = logger;
     }
 
     /// <summary>
     /// Saves the state of an actor.
     /// </summary>
-    public async Task<bool> SaveStateAsync(Guid actorId, Dictionary<string, object> state)
+    public async Task<bool> SaveStateAsync(Guid actorId, ActorPath actorPath, Dictionary<string, object> state, long sequenceNr)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
-
+        if (actorPath == null)
+            throw new ArgumentNullException(nameof(actorPath));
         if (state == null)
             throw new ArgumentNullException(nameof(state));
 
         try
         {
-            var snapshot = new ActorStateSnapshot
-            {
-                ActorId = actorId,
-                State = new Dictionary<string, string>(),
-                SavedAt = DateTime.UtcNow,
-                Version = 1
-            };
-
-            foreach (var kvp in state)
-            {
-                snapshot.State[kvp.Key] = JsonSerializer.Serialize(kvp.Value);
-            }
-
-            lock (_lockObject)
-            {
-                _stateCache[actorId.ToString()] = snapshot;
-            }
-
-            await Task.CompletedTask;
+            // Serialize the dictionary state into a single object (e.g., JSON string)
+            var serializedState = JsonSerializer.Serialize(state);
+            await _persistenceService.SaveSnapshotAsync(actorId, actorPath, serializedState, sequenceNr);
+            _logger?.LogDebug("Saved state for actor {ActorId} at path {ActorPath} with sequence {SequenceNr}", actorId, actorPath, sequenceNr);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to save state for actor {ActorId} at path {ActorPath}", actorId, actorPath);
             return false;
         }
     }
@@ -66,134 +51,126 @@ public class ActorStateRepository
     /// <summary>
     /// Loads the state of an actor.
     /// </summary>
-    public async Task<Dictionary<string, object>?> LoadStateAsync(Guid actorId)
+    public async Task<Dictionary<string, object>?> LoadStateAsync(Guid actorId, ActorPath actorPath)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        if (actorPath == null)
+            throw new ArgumentNullException(nameof(actorPath));
 
-        lock (_lockObject)
+        try
         {
-            if (_stateCache.TryGetValue(actorId.ToString(), out var snapshot))
+            var snapshot = await _persistenceService.LoadLatestSnapshotAsync(actorId, actorPath);
+            if (snapshot?.State is string serializedState)
             {
-                var state = new Dictionary<string, object>();
-                foreach (var kvp in snapshot.State)
-                {
-                    try
-                    {
-                        state[kvp.Key] = JsonSerializer.Deserialize<object>(kvp.Value) ?? kvp.Value;
-                    }
-                    catch
-                    {
-                        state[kvp.Key] = kvp.Value;
-                    }
-                }
-
-                return state;
+                _logger?.LogDebug("Loaded state for actor {ActorId} at path {ActorPath} with sequence {SequenceNr}", actorId, actorPath, snapshot.SequenceNr);
+                // Deserialize the object (JSON string) back to Dictionary<string, object>
+                return JsonSerializer.Deserialize<Dictionary<string, object>>(serializedState);
             }
+            _logger?.LogDebug("No state found for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return null;
         }
-
-        await Task.CompletedTask;
-        return null;
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to load state for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return null;
+        }
     }
 
     /// <summary>
     /// Deletes the state of an actor.
     /// </summary>
-    public async Task<bool> DeleteStateAsync(Guid actorId)
+    public async Task<bool> DeleteStateAsync(Guid actorId, ActorPath actorPath)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        if (actorPath == null)
+            throw new ArgumentNullException(nameof(actorPath));
 
-        lock (_lockObject)
+        try
         {
-            _stateCache.Remove(actorId.ToString());
+            await _persistenceService.DeleteAllSnapshotsAsync(actorId, actorPath);
+            _logger?.LogDebug("Deleted all state for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return true;
         }
-
-        await Task.CompletedTask;
-        return true;
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to delete state for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return false;
+        }
     }
 
     /// <summary>
     /// Gets the state snapshot for an actor.
     /// </summary>
-    public async Task<ActorStateSnapshot?> GetSnapshotAsync(Guid actorId)
+    public async Task<ActorStateSnapshot?> GetSnapshotAsync(Guid actorId, ActorPath actorPath)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        if (actorPath == null)
+            throw new ArgumentNullException(nameof(actorPath));
 
-        lock (_lockObject)
+        try
         {
-            _stateCache.TryGetValue(actorId.ToString(), out var snapshot);
-            return snapshot;
+            var snapshot = await _persistenceService.LoadLatestSnapshotAsync(actorId, actorPath);
+            if (snapshot != null)
+            {
+                _logger?.LogDebug("Retrieved snapshot for actor {ActorId} at path {ActorPath} with sequence {SequenceNr}", actorId, actorPath, snapshot.SequenceNr);
+                return new ActorStateSnapshot(snapshot.ActorId, ActorPath.Parse(snapshot.ActorPath), JsonSerializer.Deserialize<Dictionary<string, object>>(snapshot.State as string ?? "{}") ?? new Dictionary<string, object>(), snapshot.SequenceNr, snapshot.Timestamp);
+            }
+            _logger?.LogDebug("No snapshot found for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return null;
         }
-
-        await Task.CompletedTask;
-        return null;
-    }
-
-    /// <summary>
-    /// Gets all state snapshots.
-    /// </summary>
-    public async Task<IReadOnlyList<ActorStateSnapshot>> GetAllSnapshotsAsync()
-    {
-        lock (_lockObject)
+        catch (Exception ex)
         {
-            return _stateCache.Values.ToList().AsReadOnly();
+            _logger?.LogError(ex, "Failed to get snapshot for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return null;
         }
-
-        await Task.CompletedTask;
-        return [];
     }
 
     /// <summary>
     /// Checks if state exists for an actor.
     /// </summary>
-    public bool HasState(Guid actorId)
+    public async Task<bool> HasState(Guid actorId, ActorPath actorPath)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        if (actorPath == null)
+            throw new ArgumentNullException(nameof(actorPath));
 
-        lock (_lockObject)
+        try
         {
-            return _stateCache.ContainsKey(actorId.ToString());
+            var snapshot = await _persistenceService.LoadLatestSnapshotAsync(actorId, actorPath);
+            return snapshot != null;
         }
-    }
-
-    /// <summary>
-    /// Gets the number of saved states.
-    /// </summary>
-    public int GetStateCount()
-    {
-        lock (_lockObject)
+        catch (Exception ex)
         {
-            return _stateCache.Count;
-        }
-    }
-
-    /// <summary>
-    /// Clears all states.
-    /// </summary>
-    public void Clear()
-    {
-        lock (_lockObject)
-        {
-            _stateCache.Clear();
+            _logger?.LogError(ex, "Failed to check state existence for actor {ActorId} at path {ActorPath}", actorId, actorPath);
+            return false;
         }
     }
 }
 
 /// <summary>
 /// Represents a snapshot of actor state.
+/// This model is specific to ActorStateRepository's API, and is mapped to/from ActorSnapshot abstraction.
 /// </summary>
 public class ActorStateSnapshot
 {
-    public Guid ActorId { get; set; }
-    public Dictionary<string, string> State { get; set; } = [];
-    public DateTime SavedAt { get; set; }
-    public int Version { get; set; }
+    public Guid ActorId { get; }
+    public ActorPath ActorPath { get; }
+    public object State { get; } // Changed to object to hold deserialized state
+    public DateTime SavedAt { get; }
+    public long SequenceNr { get; } // Added SequenceNr
+    public int Version { get; } // Kept for metadata
 
-    public long GetStateSize()
+    public ActorStateSnapshot(Guid actorId, ActorPath actorPath, object state, long sequenceNr, DateTime savedAt, int version = 1)
     {
-        return State.Sum(kvp => kvp.Key.Length + kvp.Value.Length);
+        ActorId = actorId;
+        ActorPath = actorPath;
+        State = state;
+        SequenceNr = sequenceNr;
+        SavedAt = savedAt;
+        Version = version;
     }
 }
