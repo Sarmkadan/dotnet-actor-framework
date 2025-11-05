@@ -13,8 +13,8 @@ using DotNetActorFramework.Caching;
 namespace DotNetActorFramework.Configuration;
 
 /// <summary>
-/// Fluent builder for configuring and creating actor systems.
-/// Simplifies setup of middleware, services, and background workers.
+/// A fluent builder for configuring and creating actor systems.
+/// Provides methods to define middleware, services, background workers, and system-level options.
 /// </summary>
 public class ActorSystemBuilder
 {
@@ -26,6 +26,11 @@ public class ActorSystemBuilder
     private EventBus? _eventBus;
     private ActorCacheService? _cacheService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemBuilder"/> class.
+    /// </summary>
+    /// <param name="systemName">The unique name for the actor system being built.</param>
+    /// <exception cref="ArgumentException">Thrown if the provided system name is null or whitespace.</exception>
     public ActorSystemBuilder(string systemName)
     {
         if (string.IsNullOrWhiteSpace(systemName))
@@ -36,8 +41,9 @@ public class ActorSystemBuilder
     }
 
     /// <summary>
-    /// Adds logging middleware.
+    /// Adds logging middleware to the actor system pipeline.
     /// </summary>
+    /// <returns>The builder instance for fluent chaining.</returns>
     public ActorSystemBuilder WithLogging()
     {
         _middleware.Add(new LoggingMiddleware(
@@ -46,8 +52,10 @@ public class ActorSystemBuilder
     }
 
     /// <summary>
-    /// Adds error handling middleware with the specified strategy.
+    /// Adds error handling middleware with the specified strategy to the pipeline.
     /// </summary>
+    /// <param name="strategy">The <see cref="ErrorHandlingStrategy"/> to use for handling message processing errors.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
     public ActorSystemBuilder WithErrorHandling(ErrorHandlingStrategy strategy)
     {
         _middleware.Add(new ErrorHandlingMiddleware(strategy));
