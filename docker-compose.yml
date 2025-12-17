@@ -1,0 +1,103 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+
+version: '3.8'
+
+services:
+  actor-node-1:
+    build: .
+    container_name: actor-framework-node-1
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - NODE_ID=node-1
+      - BIND_ADDRESS=0.0.0.0
+      - BIND_PORT=8080
+      - SEED_NODES=actor-node-1:8080
+      - CONNECTIONSTRING=Server=postgres;Database=actor_framework;User Id=actor_user;Password=actor_password;Port=5432
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - actor-network
+    volumes:
+      - ./data/node1:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  actor-node-2:
+    build: .
+    container_name: actor-framework-node-2
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - NODE_ID=node-2
+      - BIND_ADDRESS=0.0.0.0
+      - BIND_PORT=8080
+      - SEED_NODES=actor-node-1:8080
+      - CONNECTIONSTRING=Server=postgres;Database=actor_framework;User Id=actor_user;Password=actor_password;Port=5432
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+      - actor-node-1
+    networks:
+      - actor-network
+    volumes:
+      - ./data/node2:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: actor-framework-db
+    environment:
+      POSTGRES_DB: actor_framework
+      POSTGRES_USER: actor_user
+      POSTGRES_PASSWORD: actor_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - actor-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U actor_user -d actor_framework"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: actor-framework-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - actor-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  actor-network:
+    driver: bridge
