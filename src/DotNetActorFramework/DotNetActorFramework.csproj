@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Zaiets.dotnet.actor.framework</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.2</Version>
     <Authors>Vladyslav Zaiets</Authors>
     <Description>Lightweight actor model framework for .NET - mailboxes, supervision trees, clustering, persistence</Description>
     <PackageTags>actor dotnet framework clustering supervision persistence</PackageTags>
