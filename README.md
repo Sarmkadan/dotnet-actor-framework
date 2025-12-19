@@ -1111,3 +1111,4 @@ The above copyright notice and this permission notice shall be included in all c
 ---
 
 Built by [Vladyslav Zaiets](https://sarmkadan.com)
+\n- [Supervision Guide](docs/supervision-guide.md)
