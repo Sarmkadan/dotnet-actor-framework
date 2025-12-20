@@ -4,6 +4,7 @@
 // =============================================================================
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using DotNetActorFramework.Services;
 using DotNetActorFramework.Repository;
 
@@ -42,6 +43,11 @@ public static class DependencyInjectionSetup
         services.AddSingleton<MailboxService>();
         services.AddSingleton<MessageDispatcher>();
         services.AddSingleton<SupervisionService>();
+
+        if (options.EnableClusterMode)
+        {
+            services.AddSingleton<ClusterActorRegistry>();
+        }
 
         return services;
     }
