@@ -113,7 +113,10 @@ public class MailboxService
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        _mailboxes.TryRemove(actorId, out _);
+        if (_mailboxes.TryRemove(actorId, out var mailbox))
+        {
+            mailbox.Dispose();
+        }
     }
 
     /// <summary>
@@ -147,12 +150,13 @@ public class MailboxService
 /// <summary>
 /// Represents a message mailbox for an actor.
 /// </summary>
-public class Mailbox
+public class Mailbox : IDisposable
 {
     private readonly ConcurrentQueue<Envelope> _queue = [];
     private readonly SemaphoreSlim _availableSemaphore;
     public Guid ActorId { get; }
     public int Capacity { get; }
+    private bool _disposed = false;
 
     public Mailbox(Guid actorId, int capacity)
     {
@@ -172,6 +176,8 @@ public class Mailbox
     /// </summary>
     public async Task<bool> EnqueueAsync(Envelope envelope)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Mailbox));
         if (envelope == null)
             throw new ArgumentNullException(nameof(envelope));
 
@@ -190,6 +196,8 @@ public class Mailbox
     /// </summary>
     public async Task<Envelope?> DequeueAsync()
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Mailbox));
         await Task.Yield();
         if (_queue.TryDequeue(out var envelope))
         {
@@ -214,6 +222,27 @@ public class Mailbox
     /// Gets the load factor of this mailbox (0-1).
     /// </summary>
     public double GetLoadFactor() => (double)_queue.Count / Capacity;
+
+    /// <summary>
+    /// Disposes the managed resources used by the Mailbox.
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _availableSemaphore.Dispose();
+            }
+            _disposed = true;
+        }
+    }
 }
 
 /// <summary>
