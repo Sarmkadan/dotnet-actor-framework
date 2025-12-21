@@ -7,6 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DotNetActorFramework.Services;
 using DotNetActorFramework.Repository;
+using DotNetActorFramework.Persistence;
+using DotNetActorFramework.Persistence.Abstractions;
+using DotNetActorFramework.Persistence.InMemory; // For InMemory implementations
+using DotNetActorFramework.Enums; // For PersistenceBackend enum
 
 namespace DotNetActorFramework.Configuration;
 
@@ -32,11 +36,16 @@ public static class DependencyInjectionSetup
 
         services.AddSingleton(options);
 
+        // Register persistence services based on configuration
+        RegisterPersistenceServices(services, options);
+
         // Register repositories
         services.AddSingleton<ConnectionManager>();
-        services.AddSingleton<ActorStateRepository>();
         services.AddSingleton<MessagePersistenceRepository>();
         services.AddSingleton<ActorMetricsRepository>();
+
+        // Register PersistenceService-dependent repositories
+        services.AddSingleton<ActorStateRepository>();
 
         // Register services
         services.AddSingleton<ActorRegistry>();
@@ -50,6 +59,31 @@ public static class DependencyInjectionSetup
         }
 
         return services;
+    }
+
+    private static void RegisterPersistenceServices(IServiceCollection services, ActorSystemOptions options)
+    {
+        switch (options.DefaultPersistenceBackend)
+        {
+            case PersistenceBackend.InMemory:
+                services.AddSingleton<ISnapshotStore, InMemorySnapshotStore>();
+                services.AddSingleton<IEventJournal, InMemoryEventJournal>();
+                break;
+            case PersistenceBackend.File:
+                // TODO: Implement FileSnapshotStore and FileEventJournal
+                throw new NotImplementedException("File persistence backend is not yet implemented.");
+            case PersistenceBackend.LiteDb:
+                // TODO: Implement LiteDbSnapshotStore and LiteDbEventJournal
+                throw new NotImplementedException("LiteDB persistence backend is not yet implemented.");
+            case PersistenceBackend.PostgreSql:
+                // TODO: Implement PostgreSqlSnapshotStore and PostgreSqlEventJournal
+                throw new NotImplementedException("PostgreSQL persistence backend is not yet implemented.");
+            default:
+                throw new ArgumentOutOfRangeException(nameof(options.DefaultPersistenceBackend), "Unknown persistence backend.");
+        }
+
+        // Register the PersistenceService facade
+        services.AddSingleton<PersistenceService>();
     }
 
     /// <summary>
