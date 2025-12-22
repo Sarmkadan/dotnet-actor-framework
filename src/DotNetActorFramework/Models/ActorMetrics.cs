@@ -19,6 +19,12 @@ public class ActorMetrics
     public DateTime CreatedAt { get; }
     public DateTime? LastMessageTime { get; private set; }
 
+    /// <summary>
+    /// Current number of messages waiting in this actor's mailbox.
+    /// Updated by calling <see cref="UpdateMailboxDepth"/>.
+    /// </summary>
+    public int MailboxDepth { get; private set; }
+
     private readonly List<long> _processingTimes = [];
     private readonly object _lockObject = new();
 
@@ -66,6 +72,20 @@ public class ActorMetrics
     }
 
     /// <summary>
+    /// Updates the current mailbox depth snapshot.
+    /// Should be called by the mailbox service whenever the queue depth changes,
+    /// or at query time to reflect the live value.
+    /// </summary>
+    /// <param name="depth">The current number of messages waiting in the mailbox.</param>
+    public void UpdateMailboxDepth(int depth)
+    {
+        lock (_lockObject)
+        {
+            MailboxDepth = depth;
+        }
+    }
+
+    /// <summary>
     /// Gets the error rate as a percentage.
     /// </summary>
     public double GetErrorRate()
@@ -109,7 +129,8 @@ public class ActorMetrics
                 SuccessRate = GetSuccessRate(),
                 AverageProcessingTimeMs = AverageProcessingTimeMs,
                 Uptime = GetUptime(),
-                IsHealthy = !IsUnhealthy()
+                IsHealthy = !IsUnhealthy(),
+                MailboxDepth = MailboxDepth
             };
         }
     }
@@ -140,4 +161,8 @@ public class ActorMetricsSummary
     public double AverageProcessingTimeMs { get; set; }
     public TimeSpan Uptime { get; set; }
     public bool IsHealthy { get; set; }
+    /// <summary>
+    /// Current number of messages waiting in this actor's mailbox at the time of the snapshot.
+    /// </summary>
+    public int MailboxDepth { get; set; }
 }

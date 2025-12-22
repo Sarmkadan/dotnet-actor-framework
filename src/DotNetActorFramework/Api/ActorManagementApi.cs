@@ -4,6 +4,7 @@
 // =============================================================================
 
 using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
 using DotNetActorFramework.Utilities;
 
 namespace DotNetActorFramework.Api;
@@ -15,10 +16,12 @@ namespace DotNetActorFramework.Api;
 public class ActorManagementApi
 {
     private readonly ActorSystem _actorSystem;
+    private readonly MailboxService? _mailboxService;
 
-    public ActorManagementApi(ActorSystem actorSystem)
+    public ActorManagementApi(ActorSystem actorSystem, MailboxService? mailboxService = null)
     {
         _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
+        _mailboxService = mailboxService;
     }
 
     /// <summary>
@@ -152,6 +155,35 @@ public class ActorManagementApi
     /// Gets the total number of actors.
     /// </summary>
     public int GetActorCount() => _actorSystem.GetActorCount();
+
+    /// <summary>
+    /// Gets the metrics snapshot for a specific actor, including live mailbox depth.
+    /// </summary>
+    /// <param name="path">The actor's path string (e.g. <c>/user/orders/processor</c>).</param>
+    /// <returns>
+    /// An <see cref="ActorMetricsSummary"/> with up-to-date <c>MailboxDepth</c> and
+    /// <c>ProcessedCount</c>, or <c>null</c> if no actor is registered at <paramref name="path"/>.
+    /// </returns>
+    public ActorMetricsSummary? GetActorMetrics(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        var actorPath = new ActorPath(path);
+        var summary = _actorSystem.GetActorMetricsSummary(actorPath);
+
+        if (summary == null)
+            return null;
+
+        var actorRef = _actorSystem.GetActorRef(actorPath);
+        if (actorRef != null && _mailboxService != null)
+        {
+            var depth = _mailboxService.GetMailboxSize(actorRef.Id);
+            summary.MailboxDepth = depth;
+        }
+
+        return summary;
+    }
 }
 
 /// <summary>
