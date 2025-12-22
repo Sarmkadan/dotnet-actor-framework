@@ -5,7 +5,43 @@ First off, thank you for considering contributing to DotNetActorFramework! It's 
 ## Development Requirements
 
 To build and run tests for this project, you will need:
-- .NET 10.0 SDK
+- .NET 10.0 SDK or later ([download](https://dotnet.microsoft.com/download))
+
+## Building Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/sarmkadan/dotnet-actor-framework.git
+cd dotnet-actor-framework
+
+# Restore dependencies
+dotnet restore
+
+# Build in Release configuration
+dotnet build --configuration Release
+
+# Build in Debug configuration (for local development)
+dotnet build --configuration Debug
+```
+
+## Running Tests
+
+```bash
+# Run the full test suite
+dotnet test
+
+# Run with verbose output
+dotnet test --verbosity normal
+
+# Run with code coverage reporting
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
+
+# Run a specific test class
+dotnet test --filter "FullyQualifiedName~ActorPathTests"
+
+# Run tests and export TRX report
+dotnet test --logger "trx;LogFileName=test-results.trx"
+```
 
 ## How to Contribute
 
