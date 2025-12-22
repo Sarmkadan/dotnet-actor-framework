@@ -9,8 +9,24 @@ namespace DotNetActorFramework.Middleware;
 
 /// <summary>
 /// Middleware for authenticating message senders.
-/// Validates that messages come from authorized sources before processing.
+/// Validates that messages come from authorized sources before passing them to subsequent
+/// middleware or the target actor.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Authentication is delegated to the <see cref="IAuthenticationProvider"/> supplied
+/// at construction time. Built-in providers include:
+/// <list type="bullet">
+///   <item><see cref="TokenAuthenticationProvider"/> – validates sender-to-token mappings.</item>
+///   <item><see cref="WhitelistAuthenticationProvider"/> – allows only explicitly listed senders.</item>
+///   <item><see cref="NoOpAuthenticationProvider"/> – allows all senders (testing/development).</item>
+/// </list>
+/// </para>
+/// <para>
+/// When authentication fails or the sender identity is absent, <see cref="InvokeAsync"/>
+/// returns <c>false</c> and the pipeline is short-circuited — <c>next</c> is not called.
+/// </para>
+/// </remarks>
 public class AuthenticationMiddleware : IActorMiddleware
 {
     public string Name => "AuthenticationMiddleware";
@@ -18,11 +34,25 @@ public class AuthenticationMiddleware : IActorMiddleware
 
     private readonly IAuthenticationProvider _authProvider;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AuthenticationMiddleware"/>.
+    /// </summary>
+    /// <param name="authProvider">The provider used to authenticate sender identities.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="authProvider"/> is <c>null</c>.</exception>
     public AuthenticationMiddleware(IAuthenticationProvider authProvider)
     {
         _authProvider = authProvider ?? throw new ArgumentNullException(nameof(authProvider));
     }
 
+    /// <summary>
+    /// Authenticates the envelope's sender before forwarding to the next pipeline stage.
+    /// Returns <c>false</c> without calling <paramref name="next"/> when the sender is
+    /// absent or authentication fails.
+    /// </summary>
+    /// <param name="envelope">The envelope to authenticate.</param>
+    /// <param name="next">The next stage of the pipeline, invoked only on success.</param>
+    /// <returns><c>true</c> when the sender is authenticated; <c>false</c> otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is <c>null</c>.</exception>
     public async Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)
     {
         if (envelope == null)
