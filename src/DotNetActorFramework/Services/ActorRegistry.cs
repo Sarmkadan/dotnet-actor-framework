@@ -9,8 +9,8 @@ using DotNetActorFramework.Exceptions;
 namespace DotNetActorFramework.Services;
 
 /// <summary>
-/// Manages registration and lookup of actors in the system.
-/// Provides thread-safe access to actor registry.
+/// The central registry for managing actor registrations, lookups, and hierarchy indexing within the system.
+/// It provides thread-safe mechanisms to register, retrieve, and terminate actors based on their path or ID.
 /// </summary>
 public class ActorRegistry
 {
@@ -20,8 +20,11 @@ public class ActorRegistry
     private readonly object _lockObject = new();
 
     /// <summary>
-    /// Registers an actor in the registry.
+    /// Registers an actor in the registry and updates the hierarchy index.
     /// </summary>
+    /// <param name="actorRef">The <see cref="ActorRef"/> to register.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if an actor is already registered at the same path.</exception>
     public void Register(ActorRef actorRef)
     {
         if (actorRef == null)

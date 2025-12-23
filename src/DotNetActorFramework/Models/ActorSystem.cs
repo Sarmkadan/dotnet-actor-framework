@@ -8,20 +8,31 @@ using DotNetActorFramework.Enums;
 namespace DotNetActorFramework.Models;
 
 /// <summary>
-/// The root actor system that manages all actors, their lifecycles, and message delivery.
+/// The root actor system that manages the lifecycle, registry, and message delivery for a hierarchy of actors.
+/// It acts as the central coordinator for all actor operations within the domain.
 /// </summary>
 public class ActorSystem
 {
+    /// <summary>Gets the unique name of the actor system.</summary>
     public string Name { get; }
+    /// <summary>Gets the unique identifier of the actor system instance.</summary>
     public Guid Id { get; }
+    /// <summary>Gets the UTC timestamp when the system was initialized.</summary>
     public DateTime CreatedAt { get; }
+    /// <summary>Gets the UTC timestamp when the system was shut down, if applicable.</summary>
     public DateTime? ShutdownAt { get; private set; }
+    /// <summary>Gets a value indicating whether the actor system is currently running and accepting messages.</summary>
     public bool IsRunning { get; private set; }
 
     private readonly Dictionary<Guid, Actor> _actors = [];
     private readonly Dictionary<ActorPath, Guid> _pathIndex = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystem"/> class.
+    /// </summary>
+    /// <param name="name">The unique name for this actor system.</param>
+    /// <exception cref="ArgumentException">Thrown if the provided name is null or whitespace.</exception>
     public ActorSystem(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -34,8 +45,13 @@ public class ActorSystem
     }
 
     /// <summary>
-    /// Creates and registers a new actor.
+    /// Creates and registers a new actor within the system.
     /// </summary>
+    /// <param name="path">The <see cref="ActorPath"/> defining the actor's location in the hierarchy.</param>
+    /// <param name="supervisor">Optional <see cref="ActorRef"/> of the parent supervisor actor.</param>
+    /// <returns>A task representing the asynchronous creation process, returning the <see cref="ActorRef"/> of the newly created actor.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="path"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the actor system is not running or an actor already exists at the specified path.</exception>
     public async Task<ActorRef> CreateActorAsync(ActorPath path, ActorRef? supervisor = null)
     {
         if (path == null)
