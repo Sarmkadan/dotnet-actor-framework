@@ -13,6 +13,9 @@ This directory contains practical examples demonstrating various features and pa
 | [05-metrics-monitoring.cs](05-metrics-monitoring.cs) | Monitoring | Intermediate | System health monitoring and metrics collection |
 | [06-batch-processing.cs](06-batch-processing.cs) | Optimization | Advanced | Message batching for throughput optimization |
 | [07-parent-child-hierarchy.cs](07-parent-child-hierarchy.cs) | Architecture | Advanced | Supervised hierarchies and work distribution |
+| [08-basic-usage.cs](08-basic-usage.cs) | Basics | Beginner | Minimal setup and first actor initialization |
+| [09-advanced-usage.cs](09-advanced-usage.cs) | Configuration | Intermediate | Custom options, middleware, and metrics |
+| [10-integration-example.cs](10-integration-example.cs) | Integration | Intermediate | Wiring into ASP.NET DI |
 
 ## Running the Examples
 
@@ -207,6 +210,54 @@ public override async Task OnInitializeAsync()
         _workers.Add(workerRef);
     }
 }
+```
+
+### 8. Basic Usage (Beginner)
+
+**Topics**: Minimal setup, actor initialization
+
+**What You'll Learn:**
+- Minimal actor system creation
+- Defining actor paths
+- Basic initialization patterns
+
+**Key Code:**
+```csharp
+var builder = new ActorSystemBuilder("SystemName");
+var system = builder.Build();
+```
+
+### 9. Advanced Usage (Intermediate)
+
+**Topics**: Custom configuration, middleware, metrics, caching
+
+**What You'll Learn:**
+- Configuring complex middleware pipelines
+- Enabling metrics and caching
+- Customizing error handling
+
+**Key Code:**
+```csharp
+builder
+    .WithLogging()
+    .WithRateLimiting(500)
+    .WithMetrics();
+```
+
+### 10. Integration Example (Intermediate)
+
+**Topics**: Dependency injection, ASP.NET Core integration
+
+**What You'll Learn:**
+- Wiring the actor framework into DI
+- Configuring the system via options delegates
+
+**Key Code:**
+```csharp
+services.AddActorFramework(options =>
+{
+    options.DefaultMailboxCapacity = 1000;
+});
 ```
 
 ## Common Patterns
