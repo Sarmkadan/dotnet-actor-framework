@@ -134,10 +134,26 @@ dotnet build
 dotnet pack
 ```
 
-### Docker
+## Docker
+
+### Building the Image
 
 ```bash
-docker run -it sarmkadan/dotnet-actor-framework:latest
+docker build -t dotnet-actor-framework .
+```
+
+### Running with Docker Compose
+
+To start the actor system cluster with the database:
+
+```bash
+docker-compose up -d
+```
+
+### Running a Container
+
+```bash
+docker run -it dotnet-actor-framework:latest
 ```
 
 ## Quick Start
