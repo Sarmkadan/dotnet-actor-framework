@@ -196,7 +196,6 @@ public class ActorSystemConfiguration
             await _actorSystem.ShutdownAsync();
             _registry.Clear();
             _mailboxService.Clear();
-            _stateRepository.Clear();
             _messageRepository.Clear();
             _metricsRepository.Clear();
 

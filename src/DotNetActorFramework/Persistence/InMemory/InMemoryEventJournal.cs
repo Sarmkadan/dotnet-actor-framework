@@ -68,7 +68,7 @@ public class InMemoryEventJournal : IEventJournal
         var actorKey = GetActorKey(actorId, actorPath);
         if (_events.TryGetValue(actorKey, out var actorEvents))
         {
-            foreach (var kvp in actorEvents.Where(e => e.SequenceNr <= maxSequenceNr).ToList())
+            foreach (var kvp in actorEvents.Where(e => e.Value.SequenceNr <= maxSequenceNr).ToList())
             {
                 actorEvents.TryRemove(kvp.Key, out _);
             }

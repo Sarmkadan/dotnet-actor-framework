@@ -34,6 +34,8 @@ public class ActorPath : IEquatable<ActorPath>
         Parent = Segments.Count > 1 ? new ActorPath("/" + string.Join("/", Segments.Take(Segments.Count - 1))) : null;
     }
 
+    public static ActorPath Parse(string path) => new ActorPath(path);
+
     /// <summary>
     /// Creates a child path from this path.
     /// </summary>

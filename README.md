@@ -987,17 +987,23 @@ services.AddActorFrameworkReliable(
 
 The framework is designed for high-throughput, low-latency message processing on modern .NET hardware.
 
-### Benchmarks
+### Running Benchmarks
 
-| Scenario | Throughput | Latency (P50) | Latency (P99) |
-|----------|-----------|---------------|---------------|
-| Single actor, in-memory messages | ~10,000 msg/sec | <1 ms | <5 ms |
-| 100 actors, round-robin dispatch | ~85,000 msg/sec | <2 ms | <12 ms |
-| Batch processing (100 msg/batch) | ~500,000 msg/sec | <5 ms | <20 ms |
-| Request-response (ask pattern) | ~8,000 req/sec | <3 ms | <15 ms |
-| Persistent messages (PostgreSQL) | ~3,000 msg/sec | <10 ms | <40 ms |
+To run the performance benchmarks, execute the following command from the project root:
 
-*Benchmarks measured on a single core of an AMD Ryzen 9 5900X @ 3.7 GHz, .NET 10, 16 GB RAM.*
+```bash
+dotnet run -c Release --project benchmarks/DotNetActorFramework.Benchmarks/DotNetActorFramework.Benchmarks.csproj
+```
+
+### Benchmark Results
+
+*Measured on AMD EPYC-Rome Processor 2.45GHz, .NET 10.0*
+
+| Method           | Mean        | Error     | StdDev     | Allocated |
+|----------------- |------------:|----------:|-----------:|----------:|
+| CreateActorAsync | 4,016.39 ns | 79.030 ns | 110.788 ns |    1136 B |
+| GetActorRef      |    12.22 ns |  0.242 ns |   0.288 ns |       0 B |
+| GetHealthSummary |    37.84 ns |  0.816 ns |   1.429 ns |      80 B |
 
 ### Performance Tips
 
