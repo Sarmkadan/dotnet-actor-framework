@@ -47,3 +47,5 @@ TestResults/
 # Coverage
 coverage/
 .coverage
+BenchmarkDotNet.Artifacts/
+.aider*
