@@ -1,0 +1,49 @@
+# Build results
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Visual Studio
+.vs/
+.vscode/
+*.user
+*.suo
+*.csproj.user
+*.sln.DotSettings.user
+*.DotSettings.user
+
+# Build logs
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local environment
+.env
+.env.local
+appsettings.Development.json
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Test results
+TestResults/
+*.trx
+
+# Coverage
+coverage/
+.coverage
