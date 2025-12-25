@@ -5,6 +5,8 @@
 // Regression tests for mailbox overflow bug fix
 // =============================================================================
 
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Services;
 using FluentAssertions;
@@ -18,7 +20,7 @@ public class MailboxOverflowTests
     public async Task EnqueueAsync_WithBurstTraffic_DoesNotCauseMessageLoss()
     {
         // Arrange
-        var mailboxService = new MailboxService(defaultCapacity: 10);
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 10 });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 10);
 
@@ -40,7 +42,15 @@ public class MailboxOverflowTests
         {
             tasks.Add(Task.Run(async () =>
             {
-                var result = await mailboxService.EnqueueAsync(actorId, envelope);
+                var result = true;
+                try
+                {
+                    await mailboxService.EnqueueAsync(actorId, envelope);
+                }
+                catch (MailboxException)
+                {
+                    result = false;
+                }
                 lock (successfulEnqueues)
                 {
                     successfulEnqueues.Add(result);
@@ -67,7 +77,7 @@ public class MailboxOverflowTests
     public async Task EnqueueAsync_WithConcurrentAccess_DoesNotCauseRaceConditions()
     {
         // Arrange
-        var mailboxService = new MailboxService(defaultCapacity: 5);
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 5 });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 5);
 
@@ -90,7 +100,15 @@ public class MailboxOverflowTests
             int index = i;
             tasks[i] = Task.Run(async () =>
             {
-                results[index] = await mailboxService.EnqueueAsync(actorId, envelopes[index]);
+                try
+                {
+                    await mailboxService.EnqueueAsync(actorId, envelopes[index]);
+                    results[index] = true;
+                }
+                catch (MailboxException)
+                {
+                    results[index] = false;
+                }
             });
         }
 
@@ -111,7 +129,7 @@ public class MailboxOverflowTests
     public async Task Mailbox_IsFull_AccuratelyReflectsCapacity()
     {
         // Arrange
-        var mailboxService = new MailboxService(defaultCapacity: 3);
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 3 });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 3);
 
@@ -135,17 +153,17 @@ public class MailboxOverflowTests
         var envelope4 = new Envelope(message4, actorRef4);
 
         Func<Task> act = async () => await mailboxService.EnqueueAsync(actorId, envelope4);
-        act.Should().Throw<MailboxException>();
+        await act.Should().ThrowAsync<MailboxException>();
     }
 
     [Fact]
     public void MailboxService_Constructor_ValidatesCapacity()
     {
         // Act & Assert - Should throw for invalid capacity
-        Action act = () => new MailboxService(defaultCapacity: 0);
+        Action act = () => new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 0 });
         act.Should().Throw<ArgumentException>();
 
-        act = () => new MailboxService(defaultCapacity: -1);
+        act = () => new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = -1 });
         act.Should().Throw<ArgumentException>();
     }
 }

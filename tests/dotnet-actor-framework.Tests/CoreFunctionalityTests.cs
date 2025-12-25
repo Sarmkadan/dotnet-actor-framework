@@ -56,7 +56,8 @@ public class CoreFunctionalityTests
         var service = new MailboxService(options);
         var actorId = Guid.NewGuid();
         var mailbox = service.CreateMailbox(actorId);
-        var envelope = new Envelope(new Message("test-data", 1), actorId);
+        var actorRef = new ActorRef(new ActorPath("/user/test-actor"), actorId);
+        var envelope = new Envelope(new Message<string>("test-data") { Priority = 1 }, actorRef);
 
         // Act
         await service.EnqueueAsync(actorId, envelope);
@@ -73,7 +74,8 @@ public class CoreFunctionalityTests
         var service = new MailboxService(options);
         var actorId = Guid.NewGuid();
         service.CreateMailbox(actorId);
-        var envelope = new Envelope(new Message("test-data", 1), actorId);
+        var actorRef = new ActorRef(new ActorPath("/user/test-actor"), actorId);
+        var envelope = new Envelope(new Message<string>("test-data") { Priority = 1 }, actorRef);
         await service.EnqueueAsync(actorId, envelope);
 
         // Act
@@ -93,15 +95,13 @@ public class CoreFunctionalityTests
         var service = new MailboxService(options);
         var actorId = Guid.NewGuid();
         service.CreateMailbox(actorId);
-        
-        await service.EnqueueAsync(actorId, new Envelope(new Message("m1", 1), actorId));
+        var actorRef = new ActorRef(new ActorPath("/user/test-actor"), actorId);
 
-        // Act
-        var enqueueResult = await service.EnqueueAsync(actorId, new Envelope(new Message("m2", 1), actorId));
+        await service.EnqueueAsync(actorId, new Envelope(new Message<string>("m1") { Priority = 1 }, actorRef));
 
-        // Assert
+        // Act & Assert
         // The MailboxService.EnqueueAsync method throws MailboxException if EnqueueAsync returns false
-        await service.Invoking(s => s.EnqueueAsync(actorId, new Envelope(new Message("m2", 1), actorId)))
+        await service.Invoking(s => s.EnqueueAsync(actorId, new Envelope(new Message<string>("m2") { Priority = 1 }, actorRef)))
             .Should().ThrowAsync<Exceptions.MailboxException>();
     }
 }
