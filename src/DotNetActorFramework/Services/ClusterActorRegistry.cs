@@ -6,6 +6,7 @@
 using System.Collections.Concurrent;
 using DotNetActorFramework.Models;
 using Microsoft.Extensions.Logging;
+using DotNetActorFramework.Exceptions;
 
 namespace DotNetActorFramework.Services;
 
@@ -28,16 +29,29 @@ public class ClusterActorRegistry
     /// </summary>
     /// <param name="nodeAddress">The address of the cluster node (acting as NodeId).</param>
     /// <param name="actorRef">The actor reference to register.</param>
+    /// <exception cref="ArgumentNullException">Thrown when nodeAddress or actorRef is null.</exception>
+    /// <exception cref="ClusterException">Thrown when cluster operations fail.</exception>
     public void RegisterActor(string nodeAddress, ActorRef actorRef)
     {
-        if (string.IsNullOrWhiteSpace(nodeAddress))
-            throw new ArgumentNullException(nameof(nodeAddress));
-        if (actorRef == null)
-            throw new ArgumentNullException(nameof(actorRef));
+        try
+        {
+            if (string.IsNullOrWhiteSpace(nodeAddress))
+                throw new ArgumentNullException(nameof(nodeAddress));
+            if (actorRef == null)
+                throw new ArgumentNullException(nameof(actorRef));
 
-        var actorsOnNode = _nodeActors.GetOrAdd(nodeAddress, _ => new ConcurrentBag<ActorRef>());
-        actorsOnNode.Add(actorRef);
-        _logger?.LogDebug("Registered actor {ActorPath} on node {NodeAddress}", actorRef.Path, nodeAddress);
+            var actorsOnNode = _nodeActors.GetOrAdd(nodeAddress, _ => new ConcurrentBag<ActorRef>());
+            actorsOnNode.Add(actorRef);
+            _logger?.LogDebug("Registered actor {ActorPath} on node {NodeAddress}", actorRef.Path, nodeAddress);
+        }
+        catch (ArgumentNullException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ClusterException(nodeAddress, $"Failed to register actor on node {nodeAddress}", ex);
+        }
     }
 
     /// <summary>
@@ -73,18 +87,31 @@ public class ClusterActorRegistry
     /// </summary>
     /// <param name="nodeAddress">The address of the cluster node to remove.</param>
     /// <returns>True if the node was found and removed, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when nodeAddress is null.</exception>
+    /// <exception cref="ClusterException">Thrown when cluster operations fail.</exception>
     public bool RemoveNode(string nodeAddress)
     {
-        if (string.IsNullOrWhiteSpace(nodeAddress))
-            throw new ArgumentNullException(nameof(nodeAddress));
-
-        if (_nodeActors.TryRemove(nodeAddress, out var removedActors))
+        try
         {
-            _logger?.LogInformation("Removed node {NodeAddress} and all {ActorCount} associated actors from the cluster registry.", nodeAddress, removedActors.Count);
-            return true;
+            if (string.IsNullOrWhiteSpace(nodeAddress))
+                throw new ArgumentNullException(nameof(nodeAddress));
+
+            if (_nodeActors.TryRemove(nodeAddress, out var removedActors))
+            {
+                _logger?.LogInformation("Removed node {NodeAddress} and all {ActorCount} associated actors from the cluster registry.", nodeAddress, removedActors.Count);
+                return true;
+            }
+            _logger?.LogWarning("Attempted to remove non-existent node {NodeAddress} from cluster registry.", nodeAddress);
+            return false;
         }
-        _logger?.LogWarning("Attempted to remove non-existent node {NodeAddress} from cluster registry.", nodeAddress);
-        return false;
+        catch (ArgumentNullException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ClusterException(nodeAddress, $"Failed to remove node {nodeAddress}", ex);
+        }
     }
 
     /// <summary>

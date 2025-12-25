@@ -3,7 +3,9 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Net;
 using System.Net.Http.Json;
+using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Utilities;
 
 namespace DotNetActorFramework.Integration;
@@ -33,42 +35,79 @@ public class ExternalServiceClient
     /// <summary>
     /// Makes a GET request to the external service.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when endpoint is empty.</exception>
+    /// <exception cref="ExternalServiceException">Thrown when service communication fails.</exception>
     public async Task<T?> GetAsync<T>(string endpoint)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
             throw new ArgumentException("Endpoint cannot be empty.", nameof(endpoint));
 
         var url = CombineUrl(endpoint);
-        return await RetryAsync(async () =>
+        try
         {
-            var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
+            return await RetryAsync(async () =>
+            {
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync();
-            return content.FromJson<T>();
-        });
+                var content = await response.Content.ReadAsStringAsync();
+                return content.FromJson<T>();
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"GET request failed to {url}", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"GET request to {url} timed out", ex);
+        }
+        catch (Exception ex) when (ex is not ExternalServiceException)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"GET request to {url} failed", ex);
+        }
     }
 
     /// <summary>
     /// Makes a POST request with JSON body.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when endpoint is empty.</exception>
+    /// <exception cref="ExternalServiceException">Thrown when service communication fails.</exception>
     public async Task<T?> PostAsync<T>(string endpoint, object body)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
             throw new ArgumentException("Endpoint cannot be empty.", nameof(endpoint));
 
+        if (body == null)
+            throw new ArgumentNullException(nameof(body));
+
         var url = CombineUrl(endpoint);
         var json = body.ToJson();
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-        return await RetryAsync(async () =>
+        try
         {
-            var response = await _httpClient.PostAsync(url, content);
-            response.EnsureSuccessStatusCode();
+            return await RetryAsync(async () =>
+            {
+                var response = await _httpClient.PostAsync(url, content);
+                response.EnsureSuccessStatusCode();
 
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return responseContent.FromJson<T>();
-        });
+                var responseContent = await response.Content.ReadAsStringAsync();
+                return responseContent.FromJson<T>();
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"POST request failed to {url}", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"POST request to {url} timed out", ex);
+        }
+        catch (Exception ex) when (ex is not ExternalServiceException)
+        {
+            throw new ExternalServiceException(_baseUrl, endpoint, $"POST request to {url} failed", ex);
+        }
     }
 
     /// <summary>

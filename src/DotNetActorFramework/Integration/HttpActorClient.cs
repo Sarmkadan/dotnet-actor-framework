@@ -3,10 +3,12 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Utilities;
+using DotNetActorFramework.Exceptions;
 
 namespace DotNetActorFramework.Integration;
 
@@ -37,6 +39,9 @@ public class HttpActorClient
     /// <summary>
     /// Sends a message to an actor via HTTP POST.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when actorPath is empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when message is null.</exception>
+    /// <exception cref="HttpActorCommunicationException">Thrown when HTTP communication fails.</exception>
     public async Task<HttpResponseMessage> SendMessageAsync(string actorPath, Message message)
     {
         if (string.IsNullOrWhiteSpace(actorPath))
@@ -49,12 +54,35 @@ public class HttpActorClient
         var json = message.ToJson();
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        return await _httpClient.PostAsync(url, content);
+        try
+        {
+            var response = await _httpClient.PostAsync(url, content);
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new HttpActorCommunicationException(url, response.StatusCode, responseContent);
+            }
+            return response;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new HttpActorCommunicationException(url, HttpStatusCode.ServiceUnavailable, null, ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new HttpActorCommunicationException(url, HttpStatusCode.RequestTimeout, "Request timeout", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new HttpActorCommunicationException(url, HttpStatusCode.InternalServerError, null, ex);
+        }
     }
 
     /// <summary>
     /// Gets an actor's state via HTTP GET.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when actorPath is empty.</exception>
+    /// <exception cref="HttpActorCommunicationException">Thrown when HTTP communication fails.</exception>
     public async Task<T?> GetActorStateAsync<T>(string actorPath)
     {
         if (string.IsNullOrWhiteSpace(actorPath))
@@ -72,9 +100,17 @@ public class HttpActorClient
             }
             return default;
         }
-        catch
+        catch (HttpRequestException ex)
         {
-            return default;
+            throw new HttpActorCommunicationException(url, HttpStatusCode.ServiceUnavailable, null, ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new HttpActorCommunicationException(url, HttpStatusCode.RequestTimeout, "Request timeout", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new HttpActorCommunicationException(url, HttpStatusCode.InternalServerError, null, ex);
         }
     }
 

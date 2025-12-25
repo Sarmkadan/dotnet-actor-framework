@@ -5,6 +5,7 @@
 
 using System.Collections.Concurrent;
 using DotNetActorFramework.Models;
+using DotNetActorFramework.Exceptions;
 
 namespace DotNetActorFramework.Services;
 

@@ -31,6 +31,9 @@ public class MessageDispatcher
     /// <summary>
     /// Dispatches a message to an actor asynchronously.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when envelope is null.</exception>
+    /// <exception cref="ActorNotFoundException">Thrown when recipient actor doesn't exist.</exception>
+    /// <exception cref="MailboxException">Thrown when mailbox operations fail.</exception>
     public async Task<bool> DispatchAsync(Envelope envelope)
     {
         if (envelope == null)
@@ -55,8 +58,18 @@ public class MessageDispatcher
                     IncrementDelivered();
                     return true;
                 }
-                catch (MailboxException) when (attempt < maxRetries)
+                catch (MailboxException ex) when (attempt < maxRetries)
                 {
+                    envelope.IncrementRetryCount();
+                    await Task.Delay(backoffDelay);
+                    backoffDelay = (int)Math.Min(
+                        backoffDelay * ActorConstants.BackoffMultiplier,
+                        ActorConstants.MaxBackoffDelayMs
+                    );
+                }
+                catch (Exception ex) when (attempt < maxRetries)
+                {
+                    // Log unexpected errors during enqueue attempts
                     envelope.IncrementRetryCount();
                     await Task.Delay(backoffDelay);
                     backoffDelay = (int)Math.Min(
@@ -71,11 +84,17 @@ public class MessageDispatcher
             AddToDeadLetterQueue(envelope);
             return false;
         }
-        catch (ActorNotFoundException)
+        catch (ActorNotFoundException ex)
         {
             IncrementFailed();
             AddToDeadLetterQueue(envelope);
-            return false;
+            throw new MessageDispatchException(envelope.Recipient.Path.ToString(), "Recipient actor not found", ex);
+        }
+        catch (Exception ex)
+        {
+            IncrementFailed();
+            AddToDeadLetterQueue(envelope);
+            throw new MessageDispatchException(envelope.Recipient.Path.ToString(), "Failed to dispatch message", ex);
         }
     }
 

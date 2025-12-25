@@ -25,28 +25,44 @@ public class ActorRegistry
     /// <param name="actorRef">The <see cref="ActorRef"/> to register.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown if an actor is already registered at the same path.</exception>
+    /// <exception cref="ActorSystemException">Thrown when registry operations fail.</exception>
     public void Register(ActorRef actorRef)
     {
-        if (actorRef == null)
-            throw new ArgumentNullException(nameof(actorRef));
-
-        lock (_lockObject)
+        try
         {
-            if (_pathIndex.ContainsKey(actorRef.Path))
-                throw new InvalidOperationException($"Actor already registered at path: {actorRef.Path}");
+            if (actorRef == null)
+                throw new ArgumentNullException(nameof(actorRef));
 
-            _pathIndex[actorRef.Path] = actorRef;
-            _idIndex[actorRef.Id] = actorRef;
-
-            // Update hierarchy index
-            if (actorRef.Path.Parent != null)
+            lock (_lockObject)
             {
-                if (!_hierarchyIndex.ContainsKey(actorRef.Path.Parent))
+                if (_pathIndex.ContainsKey(actorRef.Path))
+                    throw new InvalidOperationException($"Actor already registered at path: {actorRef.Path}");
+
+                _pathIndex[actorRef.Path] = actorRef;
+                _idIndex[actorRef.Id] = actorRef;
+
+                // Update hierarchy index
+                if (actorRef.Path.Parent != null)
                 {
-                    _hierarchyIndex[actorRef.Path.Parent] = [];
+                    if (!_hierarchyIndex.ContainsKey(actorRef.Path.Parent))
+                    {
+                        _hierarchyIndex[actorRef.Path.Parent] = [];
+                    }
+                    _hierarchyIndex[actorRef.Path.Parent].Add(actorRef.Path);
                 }
-                _hierarchyIndex[actorRef.Path.Parent].Add(actorRef.Path);
             }
+        }
+        catch (ArgumentNullException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ActorSystemException($"Failed to register actor {actorRef?.Path}", ex);
         }
     }
 

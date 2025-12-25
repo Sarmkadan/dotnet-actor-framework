@@ -7,8 +7,8 @@ using System.Collections.Concurrent;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Constants;
 using DotNetActorFramework.Exceptions;
-using DotNetActorFramework.Configuration; // Added for ActorSystemOptions
-using DotNetActorFramework.Enums; // Added for MailboxType
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Enums;
 
 namespace DotNetActorFramework.Services;
 
@@ -81,35 +81,61 @@ public class MailboxService
     /// <summary>
     /// Enqueues a message into an actor's mailbox.
     /// </summary>
+    /// <exception cref="MailboxException">Thrown when mailbox operations fail.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when actorId or envelope is null.</exception>
     public async Task EnqueueAsync(Guid actorId, Envelope envelope)
     {
-        if (actorId == Guid.Empty)
-            throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        try
+        {
+            if (actorId == Guid.Empty)
+                throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        if (envelope == null)
-            throw new ArgumentNullException(nameof(envelope));
+            if (envelope == null)
+                throw new ArgumentNullException(nameof(envelope));
 
-        var mailbox = GetMailbox(actorId);
-        if (mailbox == null)
-            throw new MailboxException($"Mailbox not found for actor: {actorId}");
+            var mailbox = GetMailbox(actorId);
+            if (mailbox == null)
+                throw new MailboxException(actorId, $"Mailbox not found for actor: {actorId}");
 
-        if (!await mailbox.EnqueueAsync(envelope))
-            throw new MailboxException($"Mailbox is full for actor: {actorId}");
+            if (!await mailbox.EnqueueAsync(envelope))
+                throw new MailboxException(actorId, $"Mailbox is full for actor: {actorId}");
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not MailboxException)
+        {
+            throw new MailboxException(actorId, $"Failed to enqueue message to actor {actorId}", ex);
+        }
     }
 
     /// <summary>
     /// Dequeues the next message from an actor's mailbox.
     /// </summary>
+    /// <exception cref="MailboxException">Thrown when mailbox operations fail.</exception>
+    /// <exception cref="ArgumentException">Thrown when actorId is empty.</exception>
     public async Task<Envelope?> DequeueAsync(Guid actorId)
     {
-        if (actorId == Guid.Empty)
-            throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+        try
+        {
+            if (actorId == Guid.Empty)
+                throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        var mailbox = GetMailbox(actorId);
-        if (mailbox == null)
-            throw new MailboxException($"Mailbox not found for actor: {actorId}");
+            var mailbox = GetMailbox(actorId);
+            if (mailbox == null)
+                throw new MailboxException(actorId, $"Mailbox not found for actor: {actorId}");
 
-        return await mailbox.DequeueAsync();
+            return await mailbox.DequeueAsync();
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not MailboxException)
+        {
+            throw new MailboxException(actorId, $"Failed to dequeue message from actor {actorId}", ex);
+        }
     }
 
     /// <summary>
@@ -133,14 +159,26 @@ public class MailboxService
     /// <summary>
     /// Removes a mailbox for an actor.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when actorId is empty.</exception>
     public void RemoveMailbox(Guid actorId)
     {
-        if (actorId == Guid.Empty)
-            throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
-
-        if (_mailboxes.TryRemove(actorId, out var mailbox))
+        try
         {
-            mailbox.Dispose();
+            if (actorId == Guid.Empty)
+                throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
+
+            if (_mailboxes.TryRemove(actorId, out var mailbox))
+            {
+                mailbox.Dispose();
+            }
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new MailboxException(actorId, $"Failed to remove mailbox for actor {actorId}", ex);
         }
     }
 
