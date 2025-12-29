@@ -8,13 +8,22 @@ using DotNetActorFramework.Utilities;
 using FluentAssertions;
 using Xunit;
 
-namespace DotNetActorFramework.Tests;
-
+/// <summary>
+/// Tests for the ActorMetrics class.
+/// </summary>
 public class ActorMetricsTests
 {
+    /// <summary>
+    /// Creates a new instance of ActorMetrics with a specified path.
+    /// </summary>
+    /// <param name="pathStr">The path of the actor.</param>
+    /// <returns>A new instance of ActorMetrics.</returns>
     private static ActorMetrics CreateMetrics(string pathStr = "/system/actor")
         => new ActorMetrics(Guid.NewGuid(), new ActorPath(pathStr));
 
+    /// <summary>
+    /// Verifies that RecordMessageReceived increments the message count.
+    /// </summary>
     [Fact]
     public void RecordMessageReceived_CalledMultipleTimes_IncrementsMessageCount()
     {
@@ -31,6 +40,9 @@ public class ActorMetricsTests
         metrics.LastMessageTime.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Verifies that GetErrorRate returns the correct error rate when there are errors.
+    /// </summary>
     [Fact]
     public void GetErrorRate_WithFiftyPercentErrors_ReturnsFiftyPercent()
     {
@@ -48,6 +60,9 @@ public class ActorMetricsTests
         metrics.GetSuccessRate().Should().BeApproximately(50.0, 0.001);
     }
 
+    /// <summary>
+    /// Verifies that GetErrorRate returns 0 when there are no messages.
+    /// </summary>
     [Fact]
     public void GetErrorRate_WithNoMessages_ReturnsZeroWithoutDivisionError()
     {
@@ -60,6 +75,9 @@ public class ActorMetricsTests
         metrics.GetErrorRate().Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that RecordProcessingTime averages the processing times correctly.
+    /// </summary>
     [Fact]
     public void RecordProcessingTime_WithThreeTimings_AveragesCorrectly()
     {
@@ -76,6 +94,9 @@ public class ActorMetricsTests
         metrics.AverageProcessingTimeMs.Should().BeApproximately(200.0, 0.001);
     }
 
+    /// <summary>
+    /// Verifies that IsUnhealthy returns true when the error rate exceeds the threshold.
+    /// </summary>
     [Fact]
     public void IsUnhealthy_WhenErrorRateExceedsThreshold_ReturnsTrue()
     {
@@ -89,6 +110,9 @@ public class ActorMetricsTests
         metrics.IsUnhealthy(90.0).Should().BeFalse("80 % < 90 % threshold");
     }
 
+    /// <summary>
+    /// Verifies that GetSummary returns the correct summary.
+    /// </summary>
     [Fact]
     public void GetSummary_ReflectsCurrentMetricState()
     {
@@ -111,8 +135,14 @@ public class ActorMetricsTests
     }
 }
 
+/// <summary>
+/// Tests for the MessageDeduplicator class.
+/// </summary>
 public class MessageDeduplicatorTests
 {
+    /// <summary>
+    /// Verifies that IsDuplicate returns false for an unregistered message ID.
+    /// </summary>
     [Fact]
     public void IsDuplicate_ForUnregisteredMessageId_ReturnsFalse()
     {
@@ -124,6 +154,9 @@ public class MessageDeduplicatorTests
         deduplicator.IsDuplicate(newId).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that IsDuplicate returns true for a registered message ID.
+    /// </summary>
     [Fact]
     public void IsDuplicate_AfterRegisterMessage_ReturnsTrueForSameId()
     {
@@ -139,6 +172,9 @@ public class MessageDeduplicatorTests
         deduplicator.IsDuplicate(Guid.NewGuid()).Should().BeFalse("different IDs must not match");
     }
 
+    /// <summary>
+    /// Verifies that Clear removes all registered message IDs.
+    /// </summary>
     [Fact]
     public void Clear_AfterRegisteringMultipleIds_RemovesAllRecords()
     {
