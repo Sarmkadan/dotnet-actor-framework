@@ -10,10 +10,16 @@ using DotNetActorFramework.Enums;
 using FluentAssertions;
 using Xunit;
 
+/// <summary>
+/// Contains unit tests for core functionality of the DotNetActorFramework.
+/// </summary>
 namespace DotNetActorFramework.Tests;
 
 public class CoreFunctionalityTests
 {
+    /// <summary>
+    /// Tests that an actor can be registered and retrieved from the actor registry.
+    /// </summary>
     [Fact]
     public void ActorRegistry_RegisterAndGet_ShouldReturnCorrectActor()
     {
@@ -32,6 +38,9 @@ public class CoreFunctionalityTests
         registry.Contains(path).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that clearing the actor registry removes all actors.
+    /// </summary>
     [Fact]
     public void ActorRegistry_Clear_ShouldRemoveAllActors()
     {
@@ -48,6 +57,9 @@ public class CoreFunctionalityTests
         registry.GetAll().Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that creating and enqueueing a message to a mailbox holds the message.
+    /// </summary>
     [Fact]
     public async Task MailboxService_CreateAndEnqueue_ShouldHoldMessage()
     {
@@ -66,6 +78,9 @@ public class CoreFunctionalityTests
         service.GetMailboxSize(actorId).Should().Be(1);
     }
 
+    /// <summary>
+    /// Tests that enqueuing and dequeuing a message from a mailbox returns the same message.
+    /// </summary>
     [Fact]
     public async Task MailboxService_EnqueueAndDequeue_ShouldReturnSameMessage()
     {
@@ -87,6 +102,9 @@ public class CoreFunctionalityTests
         service.GetMailboxSize(actorId).Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that enqueuing to a full mailbox fails.
+    /// </summary>
     [Fact]
     public async Task MailboxService_EnqueueToFullMailbox_ShouldFail()
     {
