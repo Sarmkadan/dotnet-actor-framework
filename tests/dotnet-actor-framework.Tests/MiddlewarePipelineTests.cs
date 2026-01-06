@@ -11,14 +11,28 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Contains unit tests for verifying the behavior and correctness of the <see cref="MiddlewarePipeline"/> class
+/// and related middleware functionality in the DotNetActorFramework.
+/// </summary>
 public class MiddlewarePipelineTests
 {
+    /// <summary>
+    /// Creates an <see cref="ActorRef"/> instance for testing purposes.
+    /// </summary>
+    /// <param name="pathStr">The actor path string used to construct the actor reference.</param>
+    /// <returns>A new <see cref="ActorRef"/> instance with the specified path and a unique identifier.</returns>
     private static ActorRef CreateActorRef(string pathStr)
     {
         var path = new ActorPath(pathStr);
         return new ActorRef(path, Guid.NewGuid());
     }
 
+    /// <summary>
+    /// Creates an <see cref="Envelope"/> instance for testing purposes with a default recipient path.
+    /// </summary>
+    /// <param name="recipientPath">The recipient actor path string. Defaults to "/system/actor".</param>
+    /// <returns>A new <see cref="Envelope"/> instance containing a test control message and recipient reference.</returns>
     private static Envelope CreateEnvelope(string recipientPath = "/system/actor")
     {
         var message = new ControlMessage("test-command");
