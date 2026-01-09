@@ -1,8 +1,3 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
-
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Utilities;
 using FluentAssertions;
@@ -10,8 +5,15 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Tests for the <see cref="ActorPath"/> class.
+/// </summary>
 public class ActorPathTests
 {
+    /// <summary>
+    /// Verifies that constructing an <see cref="ActorPath"/> with a valid nested path
+    /// correctly sets the name, segments, depth, and parent path.
+    /// </summary>
     [Fact]
     public void Constructor_WithValidNestedPath_SetsNameSegmentsAndDepth()
     {
@@ -25,6 +27,11 @@ public class ActorPathTests
         path.Parent!.Path.Should().Be("/system/workers");
     }
 
+    /// <summary>
+    /// Verifies that constructing an <see cref="ActorPath"/> with a null or whitespace string
+    /// throws an <see cref="ArgumentException"/>.
+    /// </summary>
+    /// <param name="input">The actor path string to test.</param>
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -37,6 +44,11 @@ public class ActorPathTests
         act.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>
+    /// Verifies that constructing an <see cref="ActorPath"/> with an invalid path format
+    /// throws an <see cref="ArgumentException"/> with a descriptive message.
+    /// </summary>
+    /// <param name="input">The actor path string to test.</param>
     [Theory]
     [InlineData("no-leading-slash")]
     [InlineData("/invalid path with spaces")]
@@ -51,6 +63,10 @@ public class ActorPathTests
             .WithMessage("*Invalid actor path*");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ActorPath.GetChild(string)"/> correctly builds a child path
+    /// and sets the appropriate properties.
+    /// </summary>
     [Fact]
     public void GetChild_WithValidChildName_BuildsCorrectHierarchy()
     {
@@ -67,6 +83,10 @@ public class ActorPathTests
         child.IsDescendantOf(parent).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ActorPath.IsDescendantOf(ActorPath)"/> correctly identifies
+    /// descendant relationships and distinguishes siblings.
+    /// </summary>
     [Fact]
     public void IsDescendantOf_WhenPathNested_ReturnsTrue_AndSiblingReturnsFalse()
     {
@@ -81,6 +101,10 @@ public class ActorPathTests
         root.IsDescendantOf(nested).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that two <see cref="ActorPath"/> instances with identical path strings
+    /// are considered equal and have the same hash code.
+    /// </summary>
     [Fact]
     public void Equality_WithIdenticalPathStrings_PathsAreEqual()
     {
@@ -96,6 +120,10 @@ public class ActorPathTests
         path1.GetHashCode().Should().Be(path2.GetHashCode());
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="ActorPath.IsChildOf(ActorPath)"/> extension method
+    /// correctly identifies any descendant as a child and does not consider a parent as a child.
+    /// </summary>
     [Fact]
     public void IsChildOf_ExtensionMethod_ReturnsTrueForAnyDescendant()
     {
