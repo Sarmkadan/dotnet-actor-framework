@@ -1,10 +1,3 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-//
-// Regression tests for mailbox overflow bug fix
-// =============================================================================
-
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Models;
@@ -14,8 +7,16 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Test suite for verifying mailbox overflow behavior and concurrency handling.
+/// </summary>
 public class MailboxOverflowTests
 {
+    /// <summary>
+    /// Ensures that enqueuing more messages than mailbox capacity under burst traffic
+    /// does not cause message loss and that the system remains stable.
+    /// </summary>
+    /// <returns>A Task representing the asynchronous test execution.</returns>
     [Fact]
     public async Task EnqueueAsync_WithBurstTraffic_DoesNotCauseMessageLoss()
     {
@@ -73,6 +74,11 @@ public class MailboxOverflowTests
         mailboxAfter!.GetSize().Should().BeLessOrEqualTo(10);
     }
 
+    /// <summary>
+    /// Verifies that concurrent enqueue operations are handled correctly without race conditions
+    /// and that mailbox capacity is respected.
+    /// </summary>
+    /// <returns>A Task representing the asynchronous test execution.</returns>
     [Fact]
     public async Task EnqueueAsync_WithConcurrentAccess_DoesNotCauseRaceConditions()
     {
@@ -125,6 +131,11 @@ public class MailboxOverflowTests
         mailboxAfter!.GetSize().Should().Be(successfulCount);
     }
 
+    /// <summary>
+    /// Checks that the mailbox reports full status accurately and that attempting to enqueue
+    /// beyond capacity throws a <see cref="MailboxException"/>.
+    /// </summary>
+    /// <returns>A Task representing the asynchronous test execution.</returns>
     [Fact]
     public async Task Mailbox_IsFull_AccuratelyReflectsCapacity()
     {
@@ -156,6 +167,10 @@ public class MailboxOverflowTests
         await act.Should().ThrowAsync<MailboxException>();
     }
 
+    /// <summary>
+    /// Validates that <see cref="MailboxService"/> constructor throws <see cref="ArgumentException"/>
+    /// when initialized with non-positive capacity.
+    /// </summary>
     [Fact]
     public void MailboxService_Constructor_ValidatesCapacity()
     {
