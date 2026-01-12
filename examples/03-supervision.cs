@@ -8,19 +8,30 @@ using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Enums;
 using DotNetActorFramework.Models;
 
-// Example 3: Supervision and Error Recovery
-// Demonstrates fault tolerance with supervision strategies
-
+/// <summary>
+/// Demonstrates fault tolerance with supervision strategies.
+/// </summary>
 public class UnreliableActor : Actor
 {
-    private int _attemptCount = 0;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnreliableActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
     public UnreliableActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The message to handle.</param>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "risky-operation")
         {
+            /// <summary>
+            /// The attempt count.
+            /// </summary>
+            int _attemptCount = 0;
+
             _attemptCount++;
 
             if (_attemptCount < 3)
@@ -34,6 +45,10 @@ public class UnreliableActor : Actor
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Called when the actor is stopped.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public override async Task OnStopAsync()
     {
         Console.WriteLine($"[{Path}] Actor stopped. Total attempts: {_attemptCount}");
@@ -41,16 +56,25 @@ public class UnreliableActor : Actor
     }
 }
 
+/// <summary>
+/// Demonstrates supervision and error recovery.
+/// </summary>
 public class SupervisorActor : Actor
 {
-    private readonly MessageDispatcher _dispatcher;
-    private List<ActorRef> _workers = new();
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SupervisorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
+    /// <param name="dispatcher">The message dispatcher.</param>
     public SupervisorActor(ActorPath path, MessageDispatcher dispatcher) : base(path)
     {
         _dispatcher = dispatcher;
     }
 
+    /// <summary>
+    /// Called when the actor is initialized.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public override async Task OnInitializeAsync()
     {
         // Create worker actors
@@ -64,6 +88,10 @@ public class SupervisorActor : Actor
         Console.WriteLine($"[{Path}] Created {_workers.Count} worker actors.");
     }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The message to handle.</param>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "distribute-work")
