@@ -7,19 +7,35 @@ using Microsoft.Extensions.DependencyInjection;
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Models;
 
-// Example 2: Request-Response Pattern
-// Demonstrates bidirectional communication between actors
-
+/// <summary>
+/// Demonstrates bidirectional communication between actors using the request-response pattern.
+/// </summary>
+/// <example>
+/// This example shows how to create a calculator actor that responds to requests from a requestor actor.
+/// </example>
 public class CalculatorActor : Actor
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CalculatorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor's path.</param>
     public CalculatorActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The incoming message.</param>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm)
         {
             try
             {
+                /// <summary>
+                /// Calculates the result of the specified command.
+                /// </summary>
+                /// <param name="cm">The control message containing the command and parameters.</param>
+                /// <returns>The calculated result.</returns>
                 var result = cm.Command switch
                 {
                     "add" => (int)cm.Parameters["a"] + (int)cm.Parameters["b"],
@@ -44,20 +60,33 @@ public class CalculatorActor : Actor
     }
 }
 
+/// <summary>
+/// A requestor actor that sends requests to the calculator actor.
+/// </summary>
 public class RequestorActor : Actor
 {
-    private readonly MessageDispatcher _dispatcher;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor's path.</param>
+    /// <param name="dispatcher">The message dispatcher.</param>
     public RequestorActor(ActorPath path, MessageDispatcher dispatcher) : base(path)
     {
         _dispatcher = dispatcher;
     }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The incoming message.</param>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "start")
         {
-            // Send requests to calculator
+            /// <summary>
+            /// Sends requests to the calculator actor.
+            /// </summary>
+            /// <param name="cm">The control message containing the start command.</param>
             var calculations = new[]
             {
                 new ControlMessage("add", new Dictionary<string, object> { { "a", 5 }, { "b", 3 } }),
@@ -79,10 +108,15 @@ public class RequestorActor : Actor
         }
         await Task.CompletedTask;
     }
+
+    private readonly MessageDispatcher _dispatcher;
 }
 
 class Program
 {
+    /// <summary>
+    /// The main entry point for the application.
+    /// </summary>
     static async Task Main()
     {
         Console.WriteLine("=== DotNet Actor Framework - Request-Response Pattern ===\n");
