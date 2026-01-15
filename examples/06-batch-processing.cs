@@ -1,8 +1,3 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
-
 using Microsoft.Extensions.DependencyInjection;
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Models;
@@ -10,6 +5,9 @@ using DotNetActorFramework.Models;
 // Example 6: Batch Processing
 // Demonstrates efficient message batching for throughput optimization
 
+/// <summary>
+/// Actor that processes messages in batches to improve throughput.
+/// </summary>
 public class BatchProcessorActor : Actor
 {
     private readonly List<Message> _batch = new();
@@ -17,8 +15,16 @@ public class BatchProcessorActor : Actor
     private Timer? _flushTimer;
     private int _totalProcessed = 0;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BatchProcessorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
     public BatchProcessorActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Called when the actor is initialized. Sets up a timer to flush the batch every 2 seconds.
+    /// </summary>
+    /// <returns>A completed task.</returns>
     public override async Task OnInitializeAsync()
     {
         // Flush batch every 2 seconds even if not full
@@ -29,6 +35,11 @@ public class BatchProcessorActor : Actor
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Handles incoming messages. Adds control messages with command "add-item" to the batch and flushes when the batch size is reached.
+    /// </summary>
+    /// <param name="message">The message to process.</param>
+    /// <returns>A completed task.</returns>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "add-item")
@@ -59,6 +70,10 @@ public class BatchProcessorActor : Actor
         _batch.Clear();
     }
 
+    /// <summary>
+    /// Called when the actor is stopping. Disposes the timer, flushes any remaining items, and logs the total processed.
+    /// </summary>
+    /// <returns>A completed task.</returns>
     public override async Task OnStopAsync()
     {
         _flushTimer?.Dispose();
@@ -67,8 +82,15 @@ public class BatchProcessorActor : Actor
     }
 }
 
+/// <summary>
+/// Entry point for the batch processing example.
+/// </summary>
 class Program
 {
+    /// <summary>
+    /// Starts the actor system, creates a batch processor actor, sends items, and displays health status.
+    /// </summary>
+    /// <returns>A completed task.</returns>
     static async Task Main()
     {
         Console.WriteLine("=== DotNet Actor Framework - Batch Processing ===\n");
