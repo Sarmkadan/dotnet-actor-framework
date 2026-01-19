@@ -11,13 +11,35 @@ using DotNetActorFramework.Models;
 // Example 7: Parent-Child Hierarchy
 // Demonstrates supervised actor hierarchies with delegated work
 
+/// <summary>
+/// An actor that performs individual work items within a parent-child hierarchy.
+/// </summary>
+/// <remarks>
+/// WorkerActor is a leaf node in the actor hierarchy that receives work messages
+/// from its parent supervisor and processes them independently. Each worker maintains
+/// its own work item counter and reports metrics upon completion.
+/// </remarks>
 public class WorkerActor : Actor
 {
     private int _workItems = 0;
 
-    public WorkerActor(ActorPath path) : base(path) { }
+    /// <summary>
+/// Initializes a new instance of the <see cref="WorkerActor"/> class.
+/// </summary>
+/// <param name="path">The unique path for this actor within the actor system.</param>
+public WorkerActor(ActorPath path) : base(path) { }
 
-    public override async Task ReceiveAsync(Message message)
+    	/// <summary>
+	/// Processes incoming messages and handles work distribution from the supervisor.
+	/// </summary>
+	/// <param name="message">The message to process. Expected to be a <see cref="ControlMessage"/> with command "work".</param>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// When a work message is received, this method increments the work item counter,
+	/// processes the work by simulating work with a delay, logs progress, and records
+	/// success metrics. The actual work duration is specified in the message parameters.
+	/// </remarks>
+	public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "work")
         {
@@ -33,7 +55,15 @@ public class WorkerActor : Actor
         await Task.CompletedTask;
     }
 
-    public override async Task OnStopAsync()
+    	/// <summary>
+	/// Called when the actor is being stopped to perform cleanup operations.
+	/// </summary>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// This method logs the total number of work items processed by this worker
+	/// before it was stopped. It provides visibility into the worker's final state.
+	/// </remarks>
+	public override async Task OnStopAsync()
     {
         Console.WriteLine($"[{Path}] Worker stopped after processing {_workItems} items");
         await Task.CompletedTask;
@@ -63,7 +93,17 @@ public class SupervisorActor : Actor
         Console.WriteLine($"[{Path}] Supervisor created {_workers.Count} workers");
     }
 
-    public override async Task ReceiveAsync(Message message)
+    	/// <summary>
+	/// Processes incoming messages and handles work distribution from the supervisor.
+	/// </summary>
+	/// <param name="message">The message to process. Expected to be a <see cref="ControlMessage"/> with command "work".</param>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// When a work message is received, this method increments the work item counter,
+	/// processes the work by simulating work with a delay, logs progress, and records
+	/// success metrics. The actual work duration is specified in the message parameters.
+	/// </remarks>
+	public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "distribute")
         {
@@ -91,7 +131,15 @@ public class SupervisorActor : Actor
         await Task.CompletedTask;
     }
 
-    public override async Task OnStopAsync()
+    	/// <summary>
+	/// Called when the actor is being stopped to perform cleanup operations.
+	/// </summary>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// This method logs the total number of work items processed by this worker
+	/// before it was stopped. It provides visibility into the worker's final state.
+	/// </remarks>
+	public override async Task OnStopAsync()
     {
         Console.WriteLine($"[{Path}] Supervisor shutting down with {_workers.Count} workers");
         await Task.CompletedTask;
@@ -117,7 +165,17 @@ public class RootActor : Actor
         Console.WriteLine($"[{Path}] Root actor created supervisor\n");
     }
 
-    public override async Task ReceiveAsync(Message message)
+    	/// <summary>
+	/// Processes incoming messages and handles work distribution from the supervisor.
+	/// </summary>
+	/// <param name="message">The message to process. Expected to be a <see cref="ControlMessage"/> with command "work".</param>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// When a work message is received, this method increments the work item counter,
+	/// processes the work by simulating work with a delay, logs progress, and records
+	/// success metrics. The actual work duration is specified in the message parameters.
+	/// </remarks>
+	public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "start-work")
         {
@@ -132,7 +190,15 @@ public class RootActor : Actor
         await Task.CompletedTask;
     }
 
-    public override async Task OnStopAsync()
+    	/// <summary>
+	/// Called when the actor is being stopped to perform cleanup operations.
+	/// </summary>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <remarks>
+	/// This method logs the total number of work items processed by this worker
+	/// before it was stopped. It provides visibility into the worker's final state.
+	/// </remarks>
+	public override async Task OnStopAsync()
     {
         Console.WriteLine($"[{Path}] Root actor shutting down");
         await Task.CompletedTask;
