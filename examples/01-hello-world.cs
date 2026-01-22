@@ -1,7 +1,7 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
 
 using Microsoft.Extensions.DependencyInjection;
 using DotNetActorFramework.Configuration;
@@ -10,10 +10,23 @@ using DotNetActorFramework.Models;
 // Example 1: Hello World
 // Demonstrates basic actor creation and message sending
 
+/// <summary>
+/// Represents an actor that responds to greeting commands.
+/// </summary>
 public class HelloActor : Actor
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HelloActor"/> class with the specified actor path.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
     public HelloActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Handles incoming messages. If the message is a <see cref="ControlMessage"/> with command "greet",
+    /// writes a greeting to the console.
+    /// </summary>
+    /// <param name="message">The message to process.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "greet")
