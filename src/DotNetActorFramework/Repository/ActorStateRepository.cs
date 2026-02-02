@@ -22,6 +22,36 @@ public class ActorStateRepository
     }
 
     /// <summary>
+    /// Gets the actor ID associated with this repository instance.
+    /// </summary>
+    public Guid ActorId { get; } = Guid.Empty;
+
+    /// <summary>
+    /// Gets the actor path associated with this repository instance.
+    /// </summary>
+    public ActorPath ActorPath { get; } = ActorPath.Parse("/default");
+
+    /// <summary>
+    /// Gets the current state stored in this repository.
+    /// </summary>
+    public object State { get; } = new Dictionary<string, object>();
+
+    /// <summary>
+    /// Gets the timestamp when the state was last saved.
+    /// </summary>
+    public DateTime SavedAt { get; } = DateTime.MinValue;
+
+    /// <summary>
+    /// Gets the sequence number for state persistence.
+    /// </summary>
+    public long SequenceNr { get; } = 0;
+
+    /// <summary>
+    /// Gets the version number of the state.
+    /// </summary>
+    public int Version { get; } = 0;
+
+    /// <summary>
     /// Saves the state of an actor.
     /// </summary>
     public async Task<bool> SaveStateAsync(Guid actorId, ActorPath actorPath, Dictionary<string, object> state, long sequenceNr)
