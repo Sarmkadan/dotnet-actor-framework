@@ -7,13 +7,22 @@ using Microsoft.Extensions.DependencyInjection;
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Models;
 
-// Example 5: Metrics and Monitoring
-// Demonstrates built-in metrics collection and system health monitoring
-
+/// <summary>
+/// Example 5: Metrics and Monitoring
+/// Demonstrates built-in metrics collection and system health monitoring
+/// </summary>
 public class ProcessorActor : Actor
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProcessorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
     public ProcessorActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The message to process.</param>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm && cm.Command == "process")
@@ -29,12 +38,21 @@ public class ProcessorActor : Actor
     }
 }
 
+/// <summary>
+/// Monitor actor that reports system metrics.
+/// </summary>
 public class MonitorActor : Actor
 {
     private readonly MessageDispatcher _dispatcher;
     private readonly ActorSystemConfiguration _config;
     private Timer? _monitoringTimer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MonitorActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
+    /// <param name="dispatcher">The message dispatcher.</param>
+    /// <param name="config">The actor system configuration.</param>
     public MonitorActor(ActorPath path, MessageDispatcher dispatcher,
         ActorSystemConfiguration config) : base(path)
     {
@@ -42,6 +60,10 @@ public class MonitorActor : Actor
         _config = config;
     }
 
+    /// <summary>
+    /// Initializes the actor.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task OnInitializeAsync()
     {
         Console.WriteLine($"[{Path}] Monitor started. Reporting every 2 seconds.\n");
@@ -52,6 +74,9 @@ public class MonitorActor : Actor
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Reports system metrics.
+    /// </summary>
     private void ReportMetrics()
     {
         var health = _config.GetHealthSummary();
@@ -93,6 +118,10 @@ public class MonitorActor : Actor
         Console.WriteLine("╚════════════════════════════════════════════════════════╝\n");
     }
 
+    /// <summary>
+    /// Stops the actor.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task OnStopAsync()
     {
         _monitoringTimer?.Dispose();
@@ -100,6 +129,10 @@ public class MonitorActor : Actor
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The message to process.</param>
     public override async Task ReceiveAsync(Message message)
     {
         // Monitor only reports, doesn't process messages
@@ -109,6 +142,10 @@ public class MonitorActor : Actor
 
 class Program
 {
+    /// <summary>
+    /// Main entry point for the application.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     static async Task Main()
     {
         Console.WriteLine("=== DotNet Actor Framework - Metrics & Monitoring ===\n");
