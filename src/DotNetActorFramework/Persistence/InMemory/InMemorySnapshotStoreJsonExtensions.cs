@@ -12,24 +12,23 @@ namespace DotNetActorFramework.Persistence.InMemory;
 /// </summary>
 public static class InMemorySnapshotStoreJsonExtensions
 {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
     /// <summary>
     /// Serializes the <see cref="InMemorySnapshotStore"/> to a JSON string.
     /// </summary>
-    /// <param name="value">The snapshot store to serialize</param>
-    /// <param name="indented">Whether to format the JSON with indentation</param>
-    /// <returns>A JSON string representation of the snapshot store</returns>
+    /// <param name="value">The snapshot store to serialize.</param>
+    /// <param name="indented">Whether to format the JSON with indentation.</param>
+    /// <returns>A JSON string representation of the snapshot store.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this InMemorySnapshotStore value, bool indented = false)
     {
-        if (value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
+        ArgumentNullException.ThrowIfNull(value);
 
         var options = indented
             ? new JsonSerializerOptions(_jsonSerializerOptions)
@@ -44,26 +43,29 @@ public static class InMemorySnapshotStoreJsonExtensions
     /// <summary>
     /// Deserializes an <see cref="InMemorySnapshotStore"/> from a JSON string.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize</param>
-    /// <returns>The deserialized snapshot store, or null if the JSON is null or whitespace</returns>
-    public static InMemorySnapshotStore? FromJson(string json)
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>The deserialized snapshot store, or null if the JSON is null or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    public static InMemorySnapshotStore? FromJson(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(json);
 
-        return JsonSerializer.Deserialize<InMemorySnapshotStore>(json, _jsonSerializerOptions);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<InMemorySnapshotStore>(json, _jsonSerializerOptions);
     }
 
     /// <summary>
     /// Attempts to deserialize an <see cref="InMemorySnapshotStore"/> from a JSON string.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize</param>
-    /// <param name="value">The deserialized snapshot store, or null if deserialization fails</param>
-    /// <returns>True if deserialization succeeded; otherwise, false</returns>
-    public static bool TryFromJson(string json, out InMemorySnapshotStore? value)
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="value">The deserialized snapshot store, or null if deserialization fails.</param>
+    /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    public static bool TryFromJson(string? json, out InMemorySnapshotStore? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
