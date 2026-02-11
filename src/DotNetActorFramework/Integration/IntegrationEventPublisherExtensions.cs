@@ -20,10 +20,13 @@ public static class IntegrationEventPublisherExtensions
     /// <param name="publisher">The event publisher instance</param>
     /// <param name="timeout">Maximum time to wait for processing to complete</param>
     /// <returns>True if all events were processed, false if timeout occurred</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="publisher"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timeout"/> is negative or zero</exception>
     public static async Task<bool> WaitForProcessingAsync(this IntegrationEventPublisher publisher, TimeSpan timeout)
     {
-        if (publisher == null)
-            throw new ArgumentNullException(nameof(publisher));
+        ArgumentNullException.ThrowIfNull(publisher);
+        if (timeout < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout cannot be negative");
 
         var stopwatch = Stopwatch.StartNew();
         int previousQueueLength;
@@ -50,16 +53,16 @@ public static class IntegrationEventPublisherExtensions
     /// <param name="publisher">The event publisher instance</param>
     /// <param name="events">Collection of events to publish</param>
     /// <returns>Task representing the batch publish operation</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="publisher"/> or <paramref name="events"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="events"/> contains a <see langword="null"/> event</exception>
     public static async Task PublishBatchAsync(this IntegrationEventPublisher publisher, IEnumerable<IDomainEvent> events)
     {
-        if (publisher == null)
-            throw new ArgumentNullException(nameof(publisher));
-
-        if (events == null)
-            throw new ArgumentNullException(nameof(events));
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(events);
 
         foreach (var @event in events)
         {
+            ArgumentNullException.ThrowIfNull(@event);
             await publisher.PublishAsync(@event);
         }
     }
@@ -70,10 +73,13 @@ public static class IntegrationEventPublisherExtensions
     /// <param name="publisher">The event publisher instance</param>
     /// <param name="sampleDuration">Duration to sample processing rate</param>
     /// <returns>Events per second, or 0 if no events processed</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="publisher"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="sampleDuration"/> is negative or zero</exception>
     public static async Task<double> GetProcessingRateAsync(this IntegrationEventPublisher publisher, TimeSpan sampleDuration)
     {
-        if (publisher == null)
-            throw new ArgumentNullException(nameof(publisher));
+        ArgumentNullException.ThrowIfNull(publisher);
+        if (sampleDuration <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(sampleDuration), "Sample duration must be positive");
 
         var initialQueueLength = publisher.GetQueueLength();
         var initialTime = DateTime.UtcNow;
