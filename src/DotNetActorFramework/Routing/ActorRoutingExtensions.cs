@@ -19,21 +19,21 @@ public static class ActorRoutingExtensions
     /// capability-based and tag-based actor lookup without load-aware routing.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
-    /// <returns>The same <see cref="IServiceCollection"/> for method chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is <c>null</c>.</exception>
+    /// <returns>The same <see cref="IServiceCollection"/> for method chaining.</returns>
     /// <example>
     /// <code>
     /// services.AddActorFramework()
     ///         .AddActorDiscovery();
     /// </code>
     /// </example>
-    public static IServiceCollection AddActorDiscovery(this IServiceCollection services)
-    {
-        if (services == null) throw new ArgumentNullException(nameof(services));
-
-        services.AddSingleton<ActorDiscoveryService>();
-        return services;
-    }
+            public static IServiceCollection AddActorDiscovery(this IServiceCollection services)
+            {
+                ArgumentNullException.ThrowIfNull(services);
+        
+                services.AddSingleton<ActorDiscoveryService>();
+                return services;
+            }
 
     /// <summary>
     /// Registers both <see cref="ActorDiscoveryService"/> and <see cref="LoadBasedRouter"/>
@@ -41,8 +41,8 @@ public static class ActorRoutingExtensions
     /// message routing.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
-    /// <returns>The same <see cref="IServiceCollection"/> for method chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is <c>null</c>.</exception>
+    /// <returns>The same <see cref="IServiceCollection"/> for method chaining.</returns>
     /// <remarks>
     /// Requires <c>AddActorFramework()</c> to have been called first so that
     /// <see cref="DotNetActorFramework.Services.MailboxService"/> and
@@ -64,7 +64,7 @@ public static class ActorRoutingExtensions
     /// </example>
     public static IServiceCollection AddActorDiscoveryWithRouting(this IServiceCollection services)
     {
-        if (services == null) throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<ActorDiscoveryService>();
         services.AddSingleton<LoadBasedRouter>();
