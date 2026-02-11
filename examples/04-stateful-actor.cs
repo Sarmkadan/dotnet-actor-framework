@@ -7,22 +7,36 @@ using Microsoft.Extensions.DependencyInjection;
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Models;
 
-// Example 4: Stateful Actor
-// Demonstrates actors that maintain and manage state
-
+/// <summary>
+/// Example 4: Stateful Actor
+/// Demonstrates actors that maintain and manage state
+/// </summary>
 public class BankAccountActor : Actor
 {
     private decimal _balance = 0m;
     private List<string> _transactions = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BankAccountActor"/> class.
+    /// </summary>
+    /// <param name="path">The actor path.</param>
     public BankAccountActor(ActorPath path) : base(path) { }
 
+    /// <summary>
+    /// Called when the actor is initialized.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task OnInitializeAsync()
     {
         Console.WriteLine($"[{Path}] Bank account initialized.");
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Handles incoming messages.
+    /// </summary>
+    /// <param name="message">The message to handle.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task ReceiveAsync(Message message)
     {
         if (message is ControlMessage cm)
@@ -31,6 +45,10 @@ public class BankAccountActor : Actor
             {
                 case "deposit":
                     {
+                        /// <summary>
+                        /// Deposits the specified amount into the account.
+                        /// </summary>
+                        /// <param name="amount">The amount to deposit.</param>
                         var amount = (decimal)cm.Parameters["amount"];
                         _balance += amount;
                         _transactions.Add($"Deposit: +{amount}");
@@ -40,6 +58,10 @@ public class BankAccountActor : Actor
 
                 case "withdraw":
                     {
+                        /// <summary>
+                        /// Withdraws the specified amount from the account.
+                        /// </summary>
+                        /// <param name="amount">The amount to withdraw.</param>
                         var amount = (decimal)cm.Parameters["amount"];
                         if (amount <= _balance)
                         {
@@ -55,10 +77,16 @@ public class BankAccountActor : Actor
                     break;
 
                 case "get-balance":
+                    /// <summary>
+                    /// Retrieves the current balance of the account.
+                    /// </summary>
                     Console.WriteLine($"[{Path}] Current balance: {_balance}");
                     break;
 
                 case "get-statement":
+                    /// <summary>
+                    /// Retrieves the account statement.
+                    /// </summary>
                     Console.WriteLine($"[{Path}] Account Statement:");
                     foreach (var tx in _transactions)
                     {
@@ -74,6 +102,10 @@ public class BankAccountActor : Actor
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Called when the actor is stopped.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task OnStopAsync()
     {
         Console.WriteLine($"[{Path}] Account closed. Final balance: {_balance}");
