@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System;
 using System.Text.Json;
 
 namespace DotNetActorFramework.BackgroundWorkers;
@@ -17,11 +18,11 @@ public static class MetricsCollectorWorkerExtensions
     /// Creates a shallow copy of the latest metrics snapshot.
     /// </summary>
     /// <param name="worker">The metrics collector worker instance</param>
-    /// <returns>A new MetricsSnapshot instance with the same values</returns>
+    /// <returns>A new <see cref="MetricsSnapshot"/> instance with the same values</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/></exception>
     public static MetricsSnapshot CloneLatestSnapshot(this MetricsCollectorWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         var snapshot = worker.GetLatestSnapshot();
         return new MetricsSnapshot
@@ -42,10 +43,10 @@ public static class MetricsCollectorWorkerExtensions
     /// </summary>
     /// <param name="worker">The metrics collector worker instance</param>
     /// <returns>Health percentage (100 = fully healthy, 0 = completely unhealthy)</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/></exception>
     public static double GetHealthPercentage(this MetricsCollectorWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         var snapshot = worker.GetLatestSnapshot();
 
@@ -64,19 +65,19 @@ public static class MetricsCollectorWorkerExtensions
     /// </summary>
     /// <param name="worker">The metrics collector worker instance</param>
     /// <returns>Formatted metrics string</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/></exception>
     public static string GetFormattedMetrics(this MetricsCollectorWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         var snapshot = worker.GetLatestSnapshot();
 
         return $@"Metrics Snapshot - {snapshot.Timestamp:yyyy-MM-dd HH:mm:ss}
 ========================================
-Total Actors:     {snapshot.TotalActors} ({snapshot.HealthyActors} healthy, {snapshot.ErrorActors} errors)
+Total Actors: {snapshot.TotalActors} ({snapshot.HealthyActors} healthy, {snapshot.ErrorActors} errors)
 Message Throughput: {snapshot.TotalMessages:N0} messages, {snapshot.TotalErrors:N0} errors
-Performance:      Avg Latency: {snapshot.AverageLatencyMs:F2}ms | Error Rate: {snapshot.ErrorRate:P2}
-System Health:     {worker.GetHealthPercentage():F1}% {(snapshot.IsHealthy ? "✓ HEALTHY" : "✗ DEGRADED")}
+Performance: Avg Latency: {snapshot.AverageLatencyMs:F2}ms | Error Rate: {snapshot.ErrorRate:P2}
+System Health: {worker.GetHealthPercentage():F1}% {(snapshot.IsHealthy ? "✓ HEALTHY" : "✗ DEGRADED")}
 ";
     }
 
@@ -85,10 +86,10 @@ System Health:     {worker.GetHealthPercentage():F1}% {(snapshot.IsHealthy ? "�
     /// </summary>
     /// <param name="worker">The metrics collector worker instance</param>
     /// <returns>JSON string containing all metrics</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/></exception>
     public static string ToJson(this MetricsCollectorWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         var snapshot = worker.GetLatestSnapshot();
 
