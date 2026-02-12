@@ -1,13 +1,11 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =====================================================================
+// ===================================================================
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using DotNetActorFramework.Models;
-using DotNetActorFramework.Enums;
 
 namespace DotNetActorFramework.Services;
 
@@ -17,34 +15,16 @@ namespace DotNetActorFramework.Services;
 public static class SupervisionServiceExtensions
 {
     /// <summary>
-    /// Gets the supervision context for the specified actor.
-    /// </summary>
-    /// <param name="service">The supervision service</param>
-    /// <param name="actorId">The actor ID</param>
-    /// <returns>The supervision context or null if not found</returns>
-    public static SupervisionContext? GetContext(this SupervisionService service, Guid actorId)
-    {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
-
-        var contexts = service.GetType()
-            .GetField("_supervisionContexts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(service) as System.Collections.Generic.Dictionary<Guid, SupervisionContext>;
-
-        return contexts?.GetValueOrDefault(actorId);
-    }
-
-    /// <summary>
     /// Checks if an actor has exceeded its maximum failure threshold.
     /// </summary>
     /// <param name="service">The supervision service</param>
     /// <param name="actorId">The actor ID</param>
-    /// <param name="maxFailures">Maximum allowed failures before escalation</param>
+    /// <param name="maxFailures">Maximum allowed failures before escalation. Defaults to 5.</param>
     /// <returns>True if actor has exceeded failure threshold</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is null.</exception>
     public static bool HasExceededFailureThreshold(this SupervisionService service, Guid actorId, int maxFailures = 5)
     {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
 
         var context = service.GetContext(actorId);
         return context != null && context.FailureCount >= maxFailures;
@@ -56,10 +36,10 @@ public static class SupervisionServiceExtensions
     /// <param name="service">The supervision service</param>
     /// <param name="actorId">The actor ID</param>
     /// <returns>Supervision statistics for the actor or null if not supervised</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is null.</exception>
     public static ActorSupervisionStatistics? GetActorStatistics(this SupervisionService service, Guid actorId)
     {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
 
         var context = service.GetContext(actorId);
         if (context == null)
@@ -80,18 +60,12 @@ public static class SupervisionServiceExtensions
     /// </summary>
     /// <param name="service">The supervision service</param>
     /// <returns>Dictionary of actor statistics keyed by actor ID</returns>
-    public static System.Collections.Generic.Dictionary<Guid, ActorSupervisionStatistics> GetAllActorStatistics(this SupervisionService service)
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is null.</exception>
+    public static Dictionary<Guid, ActorSupervisionStatistics> GetAllActorStatistics(this SupervisionService service)
     {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
 
-        var contexts = service.GetType()
-            .GetField("_supervisionContexts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(service) as System.Collections.Generic.Dictionary<Guid, SupervisionContext>;
-
-        if (contexts == null)
-            return new System.Collections.Generic.Dictionary<Guid, ActorSupervisionStatistics>();
-
+        var contexts = service.GetAllContexts();
         return contexts.ToDictionary(
             kvp => kvp.Key,
             kvp => new ActorSupervisionStatistics
@@ -111,58 +85,66 @@ public static class SupervisionServiceExtensions
     /// <param name="service">The supervision service</param>
     /// <param name="timeWindow">Time window to check for recent failures</param>
     /// <returns>Collection of actor IDs that have failed recently</returns>
-    public static System.Collections.Generic.IEnumerable<Guid> GetRecentlyFailedActors(
-        this SupervisionService service,
-        TimeSpan timeWindow)
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timeWindow"/> is negative.</exception>
+    public static IEnumerable<Guid> GetRecentlyFailedActors(this SupervisionService service, TimeSpan timeWindow)
     {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
-
-        var contexts = service.GetType()
-            .GetField("_supervisionContexts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(service) as System.Collections.Generic.Dictionary<Guid, SupervisionContext>;
-
-        if (contexts == null)
-            return System.Linq.Enumerable.Empty<Guid>();
+        ArgumentNullException.ThrowIfNull(service);
+        if (timeWindow < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(timeWindow), "Time window cannot be negative");
 
         var cutoffTime = DateTime.UtcNow - timeWindow;
-        return contexts
+        return service.GetAllContexts()
             .Where(kvp => kvp.Value.LastFailureTime >= cutoffTime)
-            .Select(kvp => kvp.Key)
-            .ToList();
+            .Select(kvp => kvp.Key);
     }
 
     /// <summary>
     /// Gets the actor ID with the highest failure count.
     /// </summary>
     /// <param name="service">The supervision service</param>
-    /// <returns>The actor ID with most failures, or Guid.Empty if no actors supervised</returns>
+    /// <returns>The actor ID with most failures, or <see cref="Guid.Empty"/> if no actors supervised</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is null.</exception>
     public static Guid GetWorstPerformingActor(this SupervisionService service)
     {
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
 
-        var contexts = service.GetType()
-            .GetField("_supervisionContexts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(service) as System.Collections.Generic.Dictionary<Guid, SupervisionContext>;
-
-        if (contexts == null || contexts.Count == 0)
-            return Guid.Empty;
-
-        return contexts
-            .OrderByDescending(kvp => kvp.Value.FailureCount)
-            .First().Key;
+        var contexts = service.GetAllContexts();
+        return contexts.Count == 0
+            ? Guid.Empty
+            : contexts
+                .OrderByDescending(kvp => kvp.Value.FailureCount)
+                .First().Key;
     }
 }
 
 /// <summary>
 /// Statistics for a specific actor's supervision.
 /// </summary>
-public class ActorSupervisionStatistics
+public sealed class ActorSupervisionStatistics
 {
-    public Guid ActorId { get; set; }
-    public int FailureCount { get; set; }
-    public int RestartCount { get; set; }
-    public DateTime LastFailureTime { get; set; }
-    public TimeSpan TimeSinceLastFailure { get; set; }
+    /// <summary>
+    /// Gets the actor ID.
+    /// </summary>
+    public Guid ActorId { get; init; }
+
+    /// <summary>
+    /// Gets the number of failures for this actor.
+    /// </summary>
+    public int FailureCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of restarts for this actor.
+    /// </summary>
+    public int RestartCount { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp of the last failure.
+    /// </summary>
+    public DateTime LastFailureTime { get; init; }
+
+    /// <summary>
+    /// Gets the time elapsed since the last failure.
+    /// </summary>
+    public TimeSpan TimeSinceLastFailure { get; init; }
 }

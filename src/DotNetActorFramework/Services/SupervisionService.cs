@@ -206,6 +206,32 @@ public class SupervisionService
             };
         }
     }
+
+    /// <summary>
+    /// Gets the supervision context for a specific actor.
+    /// </summary>
+    /// <param name="actorId">The actor ID</param>
+    /// <returns>The supervision context or null if not found</returns>
+    public SupervisionContext? GetContext(Guid actorId)
+    {
+        lock (_lockObject)
+        {
+            _supervisionContexts.TryGetValue(actorId, out var context);
+            return context;
+        }
+    }
+
+    /// <summary>
+    /// Gets all supervision contexts.
+    /// </summary>
+    /// <returns>Dictionary of all supervision contexts keyed by actor ID</returns>
+    public Dictionary<Guid, SupervisionContext> GetAllContexts()
+    {
+        lock (_lockObject)
+        {
+            return new Dictionary<Guid, SupervisionContext>(_supervisionContexts);
+        }
+    }
 }
 
 /// <summary>
