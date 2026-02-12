@@ -11,22 +11,16 @@ namespace DotNetActorFramework.Models
         /// <param name="actorRef">The target actor reference</param>
         /// <param name="message">The message to send</param>
         /// <returns>The response from the actor, or null if no response</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
         public static async Task<object?> AskAsync(this ActorRef actorRef, object message)
         {
+            ArgumentNullException.ThrowIfNull(actorRef);
+            ArgumentNullException.ThrowIfNull(message);
+
             return await actorRef.AskAsync(message, TimeSpan.FromSeconds(5));
         }
 
-        /// <summary>
-        /// Sends a message to this actor and waits for a response with the specified timeout.
-        /// </summary>
-        /// <param name="actorRef">The target actor reference</param>
-        /// <param name="message">The message to send</param>
-        /// <param name="timeout">Maximum time to wait for response</param>
-        /// <returns>The response from the actor, or null if no response</returns>
-        public static async Task<object?> AskWithTimeoutAsync(this ActorRef actorRef, object message, TimeSpan timeout)
-        {
-            return await actorRef.AskAsync(message, timeout);
-        }
 
         /// <summary>
         /// Determines whether this actor reference points to the same actor instance as another reference.
@@ -34,14 +28,12 @@ namespace DotNetActorFramework.Models
         /// <param name="actorRef">The actor reference</param>
         /// <param name="other">The other actor reference to compare with</param>
         /// <returns>True if both references point to the same actor instance</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
         public static bool IsSameInstance(this ActorRef actorRef, ActorRef? other)
         {
-            if (other == null)
-            {
-                return false;
-            }
+            ArgumentNullException.ThrowIfNull(actorRef);
 
-            return actorRef.Id == other.Id;
+            return actorRef.Id == other?.Id;
         }
 
         /// <summary>
@@ -49,8 +41,14 @@ namespace DotNetActorFramework.Models
         /// </summary>
         /// <param name="actorRef">The actor reference</param>
         /// <returns>TimeSpan representing how long the actor has been alive</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
         public static TimeSpan GetAge(this ActorRef actorRef)
         {
+            ArgumentNullException.ThrowIfNull(actorRef);
+
+            // Calculate age from creation timestamp
+            // Using DateTime.UtcNow - CreatedAt is the standard way to calculate age
+            // and avoids potential issues with time zone differences
             return DateTime.UtcNow - actorRef.CreatedAt;
         }
 
@@ -59,8 +57,11 @@ namespace DotNetActorFramework.Models
         /// </summary>
         /// <param name="actorRef">The actor reference</param>
         /// <returns>Formatted string with actor information</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
         public static string ToDetailedString(this ActorRef actorRef)
         {
+            ArgumentNullException.ThrowIfNull(actorRef);
+
             return $"ActorRef {{ Id = {actorRef.Id}, Path = {actorRef.Path}, IsAlive = {actorRef.IsAlive} }}";
         }
     }
