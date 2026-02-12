@@ -3,6 +3,8 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System.Diagnostics.CodeAnalysis;
+
 using DotNetActorFramework.Models;
 
 namespace DotNetActorFramework.Services;
@@ -10,6 +12,9 @@ namespace DotNetActorFramework.Services;
 /// <summary>
 /// Provides extension methods for <see cref="ActorRegistry"/> to simplify common actor management scenarios.
 /// </summary>
+/// <remarks>
+/// All methods validate their parameters and throw appropriate exceptions for null values.
+/// </remarks>
 public static class ActorRegistryExtensions
 {
     /// <summary>
