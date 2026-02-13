@@ -1,7 +1,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using DotNetActorFramework.Models;
 
@@ -9,105 +9,81 @@ namespace DotNetActorFramework.Utilities;
 
 /// <summary>
 /// Extension methods for ActorPath manipulation and querying.
-/// These utilities simplify common path operations like validation, parsing, and hierarchy traversal.
+/// These utilities simplify common path operations like hierarchy traversal and relative path calculation.
 /// </summary>
 public static class ActorPathExtensions
 {
     /// <summary>
-    /// Gets the parent path of the current actor path.
-    /// Returns null if the current path is already at the root level.
+    /// Gets the relative path from a parent actor to this actor.
+    /// Returns null if the path is not a descendant of the specified parent.
     /// </summary>
-    public static ActorPath? GetParent(this ActorPath path)
+    /// <param name="path">The actor path to calculate the relative path from.</param>
+    /// <param name="parent">The parent actor path to use as the base.</param>
+    /// <returns>The relative path from parent to path, or null if path is not a descendant of parent.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if path or parent is null.</exception>
+    public static string? GetRelativePath(this ActorPath path, ActorPath parent)
     {
-        if (path == null) return null;
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(parent);
+
         var pathStr = path.ToString();
-        var lastSlashIndex = pathStr.LastIndexOf('/');
-        if (lastSlashIndex <= 0) return null;
-        var parentPathStr = pathStr[..lastSlashIndex];
-        return new ActorPath(parentPathStr);
+        var parentStr = parent.ToString();
+
+        if (!pathStr.StartsWith(parentStr + "/", StringComparison.Ordinal))
+            return null;
+
+        return pathStr[(parentStr.Length + 1)..];
     }
 
     /// <summary>
-    /// Gets the name component of the actor path (last segment).
+    /// Gets all ancestor paths from this path to the root, including the current path itself.
+    /// Useful for traversing the supervision hierarchy or building path-based context.
     /// </summary>
-    public static string GetName(this ActorPath path)
+    /// <param name="path">The actor path to get ancestors from.</param>
+    /// <returns>An enumerable of ancestor paths starting from the current path up to the root.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if path is null.</exception>
+    public static IEnumerable<ActorPath> GetAncestors(this ActorPath path)
     {
-        if (path == null) return string.Empty;
-        var pathStr = path.ToString();
-        var lastSlashIndex = pathStr.LastIndexOf('/');
-        return lastSlashIndex >= 0 ? pathStr[(lastSlashIndex + 1)..] : pathStr;
-    }
+        ArgumentNullException.ThrowIfNull(path);
 
-    /// <summary>
-    /// Gets the depth of the path in the hierarchy.
-    /// Root path has depth 0, children of root have depth 1, etc.
-    /// </summary>
-    public static int GetDepth(this ActorPath path)
-    {
-        if (path == null) return 0;
-        return path.ToString().Count(c => c == '/');
+        var current = path;
+        while (current != null)
+        {
+            yield return current;
+            current = current.Parent;
+        }
     }
 
     /// <summary>
     /// Determines if this path is a child of the specified parent path.
+    /// A path is considered a child if it starts with the parent path followed by a '/'.
     /// </summary>
+    /// <param name="path">The actor path to check.</param>
+    /// <param name="parent">The potential parent path.</param>
+    /// <returns>True if path is a child of parent; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if path or parent is null.</exception>
     public static bool IsChildOf(this ActorPath path, ActorPath parent)
     {
-        if (path == null || parent == null) return false;
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(parent);
+
         var pathStr = path.ToString();
         var parentStr = parent.ToString();
         return pathStr.StartsWith(parentStr + "/", StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Gets the relative path from a parent actor to this actor.
-    /// Useful for understanding hierarchical relationships.
+    /// Determines if this path is a descendant of the specified ancestor path.
     /// </summary>
-    public static string? GetRelativePath(this ActorPath path, ActorPath parent)
+    /// <param name="path">The actor path to check.</param>
+    /// <param name="ancestor">The potential ancestor path.</param>
+    /// <returns>True if path is a descendant of ancestor; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if path or ancestor is null.</exception>
+    public static bool IsDescendantOf(this ActorPath path, ActorPath ancestor)
     {
-        if (path == null || parent == null) return null;
-        var pathStr = path.ToString();
-        var parentStr = parent.ToString();
-        if (!pathStr.StartsWith(parentStr + "/", StringComparison.Ordinal))
-            return null;
-        return pathStr[(parentStr.Length + 1)..];
-    }
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(ancestor);
 
-    /// <summary>
-    /// Validates that the path contains only alphanumeric characters, hyphens, underscores, and forward slashes.
-    /// </summary>
-    public static bool IsValidPath(this ActorPath path)
-    {
-        if (path == null) return false;
-        var pathStr = path.ToString();
-        return System.Text.RegularExpressions.Regex.IsMatch(
-            pathStr,
-            @"^[a-zA-Z0-9/_-]+$",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
-    }
-
-    /// <summary>
-    /// Builds a child path by appending a name segment to this path.
-    /// </summary>
-    public static ActorPath CreateChild(this ActorPath path, string childName)
-    {
-        if (path == null) throw new ArgumentNullException(nameof(path));
-        if (string.IsNullOrWhiteSpace(childName)) throw new ArgumentException("Child name cannot be empty.", nameof(childName));
-        var combined = $"{path}/{childName}";
-        return new ActorPath(combined);
-    }
-
-    /// <summary>
-    /// Gets all ancestor paths from this path to the root.
-    /// Useful for traversing the supervision hierarchy.
-    /// </summary>
-    public static IEnumerable<ActorPath> GetAncestors(this ActorPath path)
-    {
-        var current = path;
-        while (current != null)
-        {
-            yield return current;
-            current = current.GetParent();
-        }
+        return path.IsDescendantOf(ancestor);
     }
 }
