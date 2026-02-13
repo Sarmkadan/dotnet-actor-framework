@@ -31,73 +31,99 @@ public static class SerializationExtensions
     /// <summary>
     /// Serializes an object to JSON string.
     /// </summary>
-    public static string ToJson<T>(this T obj)
-    {
-        if (obj == null) return "null";
-        return JsonSerializer.Serialize(obj, DefaultOptions);
-    }
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="obj">The object to serialize.</param>
+    /// <returns>A JSON string representation of the object, or "null" if the object is null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="obj"/> is null and the type is a value type.</exception>
+    public static string ToJson<T>(this T obj) =>
+        obj is null
+            ? "null"
+            : JsonSerializer.Serialize(obj, DefaultOptions);
 
     /// <summary>
     /// Serializes an object to pretty-printed JSON string.
     /// </summary>
-    public static string ToJsonPretty<T>(this T obj)
-    {
-        if (obj == null) return "null";
-        return JsonSerializer.Serialize(obj, PrettyOptions);
-    }
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="obj">The object to serialize.</param>
+    /// <returns>A pretty-printed JSON string representation of the object, or "null" if the object is null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="obj"/> is null and the type is a value type.</exception>
+    public static string ToJsonPretty<T>(this T obj) =>
+        obj is null
+            ? "null"
+            : JsonSerializer.Serialize(obj, PrettyOptions);
 
     /// <summary>
     /// Serializes an object to JSON bytes.
     /// </summary>
-    public static byte[] ToJsonBytes<T>(this T obj)
-    {
-        if (obj == null) return [];
-        var json = obj.ToJson();
-        return Encoding.UTF8.GetBytes(json);
-    }
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="obj">The object to serialize.</param>
+    /// <returns>A UTF-8 encoded JSON byte array representation of the object, or an empty array if the object is null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="obj"/> is null and the type is a value type.</exception>
+    public static byte[] ToJsonBytes<T>(this T obj) =>
+        obj is null
+            ? Array.Empty<byte>()
+            : Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj, DefaultOptions));
 
     /// <summary>
     /// Deserializes a JSON string to an object.
-    /// Returns null if deserialization fails or input is null.
     /// </summary>
+    /// <typeparam name="T">The target type to deserialize into.</typeparam>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>The deserialized object, or null if deserialization fails or input is null/empty.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is null.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized to type <typeparamref name="T"/>.</exception>
     public static T? FromJson<T>(this string json)
     {
-        if (string.IsNullOrEmpty(json)) return default;
-        try
-        {
-            return JsonSerializer.Deserialize<T>(json, DefaultOptions);
-        }
-        catch
-        {
+        ArgumentNullException.ThrowIfNull(json);
+
+        if (string.IsNullOrEmpty(json))
             return default;
-        }
+
+        return JsonSerializer.Deserialize<T>(json, DefaultOptions);
     }
 
     /// <summary>
     /// Deserializes JSON bytes to an object.
-    /// Returns null if deserialization fails or input is empty.
     /// </summary>
+    /// <typeparam name="T">The target type to deserialize into.</typeparam>
+    /// <param name="data">The JSON byte array to deserialize.</param>
+    /// <returns>The deserialized object, or null if deserialization fails or input is null/empty.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="data"/> is null.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON bytes cannot be deserialized to type <typeparamref name="T"/>.</exception>
     public static T? FromJsonBytes<T>(this byte[] data)
     {
-        if (data == null || data.Length == 0) return default;
+        ArgumentNullException.ThrowIfNull(data);
+
+        if (data.Length == 0)
+            return default;
+
         try
         {
             var json = Encoding.UTF8.GetString(data);
             return json.FromJson<T>();
         }
-        catch
+        catch (JsonException ex)
         {
-            return default;
+            throw new JsonException("Failed to deserialize JSON bytes", ex);
         }
     }
 
     /// <summary>
     /// Attempts to deserialize JSON with error information.
     /// </summary>
+    /// <typeparam name="T">The target type to deserialize into.</typeparam>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="result">The deserialized result, or null if deserialization fails.</param>
+    /// <param name="error">Error message if deserialization fails, otherwise null.</param>
+    /// <returns>True if deserialization succeeds; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is null.</exception>
     public static bool TryFromJson<T>(this string json, out T? result, out string? error)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         result = default;
         error = null;
+
         if (string.IsNullOrEmpty(json))
         {
             error = "JSON string is null or empty";
@@ -124,12 +150,23 @@ public static class SerializationExtensions
     /// <summary>
     /// Determines if a string is valid JSON.
     /// </summary>
+    /// <param name="json">The JSON string to validate.</param>
+    /// <returns>True if the string is valid JSON; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is null.</exception>
     public static bool IsValidJson(this string json)
     {
-        if (string.IsNullOrEmpty(json)) return false;
+        ArgumentNullException.ThrowIfNull(json);
+
+        if (string.IsNullOrEmpty(json))
+            return false;
+
         try
         {
-            JsonDocument.Parse(json);
+            JsonDocument.Parse(json, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
             return true;
         }
         catch
@@ -141,10 +178,12 @@ public static class SerializationExtensions
     /// <summary>
     /// Creates a deep copy of an object by serializing and deserializing it.
     /// </summary>
-    public static T? DeepCopy<T>(this T obj)
-    {
-        if (obj == null) return default;
-        var json = obj.ToJson();
-        return json.FromJson<T>();
-    }
+    /// <typeparam name="T">The type of the object to deep copy.</typeparam>
+    /// <param name="obj">The object to deep copy.</param>
+    /// <returns>A deep copy of the object, or null if the input is null.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="obj"/> is null and the type is a value type.</exception>
+    public static T? DeepCopy<T>(this T obj) =>
+        obj is null
+            ? default
+            : JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj, DefaultOptions), DefaultOptions);
 }
