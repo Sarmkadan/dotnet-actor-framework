@@ -22,15 +22,15 @@ public static class ActorSystemConfigurationExtensions
     /// <param name="path">The hierarchical path for the new actor (e.g., "/user/workers/processor").</param>
     /// <param name="supervisor">Optional supervisor actor reference.</param>
     /// <returns>A task that completes with the actor reference when the actor is created.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if path is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configuration"/> or <paramref name="path"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="path"/> is null or whitespace.</exception>
     /// <exception cref="InvalidOperationException">Thrown if actor system is not initialized.</exception>
     public static async Task<ActorRef> CreateActorAsync(
         this ActorSystemConfiguration configuration,
         string path,
         ActorRef? supervisor = null)
     {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("Path cannot be null or empty.", nameof(path));
@@ -46,21 +46,20 @@ public static class ActorSystemConfigurationExtensions
     /// <param name="recipientPath">The path of the recipient actor.</param>
     /// <param name="message">The message to send.</param>
     /// <returns>A task that completes when the message has been dispatched.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if recipientPath or message is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if actor system is not initialized.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configuration"/>, <paramref name="recipientPath"/>, or <paramref name="message"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="recipientPath"/> is null or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if actor system is not initialized or recipient actor not found.</exception>
     public static async Task SendMessageAsync(
         this ActorSystemConfiguration configuration,
         string recipientPath,
         Message message)
     {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         if (string.IsNullOrWhiteSpace(recipientPath))
             throw new ArgumentException("Recipient path is null or empty.", nameof(recipientPath));
 
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         var actorPath = ActorPath.Parse(recipientPath);
         var recipient = configuration.GetActorSystem().GetActorRef(actorPath);
@@ -68,7 +67,10 @@ public static class ActorSystemConfigurationExtensions
         if (recipient == null)
             throw new InvalidOperationException($"Actor not found at path: {recipientPath}");
 
-        await configuration.SendMessageAsync(configuration.GetActorSystem().GetAllActors().First(), recipient, message);
+        var allActors = configuration.GetActorSystem().GetAllActors();
+        var sender = allActors.Count > 0 ? allActors[0] : throw new InvalidOperationException("No actors available to send message from.");
+
+        await configuration.SendMessageAsync(sender, recipient, message);
     }
 
     /// <summary>
@@ -77,13 +79,13 @@ public static class ActorSystemConfigurationExtensions
     /// <param name="configuration">The actor system configuration.</param>
     /// <param name="includeDetailedStats">Whether to include detailed statistics in the report.</param>
     /// <returns>A formatted health report string.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configuration"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown if actor system is not initialized.</exception>
     public static string GetHealthReport(
         this ActorSystemConfiguration configuration,
         bool includeDetailedStats = false)
     {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var healthSummary = configuration.GetHealthSummary();
         var stats = configuration.GetStatistics();
@@ -124,13 +126,13 @@ public static class ActorSystemConfigurationExtensions
     /// <param name="configuration">The actor system configuration.</param>
     /// <param name="healthThreshold">Minimum health percentage required (default: 90%).</param>
     /// <returns>True if the system is healthy; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configuration"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown if actor system is not initialized.</exception>
     public static bool IsHealthy(
         this ActorSystemConfiguration configuration,
         double healthThreshold = 90.0)
     {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var healthSummary = configuration.GetHealthSummary();
         return healthSummary.GetHealthPercentage() >= healthThreshold;
