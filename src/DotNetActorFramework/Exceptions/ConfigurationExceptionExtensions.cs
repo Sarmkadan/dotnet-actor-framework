@@ -12,7 +12,7 @@ namespace DotNetActorFramework.Exceptions
         /// </summary>
         /// <param name="exception">The exception to check. Cannot be null.</param>
         /// <returns><see langword="true"/> if the exception is an <see cref="ActorSystemConfigurationException"/>; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
         public static bool IsActorSystemConfigurationException(this ConfigurationException exception)
         {
             ArgumentNullException.ThrowIfNull(exception);
@@ -24,7 +24,7 @@ namespace DotNetActorFramework.Exceptions
         /// </summary>
         /// <param name="exception">The exception to check. Cannot be null.</param>
         /// <returns><see langword="true"/> if the exception is a <see cref="MailboxConfigurationException"/>; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
         public static bool IsMailboxConfigurationException(this ConfigurationException exception)
         {
             ArgumentNullException.ThrowIfNull(exception);
@@ -36,7 +36,7 @@ namespace DotNetActorFramework.Exceptions
         /// </summary>
         /// <param name="exception">The exception to check. Cannot be null.</param>
         /// <returns><see langword="true"/> if the exception is a <see cref="PersistenceConfigurationException"/>; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
         public static bool IsPersistenceConfigurationException(this ConfigurationException exception)
         {
             ArgumentNullException.ThrowIfNull(exception);
@@ -47,8 +47,14 @@ namespace DotNetActorFramework.Exceptions
         /// Gets a human-readable string representing the type of configuration exception.
         /// </summary>
         /// <param name="exception">The exception to categorize. Cannot be null.</param>
-        /// <returns>A string representing the configuration type ("Actor System", "Mailbox", "Persistence", or "Unknown").</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+        /// <returns>
+        /// A string representing the configuration type:
+        /// - "Actor System" if the exception is an <see cref="ActorSystemConfigurationException"/>
+        /// - "Mailbox" if the exception is a <see cref="MailboxConfigurationException"/>
+        /// - "Persistence" if the exception is a <see cref="PersistenceConfigurationException"/>
+        /// - "Unknown" otherwise
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
         public static string GetConfigurationType(this ConfigurationException exception)
         {
             ArgumentNullException.ThrowIfNull(exception);
