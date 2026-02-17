@@ -170,30 +170,18 @@ public class TestProbe
     /// </summary>
     public async Task<Envelope?> ExpectMessageAsync(TimeSpan? timeout = null)
     {
-        var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
-        try
-        {
-            return await Task.WhenAny(
-                _nextMessage.Task,
-                Task.Delay(Timeout.Infinite, cts.Token)
-            ).ContinueWith(t => _nextMessage.Task.IsCompleted ? _nextMessage.Task.Result : null);
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
+        using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
+        var completed = await Task.WhenAny(
+            _nextMessage.Task,
+            Task.Delay(Timeout.Infinite, cts.Token));
+
+        return completed == _nextMessage.Task ? await _nextMessage.Task : null;
     }
 
     /// <summary>
     /// Gets all received messages without consuming them.
     /// </summary>
-    public IReadOnlyList<Envelope> GetAllMessages()
-    {
-        var list = new List<Envelope>();
-        while (_messages.TryDequeue(out var envelope))
-            list.Add(envelope);
-        return list.AsReadOnly();
-    }
+    public IReadOnlyList<Envelope> GetAllMessages() => _messages.ToArray();
 
     /// <summary>
     /// Clears all captured messages.

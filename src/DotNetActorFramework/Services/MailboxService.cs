@@ -318,6 +318,7 @@ public class Mailbox : IMailbox
 public class PriorityMailbox : IMailbox
 {
     private readonly PriorityQueue<Envelope, int> _queue = new();
+    private readonly object _queueLock = new();
     private readonly SemaphoreSlim _availableSemaphore;
     public Guid ActorId { get; }
     public int Capacity { get; }
@@ -349,8 +350,13 @@ public class PriorityMailbox : IMailbox
         if (!await _availableSemaphore.WaitAsync(100))
             return false;
 
-        // The lower the priority value, the higher the priority
-        _queue.Enqueue(envelope, -envelope.Message.Priority);
+        // PriorityQueue dequeues the smallest priority value first, so negate the
+        // message priority to make higher-priority messages dequeue first.
+        // PriorityQueue is not thread-safe, so guard it with a lock.
+        lock (_queueLock)
+        {
+            _queue.Enqueue(envelope, -envelope.Message.Priority);
+        }
         return true;
     }
 
@@ -363,7 +369,14 @@ public class PriorityMailbox : IMailbox
             throw new ObjectDisposedException(nameof(PriorityMailbox));
         await Task.Yield(); // Yield to allow other tasks to run
 
-        if (_queue.TryDequeue(out var envelope, out _))
+        bool dequeued;
+        Envelope? envelope;
+        lock (_queueLock)
+        {
+            dequeued = _queue.TryDequeue(out envelope, out _);
+        }
+
+        if (dequeued)
         {
             _availableSemaphore.Release();
             return envelope;
@@ -375,17 +388,23 @@ public class PriorityMailbox : IMailbox
     /// <summary>
     /// Gets the number of messages in this priority mailbox.
     /// </summary>
-    public int GetSize() => _queue.Count;
+    public int GetSize()
+    {
+        lock (_queueLock)
+        {
+            return _queue.Count;
+        }
+    }
 
     /// <summary>
     /// Checks if this priority mailbox is full.
     /// </summary>
-    public bool IsFull => _queue.Count >= Capacity;
+    public bool IsFull => GetSize() >= Capacity;
 
     /// <summary>
     /// Gets the load factor of this priority mailbox (0-1).
     /// </summary>
-    public double GetLoadFactor() => (double)_queue.Count / Capacity;
+    public double GetLoadFactor() => (double)GetSize() / Capacity;
 
     /// <summary>
     /// Disposes the managed resources used by the PriorityMailbox.

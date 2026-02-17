@@ -12,7 +12,7 @@ namespace DotNetActorFramework.Integration;
 /// Publisher for integration events that need to be sent to external systems.
 /// Queues events for async delivery and ensures at-least-once semantics.
 /// </summary>
-public class IntegrationEventPublisher
+public class IntegrationEventPublisher : IDisposable
 {
     private readonly ConcurrentQueue<IntegrationEventEnvelope> _queue = [];
     private readonly WebhookDispatcher _webhookDispatcher;
@@ -23,8 +23,9 @@ public class IntegrationEventPublisher
     {
         _webhookDispatcher = webhookDispatcher ?? throw new ArgumentNullException(nameof(webhookDispatcher));
 
-        // Process queued events every 100ms
-        _processingTimer = new Timer(_ => ProcessQueuedEventsAsync(), null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+        // Process queued events every 100ms. The returned task is intentionally not awaited
+        // (timer callbacks cannot await); ProcessQueuedEventsAsync observes all exceptions itself.
+        _processingTimer = new Timer(_ => _ = ProcessQueuedEventsAsync(), null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
     }
 
     /// <summary>
@@ -52,7 +53,7 @@ public class IntegrationEventPublisher
     /// </summary>
     public int GetQueueLength() => _queue.Count;
 
-    private async void ProcessQueuedEventsAsync()
+    private async Task ProcessQueuedEventsAsync()
     {
         if (_isProcessing)
             return;
@@ -109,7 +110,7 @@ public class IntegrationEventPublisher
 public class DuplicateEventFilteringPublisher
 {
     private readonly EventBus _eventBus;
-    private readonly HashSet<Guid> _processedEventIds = [];
+    private readonly Dictionary<Guid, DateTime> _processedEventIds = [];
     private readonly object _lockObject = new();
     private readonly TimeSpan _deduplicationWindow;
 
@@ -120,19 +121,30 @@ public class DuplicateEventFilteringPublisher
     }
 
     /// <summary>
-    /// Publishes an event only if it hasn't been seen recently.
+    /// Publishes an event only if it hasn't been seen within the deduplication window.
     /// </summary>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : IDomainEvent
     {
         if (@event == null)
             return;
 
+        var now = DateTime.UtcNow;
+
         lock (_lockObject)
         {
-            if (_processedEventIds.Contains(@event.EventId))
-                return; // Already processed
+            // Evict entries that have fallen outside the deduplication window
+            var cutoff = now - _deduplicationWindow;
+            var expired = _processedEventIds
+                .Where(kvp => kvp.Value < cutoff)
+                .Select(kvp => kvp.Key)
+                .ToList();
+            foreach (var id in expired)
+                _processedEventIds.Remove(id);
 
-            _processedEventIds.Add(@event.EventId);
+            if (_processedEventIds.ContainsKey(@event.EventId))
+                return; // Already processed within the window
+
+            _processedEventIds[@event.EventId] = now;
         }
 
         await _eventBus.PublishAsync(@event);

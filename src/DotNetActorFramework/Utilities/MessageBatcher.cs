@@ -12,12 +12,19 @@ namespace DotNetActorFramework.Utilities;
 /// Batches messages together for more efficient processing.
 /// Groups messages by type or destination and processes them in batches.
 /// </summary>
-public class MessageBatcher
+public class MessageBatcher : IDisposable
 {
     private readonly int _batchSize;
     private readonly TimeSpan _batchTimeout;
     private readonly ConcurrentDictionary<string, MessageBatch> _batches = [];
     private readonly Timer _flushTimer;
+
+    /// <summary>
+    /// Raised by the background timer when a batch exceeds the batch timeout.
+    /// When no handler is attached, expired batches are retained until they are
+    /// filled or explicitly flushed, so no messages are lost.
+    /// </summary>
+    public event Action<string, IReadOnlyList<Message>>? BatchExpired;
 
     public MessageBatcher(int batchSize = 100, TimeSpan? batchTimeout = null)
     {
@@ -32,24 +39,35 @@ public class MessageBatcher
     }
 
     /// <summary>
-    /// Adds a message to a batch and returns it when the batch is full or should be flushed.
+    /// Adds a message to a batch and returns the batch contents when the batch is full.
+    /// Returns <c>null</c> while the batch is still filling.
     /// </summary>
     public IEnumerable<Message>? AddMessage(string batchKey, Message message)
     {
         if (string.IsNullOrWhiteSpace(batchKey) || message == null)
             return null;
 
-        var batch = _batches.GetOrAdd(batchKey, _ => new MessageBatch(_batchSize, _batchTimeout));
-
-        batch.Add(message);
-
-        if (batch.Count >= _batchSize)
+        while (true)
         {
-            _batches.TryRemove(batchKey, out var fullBatch);
-            return fullBatch?.Messages.ToList();
-        }
+            var batch = _batches.GetOrAdd(batchKey, _ => new MessageBatch());
+            var count = batch.TryAdd(message);
 
-        return null;
+            if (count < 0)
+            {
+                // The batch was flushed concurrently; drop the stale entry and retry
+                _batches.TryRemove(new KeyValuePair<string, MessageBatch>(batchKey, batch));
+                continue;
+            }
+
+            if (count >= _batchSize)
+            {
+                _batches.TryRemove(new KeyValuePair<string, MessageBatch>(batchKey, batch));
+                var messages = batch.Close();
+                return messages.Count > 0 ? messages : null;
+            }
+
+            return null;
+        }
     }
 
     /// <summary>
@@ -60,7 +78,8 @@ public class MessageBatcher
         if (!_batches.TryRemove(batchKey, out var batch))
             return null;
 
-        return batch.Count > 0 ? batch.Messages.ToList() : null;
+        var messages = batch.Close();
+        return messages.Count > 0 ? messages : null;
     }
 
     /// <summary>
@@ -72,8 +91,12 @@ public class MessageBatcher
 
         foreach (var kvp in _batches)
         {
-            if (_batches.TryRemove(kvp.Key, out var batch) && batch.Count > 0)
-                result[kvp.Key] = batch.Messages.ToList();
+            if (_batches.TryRemove(kvp.Key, out var batch))
+            {
+                var messages = batch.Close();
+                if (messages.Count > 0)
+                    result[kvp.Key] = messages;
+            }
         }
 
         return result;
@@ -81,14 +104,34 @@ public class MessageBatcher
 
     private void FlushExpiredBatches()
     {
-        var now = DateTime.UtcNow;
-        var expiredKeys = _batches
-            .Where(kvp => now - kvp.Value.CreatedAt > _batchTimeout && kvp.Value.Count > 0)
-            .Select(kvp => kvp.Key)
-            .ToList();
+        var handler = BatchExpired;
+        if (handler == null)
+            return; // Nobody consumes expired batches; keep them so messages are not lost
 
-        foreach (var key in expiredKeys)
-            _batches.TryRemove(key, out _);
+        var now = DateTime.UtcNow;
+
+        foreach (var kvp in _batches)
+        {
+            if (now - kvp.Value.CreatedAt <= _batchTimeout || kvp.Value.Count == 0)
+                continue;
+
+            if (!_batches.TryRemove(kvp.Key, out var batch))
+                continue;
+
+            var messages = batch.Close();
+            if (messages.Count == 0)
+                continue;
+
+            try
+            {
+                handler(kvp.Key, messages);
+            }
+            catch (Exception ex)
+            {
+                // A faulty subscriber must not stop the flush timer
+                System.Diagnostics.Debug.WriteLine($"BatchExpired handler failed for '{kvp.Key}': {ex.Message}");
+            }
+        }
     }
 
     public void Dispose()
@@ -96,24 +139,53 @@ public class MessageBatcher
         _flushTimer?.Dispose();
     }
 
-    private class MessageBatch
+    private sealed class MessageBatch
     {
         private readonly List<Message> _messages = [];
-        public int Capacity { get; }
-        public DateTime CreatedAt { get; }
+        private readonly object _sync = new();
+        private bool _closed;
 
-        public MessageBatch(int capacity, TimeSpan timeout)
+        public DateTime CreatedAt { get; } = DateTime.UtcNow;
+
+        public int Count
         {
-            Capacity = capacity;
-            CreatedAt = DateTime.UtcNow;
+            get
+            {
+                lock (_sync)
+                {
+                    return _messages.Count;
+                }
+            }
         }
 
-        public int Count => _messages.Count;
-        public IReadOnlyList<Message> Messages => _messages.AsReadOnly();
-
-        public void Add(Message message)
+        /// <summary>
+        /// Adds a message and returns the resulting count, or -1 when the batch is already closed.
+        /// </summary>
+        public int TryAdd(Message message)
         {
-            _messages.Add(message);
+            lock (_sync)
+            {
+                if (_closed)
+                    return -1;
+
+                _messages.Add(message);
+                return _messages.Count;
+            }
+        }
+
+        /// <summary>
+        /// Closes the batch and returns its contents. Returns an empty list when already closed.
+        /// </summary>
+        public List<Message> Close()
+        {
+            lock (_sync)
+            {
+                if (_closed)
+                    return [];
+
+                _closed = true;
+                return [.. _messages];
+            }
         }
     }
 }
@@ -141,23 +213,25 @@ public class MessageThrottler
     /// </summary>
     public async Task ThrottleAsync()
     {
+        TimeSpan delay;
+
         lock (_lockObject)
         {
             var now = DateTime.UtcNow;
             if (now < _nextAllowedTime)
             {
-                var delayMs = (long)(_nextAllowedTime - now).TotalMilliseconds;
+                delay = _nextAllowedTime - now;
                 _nextAllowedTime = _nextAllowedTime.AddMilliseconds(1000.0 / _messagesPerSecond);
-
-                Task.Delay((int)delayMs).Wait();
             }
             else
             {
+                delay = TimeSpan.Zero;
                 _nextAllowedTime = now.AddMilliseconds(1000.0 / _messagesPerSecond);
             }
         }
 
-        await Task.CompletedTask;
+        if (delay > TimeSpan.Zero)
+            await Task.Delay(delay);
     }
 
     /// <summary>
@@ -206,9 +280,18 @@ public class MessageDeduplicator
     {
         lock (_lockObject)
         {
-            // Clean up old entries
+            // Clean up entries that have left the deduplication window.
+            // _timestampedIds is ordered by insertion time, so expired entries form a prefix.
             var cutoff = DateTime.UtcNow - _deduplicationWindow;
-            _timestampedIds.RemoveAll(x => x.timestamp < cutoff);
+            var expiredCount = 0;
+            while (expiredCount < _timestampedIds.Count && _timestampedIds[expiredCount].timestamp < cutoff)
+            {
+                _processedIds.Remove(_timestampedIds[expiredCount].id);
+                expiredCount++;
+            }
+
+            if (expiredCount > 0)
+                _timestampedIds.RemoveRange(0, expiredCount);
 
             return _processedIds.Contains(messageId);
         }

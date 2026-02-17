@@ -71,6 +71,11 @@ public class ActorSystem
 
         lock (_lockObject)
         {
+            // Re-check: another caller may have registered the same path while
+            // this actor was being initialized outside the lock.
+            if (_pathIndex.ContainsKey(path))
+                throw new InvalidOperationException($"Actor already exists at path: {path}");
+
             _actors[actor.Id] = actor;
             _pathIndex[path] = actor.Id;
         }

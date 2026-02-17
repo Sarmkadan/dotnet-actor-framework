@@ -100,7 +100,9 @@ public class EventBus
         if (@event == null)
             throw new ArgumentNullException(nameof(@event));
 
-        var eventType = @event.GetType().Name;
+        // Look up by the static type parameter so it matches the key used by Subscribe;
+        // handlers are stored as EventHandler<TEvent> and would otherwise be silently skipped.
+        var eventType = typeof(TEvent).Name;
         List<Delegate>? handlers = null;
 
         lock (_lockObject)

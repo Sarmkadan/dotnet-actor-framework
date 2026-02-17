@@ -94,7 +94,7 @@ public class BackgroundWorkerService : IDisposable
             try
             {
                 await worker.OnStartAsync();
-                ExecuteWorkerLoop(kvp.Key, worker, cts.Token);
+                kvp.Value.Task = ExecuteWorkerLoop(kvp.Key, worker, cts.Token);
             }
             catch (Exception ex)
             {
@@ -152,10 +152,14 @@ public class BackgroundWorkerService : IDisposable
         if (!_workers.TryGetValue(workerId, out var workerTask))
             return null;
 
+        var isRunning = _isRunning
+            && _cancellationSources.TryGetValue(workerId, out var cts)
+            && !cts.Token.IsCancellationRequested;
+
         return new WorkerStatus
         {
             WorkerId = workerId,
-            IsRunning = _isRunning && !_cancellationSources[workerId].Token.IsCancellationRequested,
+            IsRunning = isRunning,
             LastExecutedAt = workerTask.LastExecutedAt,
             ExecutionCount = workerTask.ExecutionCount,
             ErrorCount = workerTask.ErrorCount,
@@ -163,10 +167,13 @@ public class BackgroundWorkerService : IDisposable
         };
     }
 
-    private async void ExecuteWorkerLoop(string workerId, IBackgroundWorker worker, CancellationToken ct)
+    private async Task ExecuteWorkerLoop(string workerId, IBackgroundWorker worker, CancellationToken ct)
     {
         if (!_workers.TryGetValue(workerId, out var workerTask))
             return;
+
+        // Let the caller capture the returned task before the first iteration runs
+        await Task.Yield();
 
         while (!ct.IsCancellationRequested)
         {
@@ -227,7 +234,7 @@ public class BackgroundWorkerService : IDisposable
 /// </summary>
 public class WorkerStatus
 {
-    public string WorkerId { get; set; }
+    public string WorkerId { get; set; } = string.Empty;
     public bool IsRunning { get; set; }
     public DateTime? LastExecutedAt { get; set; }
     public long ExecutionCount { get; set; }
