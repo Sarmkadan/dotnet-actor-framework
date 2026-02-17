@@ -76,7 +76,7 @@ public class RateLimitingMiddleware : IActorMiddleware
 /// Each actor path gets its own <see cref="TokenBucket"/> that is created lazily on first use.
 /// Buckets are refilled every 100 ms (one-tenth of a second) to smooth out burst distribution.
 /// </remarks>
-public class RateLimiter
+public class RateLimiter : IDisposable
 {
     private readonly ConcurrentDictionary<string, TokenBucket> _buckets;
     private readonly int _tokensPerSecond;

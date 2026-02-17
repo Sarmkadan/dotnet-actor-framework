@@ -16,7 +16,7 @@ namespace DotNetActorFramework.Integration;
 /// HTTP client for communicating with actors over HTTP.
 /// Enables REST-based actor invocation and message sending.
 /// </summary>
-public class HttpActorClient
+public class HttpActorClient : IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;

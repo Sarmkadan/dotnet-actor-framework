@@ -121,7 +121,9 @@ public class ConnectionManager : IDisposable
 
         try
         {
-            using var connection = GetConnection();
+            // Do not dispose here: the connection stays in the pool and disposing it
+            // would make every subsequent GetConnection call return a dead instance.
+            var connection = GetConnection();
             connection.Open();
             connection.Close();
             return Task.FromResult(true);

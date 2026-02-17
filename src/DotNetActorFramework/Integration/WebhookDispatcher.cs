@@ -28,7 +28,7 @@ public class WebhookConfig
 /// Dispatcher for sending domain events to external webhooks.
 /// Enables integration with external systems and event logging services.
 /// </summary>
-public class WebhookDispatcher
+public class WebhookDispatcher : IDisposable
 {
     private readonly List<WebhookConfig> _webhooks = [];
     private readonly HttpClient _httpClient;
@@ -115,9 +115,9 @@ public class WebhookDispatcher
             try
             {
                 var json = @event.ToJson();
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync(config.Url, content);
+                using var response = await _httpClient.PostAsync(config.Url, content);
 
                 if (response.IsSuccessStatusCode)
                     return; // Success

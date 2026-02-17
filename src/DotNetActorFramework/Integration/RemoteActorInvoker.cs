@@ -34,7 +34,7 @@ public interface IRemoteActorInvoker
 /// HTTP-based remote actor invoker.
 /// Uses HTTP to communicate with actors in remote systems.
 /// </summary>
-public class HttpRemoteActorInvoker : IRemoteActorInvoker
+public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
 {
     private readonly HttpActorClient _client;
     private readonly Dictionary<string, string> _remoteActorUrls = [];
@@ -158,6 +158,7 @@ public class RemoteActorCircuitBreaker
             if (_states.TryGetValue(remoteActorPath, out var state))
             {
                 state.FailureCount = 0;
+                state.IsOpen = false;
                 state.LastSuccessAt = DateTime.UtcNow;
             }
         }

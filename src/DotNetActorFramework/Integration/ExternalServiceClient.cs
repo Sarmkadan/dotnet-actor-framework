@@ -14,7 +14,7 @@ namespace DotNetActorFramework.Integration;
 /// Generic HTTP client for integrating with external services.
 /// Provides convenient methods for making REST API calls with error handling and retries.
 /// </summary>
-public class ExternalServiceClient
+public class ExternalServiceClient : IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
@@ -47,7 +47,7 @@ public class ExternalServiceClient
         {
             return await RetryAsync(async () =>
             {
-                var response = await _httpClient.GetAsync(url);
+                using var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -83,13 +83,15 @@ public class ExternalServiceClient
 
         var url = CombineUrl(endpoint);
         var json = body.ToJson();
-        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         try
         {
             return await RetryAsync(async () =>
             {
-                var response = await _httpClient.PostAsync(url, content);
+                // Create the content inside the retry callback: HttpClient disposes
+                // request content after sending, so it cannot be reused across attempts.
+                using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync(url, content);
                 response.EnsureSuccessStatusCode();
 
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -118,13 +120,15 @@ public class ExternalServiceClient
         if (string.IsNullOrWhiteSpace(endpoint))
             throw new ArgumentException("Endpoint cannot be empty.", nameof(endpoint));
 
+        ArgumentNullException.ThrowIfNull(body);
+
         var url = CombineUrl(endpoint);
         var json = body.ToJson();
-        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.PutAsync(url, content);
+            using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            using var response = await _httpClient.PutAsync(url, content);
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -143,7 +147,7 @@ public class ExternalServiceClient
         var url = CombineUrl(endpoint);
         return await RetryAsync(async () =>
         {
-            var response = await _httpClient.DeleteAsync(url);
+            using var response = await _httpClient.DeleteAsync(url);
             response.EnsureSuccessStatusCode();
             return true;
         });
