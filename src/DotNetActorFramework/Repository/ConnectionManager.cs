@@ -1,7 +1,10 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
+
+using System.Data;
+using System.Data.Common;
 
 namespace DotNetActorFramework.Repository;
 
@@ -11,10 +14,23 @@ namespace DotNetActorFramework.Repository;
 public class ConnectionManager : IDisposable
 {
     private string? _connectionString;
-    private readonly Dictionary<string, object> _connectionPool = [];
+    private readonly Dictionary<string, PooledConnection> _connectionPool = [];
     private readonly object _lockObject = new();
     private bool _disposed;
+    private readonly string _providerName;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
+    /// </summary>
+    /// <param name="providerName">The ADO.NET provider invariant name.</param>
+    public ConnectionManager(string providerName = "System.Data.SqlClient")
+    {
+        _providerName = providerName ?? throw new ArgumentNullException(nameof(providerName));
+    }
+
+    /// <summary>
+    /// Gets or sets the connection string for database connections.
+    /// </summary>
     public string? ConnectionString
     {
         get => _connectionString;
@@ -28,12 +44,20 @@ public class ConnectionManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the current pool size.
+    /// </summary>
     public int PoolSize => _connectionPool.Count;
+
+    /// <summary>
+    /// Gets a value indicating whether the connection manager is initialized with a connection string.
+    /// </summary>
     public bool IsConnected => !string.IsNullOrWhiteSpace(_connectionString);
 
     /// <summary>
     /// Initializes the connection manager with a connection string.
     /// </summary>
+    /// <param name="connectionString">The database connection string.</param>
     public void Initialize(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -45,7 +69,9 @@ public class ConnectionManager : IDisposable
     /// <summary>
     /// Gets or creates a connection from the pool.
     /// </summary>
-    public object? GetConnection(string key = "default")
+    /// <param name="key">The connection key (defaults to "default").</param>
+    /// <returns>A <see cref="PooledConnection"/> instance.</returns>
+    public PooledConnection GetConnection(string key = "default")
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Connection key cannot be null or empty.", nameof(key));
@@ -55,12 +81,12 @@ public class ConnectionManager : IDisposable
 
         lock (_lockObject)
         {
-            if (_connectionPool.TryGetValue(key, out var connection))
+            if (_connectionPool.TryGetValue(key, out var pooledConnection))
             {
-                return connection;
+                pooledConnection.UpdateLastUsed();
+                return pooledConnection;
             }
 
-            // Create a new mock connection for demonstration
             var newConnection = new PooledConnection(key, _connectionString!);
             _connectionPool[key] = newConnection;
             return newConnection;
@@ -70,6 +96,7 @@ public class ConnectionManager : IDisposable
     /// <summary>
     /// Releases a connection back to the pool.
     /// </summary>
+    /// <param name="key">The connection key.</param>
     public void ReleaseConnection(string key = "default")
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -77,29 +104,31 @@ public class ConnectionManager : IDisposable
 
         lock (_lockObject)
         {
-            // In a real implementation, the connection would be validated and reused
-            // For now, we keep it in the pool for reuse
+            if (_connectionPool.TryGetValue(key, out var pooledConnection))
+            {
+                pooledConnection.UpdateLastUsed();
+            }
         }
     }
 
     /// <summary>
-    /// Validates the current connection.
+    /// Validates the current connection by opening and closing it.
     /// </summary>
-    public async Task<bool> ValidateConnectionAsync()
+    public Task<bool> ValidateConnectionAsync()
     {
         if (!IsConnected)
-            return false;
+            return Task.FromResult(false);
 
         try
         {
-            var connection = GetConnection();
-            // Simulate validation
-            await Task.Delay(10);
-            return connection != null;
+            using var connection = GetConnection();
+            connection.Open();
+            connection.Close();
+            return Task.FromResult(true);
         }
         catch
         {
-            return false;
+            return Task.FromResult(false);
         }
     }
 
@@ -115,21 +144,25 @@ public class ConnectionManager : IDisposable
                 IsConnected = IsConnected,
                 PoolSize = _connectionPool.Count,
                 ConnectionString = _connectionString,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                ActiveConnections = _connectionPool.Count
             };
         }
     }
 
     /// <summary>
-    /// Clears the connection pool.
+    /// Clears the connection pool and disposes all connections.
     /// </summary>
     private void ClearPool()
     {
         lock (_lockObject)
         {
-            foreach (var conn in _connectionPool.Values.OfType<IDisposable>())
+            foreach (var connection in _connectionPool.Values)
             {
-                conn.Dispose();
+                if (connection is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
 
             _connectionPool.Clear();
@@ -152,8 +185,11 @@ public class ConnectionManager : IDisposable
 /// </summary>
 public class PooledConnection : IDisposable
 {
+    private bool _disposed;
+    private string? _connectionString;
+
     public string Key { get; }
-    public string ConnectionString { get; }
+    public string ConnectionString => _connectionString ?? string.Empty;
     public DateTime CreatedAt { get; }
     public DateTime LastUsedAt { get; private set; }
     public bool IsOpen { get; private set; }
@@ -161,10 +197,23 @@ public class PooledConnection : IDisposable
     public PooledConnection(string key, string connectionString)
     {
         Key = key ?? throw new ArgumentNullException(nameof(key));
-        ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         CreatedAt = DateTime.UtcNow;
         LastUsedAt = DateTime.UtcNow;
+        IsOpen = false;
+    }
+
+    public void Open()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(PooledConnection));
         IsOpen = true;
+        LastUsedAt = DateTime.UtcNow;
+    }
+
+    public void Close()
+    {
+        IsOpen = false;
     }
 
     public void UpdateLastUsed() => LastUsedAt = DateTime.UtcNow;
@@ -173,7 +222,11 @@ public class PooledConnection : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
         IsOpen = false;
+        _disposed = true;
         GC.SuppressFinalize(this);
     }
 }
@@ -185,6 +238,7 @@ public class ConnectionStatistics
 {
     public bool IsConnected { get; set; }
     public int PoolSize { get; set; }
+    public int ActiveConnections { get; set; }
     public string? ConnectionString { get; set; }
     public DateTime CreatedAt { get; set; }
 }
