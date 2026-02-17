@@ -81,12 +81,12 @@ public static class DateTimeExtensions
     }
 
     /// <summary>
-    /// Rounds a datetime to the nearest second, discarding milliseconds.
+    /// Truncates a datetime to whole seconds, discarding milliseconds and smaller tick components.
     /// </summary>
-    /// <param name="dateTime">The datetime to round.</param>
-    /// <returns>A new <see cref="DateTime"/> rounded to the nearest second.</returns>
+    /// <param name="dateTime">The datetime to truncate.</param>
+    /// <returns>A new <see cref="DateTime"/> truncated to the second, preserving the original <see cref="DateTime.Kind"/>.</returns>
     public static DateTime RoundToSecond(this DateTime dateTime)
-        => dateTime.AddMilliseconds(-dateTime.Millisecond);
+        => new(dateTime.Ticks - dateTime.Ticks % TimeSpan.TicksPerSecond, dateTime.Kind);
 
     /// <summary>
     /// Determines if the time is within the specified window.
@@ -112,5 +112,5 @@ public static class DateTimeExtensions
     /// <param name="dateTime">The datetime to format.</param>
     /// <returns>A formatted timestamp string.</returns>
     public static string GetLogTimestamp(this DateTime dateTime)
-        => dateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        => dateTime.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", System.Globalization.CultureInfo.InvariantCulture);
 }

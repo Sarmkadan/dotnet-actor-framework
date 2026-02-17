@@ -211,27 +211,31 @@ public class NullLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
 /// </summary>
 public static class ActorSystemExtensions
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ActorSystem, System.Collections.Concurrent.ConcurrentDictionary<string, object>> PropertyBags = new();
+
     /// <summary>
-    /// Sets a property on the actor system.
+    /// Sets a property on the actor system. Properties are stored per system instance
+    /// and released automatically when the system is garbage collected.
     /// </summary>
     public static void SetProperty(this ActorSystem system, string key, object value)
     {
         if (system == null || string.IsNullOrWhiteSpace(key))
             return;
 
-        // In a real implementation, this would use a property bag
-        System.Diagnostics.Debug.WriteLine($"Setting property: {key}");
+        var bag = PropertyBags.GetOrCreateValue(system);
+        bag[key] = value;
     }
 
     /// <summary>
-    /// Gets a property from the actor system.
+    /// Gets a property from the actor system, or <c>null</c> if the key has not been set.
     /// </summary>
     public static object? GetProperty(this ActorSystem system, string key)
     {
         if (system == null || string.IsNullOrWhiteSpace(key))
             return null;
 
-        // In a real implementation, this would use a property bag
-        return null;
+        return PropertyBags.TryGetValue(system, out var bag) && bag.TryGetValue(key, out var value)
+            ? value
+            : null;
     }
 }
