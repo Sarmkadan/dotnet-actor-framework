@@ -5,7 +5,8 @@ namespace DotNetActorFramework.Integration;
 
 /// <summary>
 /// Provides extension methods for <see cref="ExternalServiceClient"/> that offer safe, fire-and-forget style HTTP operations
-/// with automatic exception handling and graceful degradation.
+/// with automatic exception handling and graceful degradation. All methods swallow exceptions and return appropriate
+/// default values (e.g., <see langword="false"/> or <see langword="null"/>) to avoid propagating errors.
 /// </summary>
 public static class ExternalServiceClientExtensions
 {
