@@ -23,6 +23,39 @@ public class HealthMonitorActor : Actor
         }
     }
 }
-```
+
+// ... (rest of the file remains unchanged)
+
+## ActorRefExtensions
+
+The `ActorRefExtensions` provides a set of extension methods for interacting with actor references. 
+These extensions facilitate sending messages to actors, checking actor instance identity, 
+and retrieving age and detailed string representations of actors.
+
+### Usage Example
+```csharp
+public class MyActor : Actor
+{
+    public async Task HandleMessage(Message message)
+    {
+        var otherActorRef = new ActorRef(Guid.NewGuid(), "OtherActor");
+        
+        var response = await ActorRefExtensions.AskWithTimeoutAsync(otherActorRef, new MyMessage(), TimeSpan.FromSeconds(5));
+        
+        if (response != null)
+        {
+            Log.Information($"Received response from {otherActorRef}: {response}");
+        }
+        
+        var isSameInstance = ActorRefExtensions.IsSameInstance(otherActorRef, otherActorRef);
+        Log.Information($"Is same instance: {isSameInstance}");
+        
+        var age = ActorRefExtensions.GetAge(otherActorRef);
+        Log.Information($"Actor age: {age}");
+        
+        var detailedString = ActorRefExtensions.ToDetailedString(otherActorRef);
+        Log.Information($"Actor detailed string: {detailedString}");
+    }
+}
 
 // ... (rest of the file remains unchanged)
