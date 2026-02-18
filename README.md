@@ -1,33 +1,28 @@
 // ... (rest of the file remains unchanged)
 
-## ValidationExceptionExtensions
+## SupervisionServiceExtensions
 
-## ValidationExceptionExtensions
-The ValidationExceptionExtensions provide a set of convenience extension methods to create validation-related exceptions. These extensions simplify the process of throwing informative and context-rich exceptions during validation.
+The `SupervisionServiceExtensions` provides a set of extension methods for monitoring actor health, failure thresholds, and performance statistics. It enables tracking of actor failures, retrieving detailed statistics, and identifying problematic actors for supervision or logging purposes.
 
 ### Usage Example
 ```csharp
-public class MyActor : Actor
+public class HealthMonitorActor : Actor
 {
     public override async Task ReceiveAsync(Message message)
     {
-        var result = int.TryParse(message.Data.ToString(), out var numericValue);
-        if (!result)
+        var actorId = Guid.Parse("a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8");
+        
+        if (SupervisionServiceExtensions.HasExceededFailureThreshold(actorId))
         {
-            var ex = InvalidMessageException.WithExpectedFormat("expected a numeric value");
-            throw ex;
+            var stats = SupervisionServiceExtensions.GetActorStatistics(actorId);
+            var worstActor = SupervisionServiceExtensions.GetWorstPerformingActor();
+            
+            Log.Warning($"Actor {actorId} has {stats.FailureCount} failures (last at {stats.LastFailureTime}) " +
+                        $"and a {stats.TimeSinceLastFailure.TotalSeconds} second gap since last failure. " +
+                        $"Worst performer: {worstActor}");
         }
-
-        // More processing...
     }
 }
 ```
-
-### Available Extensions
-- `WithContext`: Adds contextual information to an InvalidActorPathException.
-- `WithExpectedFormat`: Creates an InvalidMessageException indicating the expected message format.
-- `WithActorType`: Generates an InvalidActorReferenceException specifying the expected actor type.
-- `CombineWith`: Merges multiple validation exceptions into a single ValidationException.
-- `IsValidationType`: Checks if an exception is of a validation type.
 
 // ... (rest of the file remains unchanged)
