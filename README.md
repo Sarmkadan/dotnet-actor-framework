@@ -23,6 +23,7 @@ public class HealthMonitorActor : Actor
         }
     }
 }
+```
 
 // ... (rest of the file remains unchanged)
 
@@ -57,5 +58,45 @@ public class MyActor : Actor
         Log.Information($"Actor detailed string: {detailedString}");
     }
 }
+```
+
+## ActorPathTestsExtensions
+
+`ActorPathTestsExtensions` contains helper methods used in unit‑tests to build and assert `ActorPath` hierarchies.  
+It simplifies creation of deep hierarchies, sibling paths, and provides fluent assertions for segment counts, parent/child relationships, and sibling checks.
+
+### Usage Example
+```csharp
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Tests;
+
+public class ActorPathTestsDemo
+{
+    public void Execute()
+    {
+        // Build a deep hierarchy path for testing
+        ActorPath deep = ActorPathTestsExtensions.CreateDeepHierarchy();
+
+        // Verify the path contains the expected segments
+        ActorPathTestsExtensions.ShouldHaveSegments(
+            deep,
+            new[] { "root", "level1", "level2", "leaf" });
+
+        // Create a sibling path of the same parent
+        ActorPath sibling = ActorPathTestsExtensions.CreateSibling(deep);
+
+        // Assert that the two paths are siblings
+        ActorPathTestsExtensions.ShouldBeSiblings(deep, sibling);
+
+        // Retrieve the parent of the deep path and assert the child relationship
+        ActorPath parent = ActorPathTestsExtensions.ShouldHaveParent(deep);
+        ActorPathTestsExtensions.ShouldBeDirectChildOf(deep, parent);
+
+        // Compute the relative path from sibling to deep
+        string[]? relative = ActorPathTestsExtensions.GetRelativePath(sibling, deep);
+        // `relative` contains the segment differences, or null if the paths share the same hierarchy
+    }
+}
+```
 
 // ... (rest of the file remains unchanged)
