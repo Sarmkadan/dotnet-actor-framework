@@ -50,4 +50,51 @@ await eventJournal.DeleteEventsAsync(actorId, actorPath, 1);
 await eventJournal.DeleteAllEventsAsync(actorId, actorPath);
 ```
 
+## ExternalServiceClient
+
+The `ExternalServiceClient` is a generic HTTP client designed for integrating with external RESTful services. It provides convenient methods for making GET, POST, PUT, and DELETE requests with built-in error handling, automatic retries, and JSON serialization support.
+
+### Usage Example
+
+```csharp
+// Create a client for a payment service API
+var paymentServiceClient = new ExternalServiceClient(
+    baseUrl: "https://api.paymentservice.com/v1",
+    maxRetries: 3,
+    retryDelay: TimeSpan.FromSeconds(1)
+);
+
+try
+{
+    // GET request - retrieve payment status
+    var paymentStatus = await paymentServiceClient.GetAsync<PaymentStatus>(
+        $"payments/{paymentId}"
+    );
+    Console.WriteLine($"Payment status: {paymentStatus?.Status}");
+
+    // POST request - create a new payment
+    var newPayment = await paymentServiceClient.PostAsync<PaymentResult>(
+        "payments",
+        new { amount = 99.99m, currency = "USD", customerId = customerId }
+    );
+    Console.WriteLine($"Created payment: {newPayment?.Id}");
+
+    // PUT request - update payment details
+    var updatedPayment = await paymentServiceClient.PutAsync<PaymentResult>(
+        $"payments/{paymentId}",
+        new { amount = 149.99m, status = "completed" }
+    );
+
+    // DELETE request - cancel a payment
+    var isDeleted = await paymentServiceClient.DeleteAsync(
+        $"payments/{paymentId}"
+    );
+    Console.WriteLine($"Payment deleted: {isDeleted}");
+}
+finally
+{
+    paymentServiceClient.Dispose();
+}
+```
+
 // ... (rest of the file remains unchanged)
