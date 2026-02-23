@@ -63,6 +63,68 @@ await persistenceService.DeleteSnapshotsAsync(actorId, actorPath, maxSequenceNr:
 await persistenceService.DeleteEventsAsync(actorId, actorPath, maxSequenceNr: 30);
 ```
 
+## IActorStatePersistence
+
+The `IActorStatePersistence` interface defines a contract for persisting and retrieving actor state, enabling actors to recover from failures and maintain state across restarts. Implementations can store state in memory, files, databases, or other storage backends. The interface provides basic CRUD operations for actor state management.
+
+### Usage Example
+
+```csharp
+// Using InMemoryActorStatePersistence for testing
+var persistence = new InMemoryActorStatePersistence();
+
+var actorId = Guid.NewGuid();
+var actorPath = new ActorPath("order-processing", "order-123");
+
+// Save actor state
+var orderState = new { OrderId = "order-123", Status = "Processing", Items = new[] { "item-1", "item-2" } };
+await persistence.SaveAsync(actorId, actorPath, orderState);
+
+// Check if state exists
+var exists = await persistence.ExistsAsync(actorId, actorPath);
+Console.WriteLine($"State exists: {exists}");
+
+// Load actor state
+var loadedState = await persistence.LoadAsync(actorId, actorPath);
+Console.WriteLine($"Loaded state: {loadedState}");
+
+// Delete actor state when no longer needed
+await persistence.DeleteAsync(actorId, actorPath);
+```
+
+### File-based Persistence
+
+```csharp
+// Using FileActorStatePersistence for persistent storage
+var filePersistence = new FileActorStatePersistence("/var/lib/actor-states");
+
+var actorId = Guid.NewGuid();
+var actorPath = new ActorPath("inventory", "warehouse-nyc");
+
+// Save state to file system
+var inventoryState = new InventoryState
+{
+    WarehouseId = "warehouse-nyc",
+    Items = new Dictionary<string, int>
+    {
+        ["sku-123"] = 150,
+        ["sku-456"] = 75
+    }
+};
+await filePersistence.SaveAsync(actorId, actorPath, inventoryState);
+
+// Load state from file system
+var loadedInventory = await filePersistence.LoadAsync(actorId, actorPath) as byte[];
+if (loadedInventory != null)
+{
+    var deserialized = JsonSerializer.Deserialize<InventoryState>(Encoding.UTF8.GetString(loadedInventory));
+    Console.WriteLine($"Warehouse {deserialized.WarehouseId} has {deserialized.Items.Count} items");
+}
+
+// Clean up when warehouse is closed
+await filePersistence.DeleteAsync(actorId, actorPath);
+```
+
 ## IDomainEvent
 
 The `IDomainEvent` interface represents a domain event in the actor system, providing a way to publish and subscribe to events. It defines properties such as `EventId`, `OccurredAt`, and `EventType`, which are used to identify and characterize the event.
