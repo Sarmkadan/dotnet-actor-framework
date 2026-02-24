@@ -20,6 +20,74 @@ var webhookDispatcher = new WebhookDispatcher();
 webhookDispatcher.RegisterWebhook(webhookConfig);
 ```
 
+## IntegrationEventPublisher
+
+The `IntegrationEventPublisher` is responsible for publishing domain events to an integration bus or message queue. It tracks event publishing attempts, handles duplicate event filtering, and provides visibility into the publishing pipeline through various metadata properties. The publisher supports both direct event publishing and deduplication filtering to prevent duplicate event processing.
+
+### Usage Example
+
+```csharp
+// Create a domain event
+guid orderId = Guid.NewGuid();
+var orderCreatedEvent = new OrderCreatedEvent
+{
+    OrderId = orderId,
+    CustomerId = Guid.NewGuid(),
+    Amount = 99.99m,
+    Items = new[] { new OrderItem { ProductId = 1, Quantity = 2 } }
+};
+
+// Create and configure the event publisher
+var eventPublisher = new IntegrationEventPublisher(orderCreatedEvent)
+{
+    Id = Guid.NewGuid(),
+    EnqueuedAt = DateTime.UtcNow
+};
+
+// Publish the event asynchronously
+await eventPublisher.PublishAsync();
+
+// Check queue status
+int queueLength = eventPublisher.GetQueueLength();
+Console.WriteLine($"Event {eventPublisher.Id} is in queue with {queueLength} items");
+
+// Dispose when done
+// This will clean up any resources and mark the event as processed
+eventPublisher.Dispose();
+```
+
+### Deduplication Filtering
+
+To prevent duplicate events from being processed, wrap the publisher with a deduplication filter:
+
+```csharp
+// Create the base publisher
+var basePublisher = new IntegrationEventPublisher(orderCreatedEvent);
+
+// Wrap it with deduplication filtering
+var deduplicationPublisher = new DuplicateEventFilteringPublisher(basePublisher);
+
+// Publish the event - duplicates will be filtered
+await deduplicationPublisher.PublishAsync<OrderCreatedEvent>();
+
+// The filter uses event IDs to detect duplicates
+Console.WriteLine($"Event deduplication cache cleared. Items filtered: {deduplicationPublisher.ClearDeduplicationCache()}");
+```
+
+### Properties and Methods
+
+- **Id**: Unique identifier for the event publisher instance
+- **Event**: The domain event being published
+- **EnqueuedAt**: When the event was enqueued for publishing
+- **ProcessedAt**: When the event was processed (nullable)
+- **Attempts**: Number of publishing attempts made
+- **PublishAsync()**: Publishes the event asynchronously
+- **GetQueueLength()**: Gets the current queue length
+- **Dispose()**: Disposes the publisher and cleans up resources
+- **DuplicateEventFilteringPublisher**: Wrapper to filter duplicate events
+- **PublishAsync<TEvent>()**: Generic method to publish events of specific type
+- **ClearDeduplicationCache()**: Clears the deduplication cache
+
 ## IRemoteActorInvoker
 
 The `IRemoteActorInvoker` interface provides the ability to invoke actors in remote systems across distributed environments. It enables communication between actors running in different processes or on different machines through HTTP-based remote calls. The interface supports both request-response patterns (`InvokeAsync`) and fire-and-forget messaging (`SendAsync`), along with health checking (`PingAsync`) to verify remote actor availability.
