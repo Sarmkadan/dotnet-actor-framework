@@ -1,161 +1,32 @@
 // ... (rest of the file remains unchanged)
 
-## WebhookConfig
+## HttpActorClient
 
-The `WebhookConfig` represents a configuration for a webhook endpoint. It defines how and when to dispatch events to an external service.
-
-### Usage Example
-
-```csharp
-var webhookConfig = new WebhookConfig
-{
-  Url = "https://example.com/webhooks",
-  EventType = "order.placed",
-  IsActive = true,
-  MaxRetries = 3,
-  RetryDelay = TimeSpan.FromSeconds(5)
-};
-
-var webhookDispatcher = new WebhookDispatcher();
-webhookDispatcher.RegisterWebhook(webhookConfig);
-```
-
-## IntegrationEventPublisher
-
-The `IntegrationEventPublisher` is responsible for publishing domain events to an integration bus or message queue. It tracks event publishing attempts, handles duplicate event filtering, and provides visibility into the publishing pipeline through various metadata properties. The publisher supports both direct event publishing and deduplication filtering to prevent duplicate event processing.
+The `HttpActorClient` is a client for communicating with actors over HTTP. It enables REST-based actor invocation and message sending.
 
 ### Usage Example
 
 ```csharp
-// Create a domain event
-guid orderId = Guid.NewGuid();
-var orderCreatedEvent = new OrderCreatedEvent
-{
-    OrderId = orderId,
-    CustomerId = Guid.NewGuid(),
-    Amount = 99.99m,
-    Items = new[] { new OrderItem { ProductId = 1, Quantity = 2 } }
-};
+var client = new HttpActorClient("https://example.com/actors");
+var response = await client.SendMessageAsync("my-actor", new MyMessage { Foo = "bar" });
+Console.WriteLine(response.StatusCode);
 
-// Create and configure the event publisher
-var eventPublisher = new IntegrationEventPublisher(orderCreatedEvent)
-{
-    Id = Guid.NewGuid(),
-    EnqueuedAt = DateTime.UtcNow
-};
+var actorState = await client.GetActorStateAsync<MyActorState>("my-actor");
+Console.WriteLine(actorState.State);
 
-// Publish the event asynchronously
-await eventPublisher.PublishAsync();
+var healthStatus = await client.GetActorHealthAsync("my-actor");
+Console.WriteLine(healthStatus.IsHealthy);
 
-// Check queue status
-int queueLength = eventPublisher.GetQueueLength();
-Console.WriteLine($"Event {eventPublisher.Id} is in queue with {queueLength} items");
-
-// Dispose when done
-// This will clean up any resources and mark the event as processed
-eventPublisher.Dispose();
-```
-
-### Deduplication Filtering
-
-To prevent duplicate events from being processed, wrap the publisher with a deduplication filter:
-
-```csharp
-// Create the base publisher
-var basePublisher = new IntegrationEventPublisher(orderCreatedEvent);
-
-// Wrap it with deduplication filtering
-var deduplicationPublisher = new DuplicateEventFilteringPublisher(basePublisher);
-
-// Publish the event - duplicates will be filtered
-await deduplicationPublisher.PublishAsync<OrderCreatedEvent>();
-
-// The filter uses event IDs to detect duplicates
-Console.WriteLine($"Event deduplication cache cleared. Items filtered: {deduplicationPublisher.ClearDeduplicationCache()}");
+var systemHealth = await client.GetSystemHealthAsync();
+Console.WriteLine(systemHealth.TotalActors);
 ```
 
 ### Properties and Methods
 
-- **Id**: Unique identifier for the event publisher instance
-- **Event**: The domain event being published
-- **EnqueuedAt**: When the event was enqueued for publishing
-- **ProcessedAt**: When the event was processed (nullable)
-- **Attempts**: Number of publishing attempts made
-- **PublishAsync()**: Publishes the event asynchronously
-- **GetQueueLength()**: Gets the current queue length
-- **Dispose()**: Disposes the publisher and cleans up resources
-- **DuplicateEventFilteringPublisher**: Wrapper to filter duplicate events
-- **PublishAsync<TEvent>()**: Generic method to publish events of specific type
-- **ClearDeduplicationCache()**: Clears the deduplication cache
-
-## IRemoteActorInvoker
-
-The `IRemoteActorInvoker` interface provides the ability to invoke actors in remote systems across distributed environments. It enables communication between actors running in different processes or on different machines through HTTP-based remote calls. The interface supports both request-response patterns (`InvokeAsync`) and fire-and-forget messaging (`SendAsync`), along with health checking (`PingAsync`) to verify remote actor availability.
-
-
-
-### Usage Example
-
-```csharp
-// Create an HTTP remote actor invoker pointing to the remote system
-var remoteInvoker = new HttpRemoteActorInvoker("https://remote-actor-system:5000");
-
-// Register a remote actor endpoint
-remoteInvoker.RegisterRemoteActor("order-processor", "https://remote-system/actors/order-processor");
-
-// Send a message to a remote actor (fire-and-forget)
-await remoteInvoker.SendAsync("order-processor", new ProcessOrderMessage { OrderId = 123 });
-
-// Invoke a remote actor and wait for response
-var result = await remoteInvoker.InvokeAsync<OrderResult>(
-    "order-processor",
-    new GetOrderStatus { OrderId = 123 },
-    TimeSpan.FromSeconds(30)
-);
-
-// Check if remote actor is reachable
-var isReachable = await remoteInvoker.PingAsync("order-processor");
+- `HttpActorClient(string baseUrl)`: Initializes a new instance of the `HttpActorClient` class.
+- `async Task<HttpResponseMessage> SendMessageAsync(string actorPath, Message message)`: Sends a message to an actor via HTTP POST.
+- `async Task<T?> GetActorStateAsync<T>(string actorPath)`: Gets an actor's state via HTTP GET.
+- `async Task<ActorHealthStatus?> GetActorHealthAsync(string actorPath)`: Gets an actor's health status via HTTP GET.
+- `async Task<SystemHealthStatus?> GetSystemHealthAsync()`: Gets the system health status via HTTP GET.
+- `void Dispose()`: Disposes the client.
 ```
-
-### Circuit Breaker Pattern
-
-The `RemoteActorCircuitBreaker` class helps prevent cascading failures by tracking call failures and temporarily blocking calls to unhealthy remote actors. When the failure threshold is reached, subsequent calls are rejected until either the timeout expires or successful calls resume.
-
-
-```csharp
-var circuitBreaker = new RemoteActorCircuitBreaker(failureThreshold: 5, timeout: TimeSpan.FromMinutes(2));
-
-// Track successful calls
-circuitBreaker.RecordSuccess("order-processor");
-
-// Track failed calls
-circuitBreaker.RecordFailure("order-processor");
-
-// Check if calls are allowed
-if (circuitBreaker.CanCall("order-processor"))
-{
-    // Safe to make remote call
-    await remoteInvoker.InvokeAsync<OrderResult>("order-processor", new GetOrderStatus { OrderId = 123 });
-}
-```
-
-### Properties and Methods
-
-- **HttpRemoteActorInvoker**: HTTP-based implementation of `IRemoteActorInvoker`
-- **RegisterRemoteActor(string actorPath, string httpUrl)**: Registers a remote actor endpoint
-- **InvokeAsync<T>(string remoteActorPath, Message message, TimeSpan? timeout)**: Invokes a remote actor and waits for response
-- **SendAsync(string remoteActorPath, Message message)**: Sends a message without waiting for response
-- **PingAsync(string remoteActorPath)**: Checks if remote actor is reachable
-- **Dispose()**: Disposes the HTTP client
-- **Result**: The result of the remote call (in `RemoteCallResult<T>`)
-- **IsSuccess**: Whether the remote call succeeded
-- **ErrorMessage**: Error message if the call failed
-- **ElapsedMilliseconds**: Duration of the remote call in milliseconds
-- **RemoteActorCircuitBreaker**: Circuit breaker for preventing cascading failures
-- **RecordSuccess(string remoteActorPath)**: Records a successful call
-- **RecordFailure(string remoteActorPath)**: Records a failed call
-- **CanCall(string remoteActorPath)**: Checks if calls to the remote actor should be allowed
-- **IsOpen**: Whether the circuit breaker is currently open
-- **FailureCount**: Number of consecutive failures
-- **OpenedAt**: When the circuit breaker was opened
-- **LastSuccessAt**: When the last successful call occurred
