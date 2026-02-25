@@ -103,3 +103,65 @@ await actorSystem.ShutdownAsync();
 ### Nested Types
 
 - `SystemHealthSummary`: Summary of the actor system health with properties like `SystemId`, `SystemName`, `TotalActors`, `HealthyActors`, `UnhealthyActors`, `ErrorActors`, `TotalMessages`, `TotalErrors`, and methods like `GetHealthPercentage()`, `GetErrorRate()`, and `IsHealthy`.
+
+## ActorPath
+
+The `ActorPath` class represents the hierarchical path to an actor in the actor system. Paths are immutable and uniquely identify an actor within a system, enabling parent-child relationships and hierarchical navigation.
+
+
+
+
+
+### Usage Example
+
+
+```csharp
+// Create a root actor path
+var rootPath = new ActorPath("/root");
+Console.WriteLine(rootPath.Path); // Output: /root
+Console.WriteLine(rootPath.Name); // Output: root
+Console.WriteLine(rootPath.GetDepth()); // Output: 1
+
+// Create a child actor path
+var userPath = rootPath.GetChild("users");
+Console.WriteLine(userPath.Path); // Output: /root/users
+Console.WriteLine(userPath.Name); // Output: users
+Console.WriteLine(userPath.GetDepth()); // Output: 2
+
+// Access parent-child relationships
+Console.WriteLine(userPath.Parent?.Path); // Output: /root
+Console.WriteLine(userPath.Parent?.Name); // Output: root
+
+// Parse a path from string
+var parsedPath = ActorPath.Parse("/root/users/user1");
+Console.WriteLine(parsedPath.Path); // Output: /root/users/user1
+
+// Check hierarchical relationships
+var orderPath = rootPath.GetChild("orders").GetChild("order123");
+Console.WriteLine(orderPath.IsDescendantOf(rootPath)); // Output: True
+Console.WriteLine(orderPath.IsDescendantOf(userPath)); // Output: False
+
+// Compare paths
+var path1 = new ActorPath("/root/users/user1");
+var path2 = new ActorPath("/root/users/user1");
+var path3 = new ActorPath("/root/users/user2");
+Console.WriteLine(path1.Equals(path2)); // Output: True
+Console.WriteLine(path1 == path2); // Output: True
+Console.WriteLine(path1.Equals(path3)); // Output: False
+```
+
+### Properties and Methods
+
+- `string Path { get; }`: Gets the full path string (e.g., "/root/users/user1").
+- `string Name { get; }`: Gets the name of this path segment (e.g., "user1" for "/root/users/user1").
+- `ActorPath? Parent { get; }`: Gets the parent path, or null if this is a root path.
+- `IReadOnlyList<string> Segments { get; }`: Gets the path segments as a read-only list.
+- `ActorPath(string path)`: Initializes a new instance of the `ActorPath` class.
+- `static ActorPath Parse(string path)`: Parses a string into an `ActorPath` instance.
+- `ActorPath GetChild(string childName)`: Creates a child path from this path.
+- `bool IsDescendantOf(ActorPath other)`: Checks if this path is a descendant of another path.
+- `int GetDepth()`: Gets the depth of this path in the hierarchy.
+- `override string ToString()`: Returns the path string.
+- `override bool Equals(object? obj)`: Override of Object.Equals.
+- `bool Equals(ActorPath? other)`: Compares this path with another path.
+- `override int GetHashCode()`: Override of Object.GetHashCode.
