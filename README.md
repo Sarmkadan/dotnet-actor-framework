@@ -1,42 +1,41 @@
 // ... (rest of the file remains unchanged)
 
-## LoadBasedRouter
+## ActorMetrics
 
-// ... (rest of the file remains unchanged)
-
-## ActorRef
-
-The `ActorRef` provides a thread-safe reference to an actor, enabling message sending and management of actor interactions. It encapsulates essential actor metadata and behavior.
+The `ActorMetrics` class tracks performance and behavior metrics for an actor, providing insights into its message processing and error rates.
 
 ### Usage Example
 
 ```csharp
-var parent = new ActorRef(new ActorPath("parent"), Guid.NewGuid());
-var child = new ActorRef(new ActorPath("parent", "child"), Guid.NewGuid());
+var metrics = new ActorMetrics(Guid.NewGuid(), new ActorPath("parent", "child"));
+metrics.RecordMessageReceived();
+metrics.RecordProcessingTime(100);
+metrics.RecordError();
 
-Console.WriteLine($"Path: {child.Path}, ID: {child.Id:N}, IsAlive: {child.IsAlive}, CreatedAt: {child.CreatedAt}");
-
-await child.SendAsync(new MyMessage()); // Example message sending
-
-var response = await child.AskAsync(new RequestMessage(), TimeSpan.FromSeconds(5));
-Console.WriteLine($"Received response: {response}");
-
-var parentRef = child.GetParent();
-Console.WriteLine($"Parent ActorRef: {parentRef?.ToString()}");
-
-Console.WriteLine(child.Equals(parentRef)); // Equality comparison
+Console.WriteLine($"ActorId: {metrics.ActorId}, ActorPath: {metrics.ActorPath}, MessageCount: {metrics.MessageCount}, ErrorCount: {metrics.ErrorCount}");
+Console.WriteLine($"ProcessedCount: {metrics.ProcessedCount}, AverageProcessingTimeMs: {metrics.AverageProcessingTimeMs}, CreatedAt: {metrics.CreatedAt}");
+Console.WriteLine($"LastMessageTime: {metrics.LastMessageTime}, MailboxDepth: {metrics.MailboxDepth}");
+Console.WriteLine($"ErrorRate: {metrics.GetErrorRate()}, SuccessRate: {metrics.GetSuccessRate()}, Uptime: {metrics.GetUptime()}");
+Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetSummary()}");
 ```
 
 ### Properties and Methods
 
-- `ActorPath Path { get; }`: Gets the path of the referenced actor.
-- `Guid Id { get; }`: Gets the unique identifier of the referenced actor.
-- `bool IsAlive { get; }`: Gets a value indicating whether the actor is alive.
+- `Guid ActorId { get; }`: Gets the unique identifier of the actor.
+- `ActorPath ActorPath { get; }`: Gets the path of the referenced actor.
+- `long MessageCount { get; private set; }`: Gets the total number of messages processed by the actor.
+- `long ErrorCount { get; private set; }`: Gets the total number of errors encountered by the actor.
+- `long ProcessedCount { get; private set; }`: Gets the total number of messages processed by the actor.
+- `double AverageProcessingTimeMs { get; private set; }`: Gets the average processing time of messages in milliseconds.
 - `DateTime CreatedAt { get; }`: Gets the UTC timestamp when the actor reference was created.
-- `async Task SendAsync(object message)`: Sends a message to the actor asynchronously.
-- `async Task<object?> AskAsync(object message, TimeSpan timeout)`: Sends a message and waits for a response within a specified timeout.
-- `ActorRef? GetParent()`: Gets the parent actor reference.
-- `override string ToString()`: Returns a string representation of the actor reference.
-- `override bool Equals(object? obj)`: Compares this actor reference with another object for equality.
-- `bool Equals(ActorRef? other)`: Compares this actor reference with another actor reference for equality.
-- `override int GetHashCode()`: Returns the hash code for this actor reference.
+- `DateTime? LastMessageTime { get; private set; }`: Gets the UTC timestamp of the last message received by the actor.
+- `int MailboxDepth { get; private set; }`: Gets the current number of messages waiting in the actor's mailbox.
+- `void RecordMessageReceived()`: Records that a message was received.
+- `void RecordProcessingTime(long elapsedMilliseconds)`: Records the processing time of a message in milliseconds.
+- `void RecordError()`: Records that an error occurred processing a message.
+- `void UpdateMailboxDepth(int depth)`: Updates the current mailbox depth snapshot.
+- `double GetErrorRate()`: Gets the error rate as a percentage.
+- `double GetSuccessRate()`: Gets the success rate as a percentage.
+- `TimeSpan GetUptime()`: Gets the total uptime since creation.
+- `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
+- `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
