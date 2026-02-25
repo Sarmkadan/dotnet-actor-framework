@@ -165,3 +165,27 @@ Console.WriteLine(path1.Equals(path3)); // Output: False
 - `override bool Equals(object? obj)`: Override of Object.Equals.
 - `bool Equals(ActorPath? other)`: Compares this path with another path.
 - `override int GetHashCode()`: Override of Object.GetHashCode.
+
+## Message
+
+The `Message` class is the base abstraction for all communication within the actor system, ensuring type safety and traceability for inter-actor interactions. It provides built-in metadata such as a `MessageId`, `CreatedAt` timestamp, and `Priority` for advanced scheduling.
+
+### Usage Example
+
+```csharp
+// Creating a command message
+var command = new ControlMessage("processData", new Dictionary<string, object> 
+{ 
+    { "dataId", "123" } 
+});
+
+// Accessing message properties
+Console.WriteLine($"Message: {command.Command}, Id: {command.MessageId}, Priority: {command.Priority}");
+
+// Handling a response
+var response = new ResponseMessage(response: "Success", isSuccess: true);
+if (response.IsSuccess)
+{
+    Console.WriteLine($"Response received: {response.Response}");
+}
+```
