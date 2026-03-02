@@ -17,6 +17,8 @@ public class ActorSystemOptions
 
     public int DefaultMailboxCapacity { get; set; } = ActorConstants.DefaultMailboxCapacity;
 
+    public MailboxType DefaultMailboxType { get; set; } = MailboxType.FIFO;
+
     public int DefaultTimeoutSeconds { get; set; } = ActorConstants.DefaultTimeoutSeconds;
 
     public int MaxMessageRetries { get; set; } = ActorConstants.MaxMessageRetries;
