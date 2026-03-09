@@ -10,8 +10,13 @@ namespace DotNetActorFramework.Middleware;
 
 /// <summary>
 /// Middleware that collects detailed metrics about message processing.
-/// Tracks latency, throughput, error rates, and other performance indicators.
+/// Tracks per-actor and per-message-type latency, throughput, and error rates
+/// and stores them in the associated <see cref="MetricsCollector"/>.
 /// </summary>
+/// <remarks>
+/// Runs at <c>Order = 200</c> so it executes last in the default pipeline and
+/// captures the full end-to-end processing time after all other middleware.
+/// </remarks>
 public class MetricsCollectionMiddleware : IActorMiddleware
 {
     public string Name => "MetricsCollectionMiddleware";
