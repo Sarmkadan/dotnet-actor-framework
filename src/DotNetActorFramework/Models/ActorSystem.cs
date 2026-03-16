@@ -162,6 +162,27 @@ public class ActorSystem
     }
 
     /// <summary>
+    /// Gets the metrics summary for a specific actor.
+    /// </summary>
+    /// <param name="path">The actor's hierarchical path.</param>
+    /// <returns>
+    /// The actor's <see cref="ActorMetricsSummary"/>, or <c>null</c> if no actor is registered at <paramref name="path"/>.
+    /// </returns>
+    public ActorMetricsSummary? GetActorMetricsSummary(ActorPath path)
+    {
+        if (path == null)
+            throw new ArgumentNullException(nameof(path));
+
+        lock (_lockObject)
+        {
+            if (_pathIndex.TryGetValue(path, out var id) && _actors.TryGetValue(id, out var actor))
+                return actor.Metrics.GetSummary();
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Gets a health summary of all actors.
     /// </summary>
     public SystemHealthSummary GetHealthSummary()
