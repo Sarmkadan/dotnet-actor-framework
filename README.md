@@ -104,6 +104,97 @@ await actorSystem.ShutdownAsync();
 
 - `SystemHealthSummary`: Summary of the actor system health with properties like `SystemId`, `SystemName`, `TotalActors`, `HealthyActors`, `UnhealthyActors`, `ErrorActors`, `TotalMessages`, `TotalErrors`, and methods like `GetHealthPercentage()`, `GetErrorRate()`, and `IsHealthy`.
 
+## Actor
+
+The `Actor` class is the fundamental building block of the actor system. Each actor is a lightweight, single-threaded entity that processes messages sequentially from its mailbox. Actors encapsulate their own state and communicate exclusively through asynchronous message passing, making them ideal for building concurrent, distributed systems with built-in fault tolerance.
+
+
+
+### Usage Example
+
+```csharp
+// Create a custom actor by inheriting from Actor
+public class CounterActor : Actor
+{
+    public CounterActor(ActorPath path, ActorRef? supervisor = null) 
+        : base(path, supervisor)
+    {
+        // Initialize state
+        SetState("count", 0);
+    }
+
+    protected override async Task OnInitializeAsync()
+    {
+        Console.WriteLine($"Counter actor initialized at {Path}");
+        await base.OnInitializeAsync();
+    }
+
+    protected override async Task OnReceiveAsync(Message message)
+    {
+        if (message is ControlMessage cm && cm.Command == "increment")
+        {
+            var currentCount = (int)(GetState("count") ?? 0);
+            SetState("count", currentCount + 1);
+            Console.WriteLine($"Count incremented to {currentCount + 1}");
+        }
+        else if (message is ControlMessage cm2 && cm2.Command == "get")
+        {
+            var currentCount = (int)(GetState("count") ?? 0);
+            Console.WriteLine($"Current count: {currentCount}");
+        }
+        await base.OnReceiveAsync(message);
+    }
+
+    protected override async Task OnStopAsync()
+    {
+        Console.WriteLine($"Counter actor stopping at {Path}");
+        await base.OnStopAsync();
+    }
+}
+
+// Usage in an actor system
+var actorSystem = new ActorSystem("MySystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+
+var counterPath = new ActorPath("/root/counter");
+var counterActor = new CounterActor(counterPath, rootActor.Ref);
+await counterActor.InitializeAsync();
+
+// Send messages to the actor
+await counterActor.ProcessMessageAsync(new ControlMessage("increment", null));
+await counterActor.ProcessMessageAsync(new ControlMessage("increment", null));
+await counterActor.ProcessMessageAsync(new ControlMessage("get", null));
+
+// Get actor information
+Console.WriteLine($"Actor ID: {counterActor.Id}");
+Console.WriteLine($"Actor Path: {counterActor.Path}");
+Console.WriteLine($"Actor State: {counterActor.State}");
+Console.WriteLine($"Created At: {counterActor.CreatedAt}");
+Console.WriteLine($"Metrics Summary: {counterActor.GetMetricsSummary()}");
+
+// Terminate the actor
+await counterActor.TerminateAsync();
+```
+
+### Properties and Methods
+
+- `Guid Id { get; }`: Gets the unique identifier assigned at construction time.
+- `ActorRef Ref { get; }`: Gets a serializable reference that other actors use to send messages to this actor.
+- `ActorPath Path { get; }`: Gets the hierarchical address within the actor system (e.g., "/user/orders/processor").
+- `ActorState State { get; }`: Gets the current lifecycle state of the actor.
+- `ActorMetrics Metrics { get; }`: Gets performance counters tracking messages processed, errors, and latency.
+- `DateTime CreatedAt { get; }`: Gets the UTC timestamp when this actor instance was created.
+- `DateTime? TerminatedAt { get; }`: Gets the UTC timestamp when the actor was terminated, or null if still alive.
+- `ActorRef? Supervisor { get; set; }`: Gets or sets the reference to the supervising actor that handles failures.
+- `Task InitializeAsync()`: Transitions the actor from Created to Started state by invoking `OnInitializeAsync`.
+- `Task ProcessMessageAsync(Message message)`: Processes a single message, recording metrics and handling errors.
+- `void SetState(string key, object value)`: Stores a value in the actor's thread-safe internal state dictionary.
+- `object? GetState(string key)`: Retrieves a value from the actor's internal state dictionary.
+- `bool HasState(string key)`: Checks if a state key exists.
+- `Task TerminateAsync()`: Gracefully terminates the actor by invoking `OnStopAsync` and marking the actor as terminated.
+- `ActorMetricsSummary GetMetricsSummary()`: Gets the current metrics summary.
+- `override string ToString()`: Returns a string representation of the actor.
+
 ## ActorPath
 
 The `ActorPath` class represents the hierarchical path to an actor in the actor system. Paths are immutable and uniquely identify an actor within a system, enabling parent-child relationships and hierarchical navigation.
