@@ -10,7 +10,7 @@
     <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
     <Description>Lightweight actor model framework for .NET with mailboxes, supervision trees, clustering, and persistence</Description>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/sarmkadan/dotnet-actor-framework</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/dotnet-actor-framework</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
