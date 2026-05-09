@@ -149,7 +149,7 @@ public class EventBus
 /// <summary>
 /// Base class for actor system events.
 /// </summary>
-public class ActorSystemEvent : DomainEvent
+public abstract class ActorSystemEvent : DomainEvent
 {
     public string SystemName { get; set; }
     public Guid SystemId { get; set; }

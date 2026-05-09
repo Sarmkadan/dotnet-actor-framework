@@ -123,7 +123,7 @@ public class SupervisionService
                 exception
             );
 
-            await _dispatcher.SendAsync(failureMessage.Recipient ?? actor, failureMessage);
+            await _dispatcher.SendAsync(parent, failureMessage);
         }
         else
         {

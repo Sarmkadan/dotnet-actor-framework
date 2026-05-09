@@ -9,12 +9,11 @@ namespace DotNetActorFramework.Middleware;
 
 /// <summary>
 /// Middleware that provides centralized error handling for message processing.
-/// Catches exceptions and applies recovery strategies based on configuration.
 /// </summary>
 public class ErrorHandlingMiddleware : IActorMiddleware
 {
     public string Name => "ErrorHandlingMiddleware";
-    public int Order => 100; // Run after logging middleware
+    public int Order => 100;
 
     private readonly ErrorHandlingStrategy _strategy;
 
@@ -45,33 +44,27 @@ public class ErrorHandlingMiddleware : IActorMiddleware
 /// </summary>
 public abstract class ErrorHandlingStrategy
 {
-    /// <summary>
-    /// Handles an error that occurred during message processing.
-    /// Return true to continue, false to stop processing.
-    /// </summary>
     public abstract Task<bool> HandleErrorAsync(Envelope envelope, Exception exception);
 }
 
 /// <summary>
-/// Error handling strategy that logs and suppresses errors (fire-and-forget semantics).
+/// Silently suppresses errors (fire-and-forget semantics).
 /// </summary>
 public class SuppressErrorStrategy : ErrorHandlingStrategy
 {
     public override Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
-    {
-        // Silently suppress the error - message is lost
-        return Task.FromResult(true);
-    }
+        => Task.FromResult(true);
 }
 
 /// <summary>
-/// Error handling strategy that retries with exponential backoff.
+/// Retries with exponential backoff up to a configured maximum.
 /// </summary>
 public class RetryErrorStrategy : ErrorHandlingStrategy
 {
     private readonly int _maxRetries;
     private readonly TimeSpan _initialDelay;
     private readonly double _backoffMultiplier;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, int> _retryCounts = new();
 
     public RetryErrorStrategy(
         int maxRetries = 3,
@@ -85,30 +78,31 @@ public class RetryErrorStrategy : ErrorHandlingStrategy
 
     public override async Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
     {
-        var retryCount = envelope.GetMetadata("retry-count")?.FromJson<int>() ?? 0;
+        var id = envelope.EnvelopeId;
+        var retryCount = _retryCounts.GetOrAdd(id, 0);
 
         if (retryCount >= _maxRetries)
-            return false; // Max retries exceeded
+        {
+            _retryCounts.TryRemove(id, out _);
+            return false;
+        }
 
-        // Calculate delay with exponential backoff
+        _retryCounts[id] = retryCount + 1;
         var delay = TimeSpan.FromMilliseconds(_initialDelay.TotalMilliseconds * Math.Pow(_backoffMultiplier, retryCount));
         await Task.Delay(delay);
-
-        // Update retry count in metadata
-        envelope.SetMetadata("retry-count", (retryCount + 1).ToJson());
-        return true; // Indicate retry should happen
+        return true;
     }
 }
 
 /// <summary>
-/// Error handling strategy that immediately fails and re-throws the exception.
+/// Immediately re-throws the exception as an InvalidOperationException.
 /// </summary>
 public class FailFastErrorStrategy : ErrorHandlingStrategy
 {
     public override Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
     {
         throw new InvalidOperationException(
-            $"Message processing failed for {envelope.RecipientPath}",
+            $"Message processing failed for {envelope.Recipient.Path}",
             exception);
     }
 }

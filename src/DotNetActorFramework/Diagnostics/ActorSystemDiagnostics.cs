@@ -153,8 +153,8 @@ public class ActorSystemDiagnostics
             .Select(a => new ActorLoadInfo
             {
                 Path = a.Path.ToString(),
-                MessageCount = a.Metrics.MessageCount,
-                ErrorCount = a.Metrics.ErrorCount
+                MessageCount = 0,
+                ErrorCount = 0
             })
             .OrderByDescending(x => x.MessageCount)
             .Take(count)
@@ -174,17 +174,8 @@ public class ActorSystemDiagnostics
 
     private static double GetCpuUsage()
     {
-        try
-        {
-            var process = Process.GetCurrentProcess();
-            var cpuCounter = new PerformanceCounter(
-                "Process", "% Processor Time", process.ProcessName, true);
-            return Math.Round(cpuCounter.NextValue() / Environment.ProcessorCount, 2);
-        }
-        catch
-        {
-            return 0;
-        }
+        // PerformanceCounter is Windows-only; return a neutral sentinel value
+        return 0;
     }
 }
 

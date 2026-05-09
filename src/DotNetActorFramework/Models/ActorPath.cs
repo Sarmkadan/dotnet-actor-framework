@@ -31,7 +31,7 @@ public class ActorPath : IEquatable<ActorPath>
         Path = path;
         Segments = ParseSegments(path);
         Name = Segments.Last();
-        Parent = Segments.Count > 1 ? new ActorPath("/" + string.Join("/", Segments.DropLast(1))) : null;
+        Parent = Segments.Count > 1 ? new ActorPath("/" + string.Join("/", Segments.Take(Segments.Count - 1))) : null;
     }
 
     /// <summary>

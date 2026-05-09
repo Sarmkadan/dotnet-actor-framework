@@ -76,7 +76,7 @@ public class ActorMetricsRepository
     /// <summary>
     /// Gets metrics history for an actor.
     /// </summary>
-    public async Task<IReadOnlyList<MetricsSnapshot>> GetHistoryAsync(Guid actorId, int limit = 100)
+    public Task<IReadOnlyList<MetricsSnapshot>> GetHistoryAsync(Guid actorId, int limit = 100)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
@@ -84,29 +84,27 @@ public class ActorMetricsRepository
         if (limit <= 0)
             throw new ArgumentException("Limit must be greater than zero.", nameof(limit));
 
+        IReadOnlyList<MetricsSnapshot> result1;
         lock (_lockObject)
         {
             if (_metricsHistory.TryGetValue(actorId, out var snapshots))
             {
-                var result = snapshots
+                result1 = snapshots
                     .OrderByDescending(s => s.RecordedAt)
                     .Take(limit)
                     .ToList()
                     .AsReadOnly();
-
-                await Task.CompletedTask;
-                return result;
+                return Task.FromResult(result1);
             }
         }
 
-        await Task.CompletedTask;
-        return [];
+        return Task.FromResult<IReadOnlyList<MetricsSnapshot>>([]);
     }
 
     /// <summary>
     /// Gets metrics for a time range.
     /// </summary>
-    public async Task<IReadOnlyList<MetricsSnapshot>> GetMetricsAsync(Guid actorId, DateTime from, DateTime to)
+    public Task<IReadOnlyList<MetricsSnapshot>> GetMetricsAsync(Guid actorId, DateTime from, DateTime to)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
@@ -114,30 +112,29 @@ public class ActorMetricsRepository
         if (from > to)
             throw new ArgumentException("From time must be before to time.", nameof(from));
 
+        IReadOnlyList<MetricsSnapshot> result2;
         lock (_lockObject)
         {
             if (_metricsHistory.TryGetValue(actorId, out var snapshots))
             {
-                var result = snapshots
+                result2 = snapshots
                     .Where(s => s.RecordedAt >= from && s.RecordedAt <= to)
                     .OrderBy(s => s.RecordedAt)
                     .ToList()
                     .AsReadOnly();
-
-                await Task.CompletedTask;
-                return result;
+                return Task.FromResult(result2);
             }
         }
 
-        await Task.CompletedTask;
-        return [];
+        return Task.FromResult<IReadOnlyList<MetricsSnapshot>>([]);
     }
 
     /// <summary>
     /// Gets aggregate metrics across all actors.
     /// </summary>
-    public async Task<AggregateMetrics> GetAggregateMetricsAsync()
+    public Task<AggregateMetrics> GetAggregateMetricsAsync()
     {
+        AggregateMetrics aggregate;
         lock (_lockObject)
         {
             var allSnapshots = _metricsHistory.Values
@@ -145,7 +142,7 @@ public class ActorMetricsRepository
                 .OrderByDescending(s => s.RecordedAt)
                 .FirstOrDefault();
 
-            var aggregate = new AggregateMetrics
+            aggregate = new AggregateMetrics
             {
                 TotalActorsTracked = _metricsHistory.Count,
                 TotalSnapshots = _metricsHistory.Values.Sum(s => s.Count),
@@ -168,29 +165,28 @@ public class ActorMetricsRepository
                     aggregate.AverageProcessingTimeMs = latest.Average(s => s.AverageProcessingTimeMs);
                 }
             }
-
-            await Task.CompletedTask;
-            return aggregate;
         }
+
+        return Task.FromResult(aggregate);
     }
 
     /// <summary>
     /// Gets metrics snapshots for multiple actors.
     /// </summary>
-    public async Task<IReadOnlyList<MetricsSnapshot>> GetLatestSnapshotsAsync()
+    public Task<IReadOnlyList<MetricsSnapshot>> GetLatestSnapshotsAsync()
     {
+        IReadOnlyList<MetricsSnapshot> latest;
         lock (_lockObject)
         {
-            var latest = _metricsHistory.Values
+            latest = _metricsHistory.Values
                 .Select(s => s.OrderByDescending(m => m.RecordedAt).FirstOrDefault())
                 .Where(s => s != null)
                 .Cast<MetricsSnapshot>()
                 .ToList()
                 .AsReadOnly();
-
-            await Task.CompletedTask;
-            return latest;
         }
+
+        return Task.FromResult(latest);
     }
 
     /// <summary>

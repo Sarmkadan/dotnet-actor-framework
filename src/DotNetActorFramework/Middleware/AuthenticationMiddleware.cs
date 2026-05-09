@@ -29,7 +29,7 @@ public class AuthenticationMiddleware : IActorMiddleware
             throw new ArgumentNullException(nameof(envelope));
 
         // Check if sender is authenticated
-        var senderId = envelope.GetMetadata("sender-id");
+        var senderId = envelope.Sender?.Path.Name;
         if (string.IsNullOrEmpty(senderId))
             return false; // No sender info
 

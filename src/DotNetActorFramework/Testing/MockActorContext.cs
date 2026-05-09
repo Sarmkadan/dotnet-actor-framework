@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Collections.Concurrent;
 using DotNetActorFramework.Models;
 
 namespace DotNetActorFramework.Testing;
@@ -80,7 +81,7 @@ public class MockActorContext
         lock (_lockObject)
         {
             return _receivedMessages
-                .Where(m => m.Type == messageType)
+                .Where(m => m.GetType().Name == messageType)
                 .ToList()
                 .AsReadOnly();
         }
@@ -128,7 +129,7 @@ public class MockActorContext
     {
         lock (_lockObject)
         {
-            return _receivedMessages.Any(m => m.Type == messageType);
+            return _receivedMessages.Any(m => m.GetType().Name == messageType);
         }
     }
 
