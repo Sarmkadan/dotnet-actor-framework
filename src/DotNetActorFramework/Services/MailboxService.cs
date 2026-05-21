@@ -29,17 +29,18 @@ public class MailboxService
 
     /// <summary>
     /// Creates a new mailbox for an actor.
+    /// Uses atomic TryAdd to prevent TOCTOU race between existence check and insertion.
     /// </summary>
     public Mailbox CreateMailbox(Guid actorId, int capacity = 0)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        if (_mailboxes.ContainsKey(actorId))
+        var mailbox = new Mailbox(actorId, capacity > 0 ? capacity : _defaultCapacity);
+
+        if (!_mailboxes.TryAdd(actorId, mailbox))
             throw new InvalidOperationException($"Mailbox already exists for actor: {actorId}");
 
-        var mailbox = new Mailbox(actorId, capacity > 0 ? capacity : _defaultCapacity);
-        _mailboxes.TryAdd(actorId, mailbox);
         return mailbox;
     }
 
