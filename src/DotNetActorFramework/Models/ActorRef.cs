@@ -6,14 +6,18 @@
 namespace DotNetActorFramework.Models;
 
 /// <summary>
-/// A reference to an actor that can be used to send messages.
-/// ActorRefs are immutable and can be safely shared across threads.
+/// A thread-safe, immutable reference to an actor that provides a unified interface for sending messages
+/// and managing actor interactions across the system.
 /// </summary>
 public class ActorRef : IEquatable<ActorRef>
 {
+    /// <summary>Gets the <see cref="ActorPath"/> of the referenced actor.</summary>
     public ActorPath Path { get; }
+    /// <summary>Gets the unique identifier of the referenced actor.</summary>
     public Guid Id { get; }
+    /// <summary>Gets a value indicating whether the referenced actor is currently alive and able to process messages.</summary>
     public bool IsAlive { get; private set; }
+    /// <summary>Gets the UTC timestamp when the actor reference was created.</summary>
     public DateTime CreatedAt { get; }
 
     internal ActorRef(ActorPath path, Guid id)
@@ -27,6 +31,10 @@ public class ActorRef : IEquatable<ActorRef>
     /// <summary>
     /// Sends a message to this actor asynchronously.
     /// </summary>
+    /// <param name="message">The message object to send.</param>
+    /// <returns>A task that completes when the message has been dispatched to the actor's mailbox.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the actor is not alive.</exception>
     public async Task SendAsync(object message)
     {
         if (message == null)
@@ -41,8 +49,12 @@ public class ActorRef : IEquatable<ActorRef>
     }
 
     /// <summary>
-    /// Sends a message and waits for a response with timeout.
+    /// Sends a message to the actor and asynchronously waits for a response.
     /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="timeout">The maximum time to wait for a response.</param>
+    /// <returns>A task representing the operation, returning the response object if successful; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
     public async Task<object?> AskAsync(object message, TimeSpan timeout)
     {
         if (message == null)
