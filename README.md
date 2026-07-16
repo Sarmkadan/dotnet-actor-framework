@@ -5,7 +5,104 @@ mailboxes, supervision strategies, middleware, metrics and pluggable
 persistence, composed via `Microsoft.Extensions.DependencyInjection` or a
 fluent builder.
 
+## ActorSystemOptions
+
+The `ActorSystemOptions` class provides centralized configuration for the DotNetActorFramework, controlling system-wide behavior such as mailbox capacity, supervision strategies, persistence settings, cluster configuration, and performance tuning. These options are used during actor system initialization and can be customized for different deployment scenarios (high-performance, reliable, or cluster-aware systems).
+
+### Usage Example
+
+```csharp
+// Initialize with default configuration
+var defaultOptions = new ActorSystemOptions
+{
+    SystemName = "ProductionSystem",
+    DefaultMailboxCapacity = 2000,
+    DefaultMailboxType = MailboxType.FIFO,
+    DefaultTimeoutSeconds = 30,
+    MaxMessageRetries = 3,
+    MaxActorDepth = 10,
+    DefaultSupervisionStrategy = SupervisionStrategy.Restart,
+    EnableMessagePersistence = true,
+    EnableMetricsCollection = true,
+    EnableActorStateSnapshotting = true,
+    SnapshotIntervalSeconds = 300,
+    DefaultPersistenceBackend = PersistenceBackend.InMemory,
+    DatabaseConnectionString = "Server=localhost;Database=ActorFramework;User Id=sa;Password=your_password;",
+    EnableClusterMode = false,
+    ClusterAddress = "127.0.0.1:8080",
+    MaxClusterNodes = 5,
+    UnhealthyErrorRateThreshold = 0.25,
+    CriticalErrorRateThreshold = 0.5,
+    InitialBackoffDelayMs = 100,
+    MaxBackoffDelayMs = 10000,
+    BackoffMultiplier = 2.0,
+    EnableDetailedLogging = false
+};
+
+// Create actor system with custom configuration
+var actorSystem = new ActorSystem(defaultOptions);
+
+// Use predefined configuration profiles for common scenarios
+var highPerformanceOptions = ActorSystemOptions.CreateHighPerformance();
+var reliableOptions = ActorSystemOptions.CreateReliable();
+var clusterOptions = ActorSystemOptions.CreateCluster("node1.example.com:8080");
+
+// Validate configuration before use
+try
+{
+    defaultOptions.Validate();
+    Console.WriteLine("Configuration is valid!");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"Configuration error: {ex.Message}");
+}
+```
+
+### Properties
+
+- `string SystemName`: Gets or sets the name of the actor system (default: "DefaultActorSystem")
+- `int DefaultMailboxCapacity`: Gets or sets the default capacity for actor mailboxes (default: 1000)
+- `MailboxType DefaultMailboxType`: Gets or sets the default mailbox type (FIFO, Priority, or LIFO) (default: MailboxType.FIFO)
+- `int DefaultTimeoutSeconds`: Gets or sets the default timeout for message operations in seconds (default: 30)
+- `int MaxMessageRetries`: Gets or sets the maximum number of retry attempts for failed message deliveries (default: 3)
+- `int MaxActorDepth`: Gets or sets the maximum depth of the actor hierarchy (default: 10)
+- `SupervisionStrategy DefaultSupervisionStrategy`: Gets or sets the default supervision strategy for handling actor failures (default: SupervisionStrategy.Restart)
+- `bool EnableMessagePersistence`: Gets or sets whether message persistence is enabled (default: true)
+- `bool EnableMetricsCollection`: Gets or sets whether metrics collection is enabled (default: true)
+- `bool EnableActorStateSnapshotting`: Gets or sets whether actor state snapshotting is enabled (default: true)
+- `int SnapshotIntervalSeconds`: Gets or sets the interval between state snapshots in seconds (default: 300)
+- `PersistenceBackend DefaultPersistenceBackend`: Gets or sets the default persistence backend (InMemory, SqlServer, PostgreSql) (default: PersistenceBackend.InMemory)
+- `string? DatabaseConnectionString`: Gets or sets the database connection string for persistence (default: null)
+- `bool EnableClusterMode`: Gets or sets whether cluster mode is enabled (default: false)
+- `string ClusterAddress`: Gets or sets the cluster address for distributed actor systems (default: "127.0.0.1:8080")
+- `int MaxClusterNodes`: Gets or sets the maximum number of nodes in the cluster (default: 10)
+- `double UnhealthyErrorRateThreshold`: Gets or sets the error rate threshold for marking actors as unhealthy (default: 0.25)
+- `double CriticalErrorRateThreshold`: Gets or sets the error rate threshold for marking actors as critical (default: 0.5)
+- `int InitialBackoffDelayMs`: Gets or sets the initial delay for exponential backoff in milliseconds (default: 100)
+- `int MaxBackoffDelayMs`: Gets or sets the maximum delay for exponential backoff in milliseconds (default: 10000)
+- `double BackoffMultiplier`: Gets or sets the multiplier for exponential backoff (default: 2.0)
+- `bool EnableDetailedLogging`: Gets or sets whether detailed logging is enabled (default: false)
+
+### Methods
+
+- `void Validate()`: Validates the configuration options and throws exceptions for invalid values
+- `static ActorSystemOptions CreateDefault()`: Creates a default configuration
+- `static ActorSystemOptions CreateHighPerformance()`: Creates a high-performance configuration optimized for throughput
+- `static ActorSystemOptions CreateReliable()`: Creates a reliable configuration optimized for durability
+- `static ActorSystemOptions CreateCluster(string clusterAddress = "127.0.0.1:8080")`: Creates a cluster-optimized configuration
+
+### Configuration Profiles
+
+The framework provides several predefined configuration profiles:
+
+- **Default**: Balanced configuration suitable for most use cases
+- **HighPerformance**: Optimized for maximum throughput with minimal overhead (persistence and metrics disabled)
+- **Reliable**: Optimized for durability and fault tolerance (persistence and snapshotting enabled)
+- **Cluster**: Configured for distributed actor systems with cluster mode enabled
+
 ## Architecture
+
 
 See [docs/architecture.md](docs/architecture.md) for the full picture: module
 breakdown, message flow, concurrency model, design decisions with their
