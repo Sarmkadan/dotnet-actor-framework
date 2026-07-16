@@ -5,6 +5,53 @@ mailboxes, supervision strategies, middleware, metrics and pluggable
 persistence, composed via `Microsoft.Extensions.DependencyInjection` or a
 fluent builder.
 
+## ActorSystemBuilder
+
+The `ActorSystemBuilder` class provides a fluent interface for constructing and configuring an `ActorSystem` instance. It allows you to chain configuration methods to customize various aspects of the actor system such as logging, error handling, rate limiting, metrics collection, authentication, caching, event bus, background workers, and mailbox capacity. The builder pattern enables clean, readable configuration that can be easily modified and extended.
+
+### Usage Example
+
+```csharp
+// Create and configure an actor system using the builder pattern
+var actorSystem = new ActorSystemBuilder("ProductionSystem")
+    .WithLogging()
+    .WithErrorHandling()
+    .WithRateLimiting(tokensPerSecond: 1000, bucketCapacity: 10000)
+    .WithMetrics()
+    .WithAuthentication(new TokenAuthenticationProvider("secret-token-123"))
+    .WithCaching(TimeSpan.FromMinutes(5))
+    .WithEventBus(new InMemoryEventBus())
+    .AddBackgroundWorker(new MetricsCollectorWorker(actorSystem, new MetricsCollector()))
+    .WithMailboxCapacity(2000)
+    .Build();
+
+// Alternative: Build middleware pipeline separately for advanced configuration
+var middlewarePipeline = new ActorSystemBuilder("MiddlewareDemo")
+    .WithLogging()
+    .WithErrorHandling()
+    .WithRateLimiting()
+    .BuildMiddlewarePipeline();
+
+// Create actor system with custom middleware
+var actorSystemWithMiddleware = new ActorSystemBuilder("CustomSystem")
+    .WithLogging()
+    .WithErrorHandling()
+    .WithRateLimiting()
+    .Build();
+
+// Access built services for monitoring and management
+var metricsCollector = new ActorSystemBuilder("MetricsDemo")
+    .WithMetrics()
+    .Build()
+    .GetMetricsCollector();
+
+if (metricsCollector != null)
+{
+    var metrics = metricsCollector.GetSystemMetrics();
+    Console.WriteLine($"System metrics: {metrics.TotalMessagesProcessed} messages processed");
+}
+```
+
 ## ActorSystemOptions
 
 The `ActorSystemOptions` class provides centralized configuration for the DotNetActorFramework, controlling system-wide behavior such as mailbox capacity, supervision strategies, persistence settings, cluster configuration, and performance tuning. These options are used during actor system initialization and can be customized for different deployment scenarios (high-performance, reliable, or cluster-aware systems).
