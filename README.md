@@ -273,6 +273,66 @@ The framework provides several predefined configuration profiles:
 - **Reliable**: Optimized for durability and fault tolerance (persistence and snapshotting enabled)
 - **Cluster**: Configured for distributed actor systems with cluster mode enabled
 
+## GuardExtensions
+
+The `GuardExtensions` class provides guard clause methods for validating method parameters and enforcing common validation patterns throughout the actor framework. These extension methods reduce boilerplate validation code by throwing appropriate exceptions when validation fails, making the code more concise and readable while maintaining robust input validation.
+
+### Usage Example
+
+```csharp
+// Validate method parameters using guard extensions
+public class ActorConfiguration
+{
+    public ActorConfiguration(string name, int mailboxCapacity)
+    {
+        // Validate parameters using guard extensions
+        Name = name.NotNullOrWhiteSpace(nameof(name));
+        MailboxCapacity = mailboxCapacity.MustBePositive(nameof(mailboxCapacity));
+    }
+
+    public string Name { get; }
+    public int MailboxCapacity { get; }
+}
+
+// Validate collections and GUIDs
+public void RegisterActor(Guid actorId, IEnumerable<IActor> actors)
+{
+    actorId = actorId.NotEmpty(nameof(actorId));
+    actors = actors.NotEmpty(nameof(actors));
+
+    // Validate boolean conditions
+    bool isValid = ValidateActor(actorId);
+    isValid.MustBeTrue("Actor validation failed");
+}
+
+// Validate that conditions are false
+public void ValidateConfiguration(bool shouldSkipValidation)
+{
+    shouldSkipValidation.MustBeFalse("Validation should not be skipped in production");
+}
+
+// Validate non-negative and positive numbers
+public void ConfigureTimeout(int timeoutMs)
+{
+    timeoutMs = timeoutMs.MustBeNonNegative(nameof(timeoutMs));
+    
+    int maxRetries = 3;
+    maxRetries = maxRetries.MustBePositive(nameof(maxRetries));
+}
+```
+
+### Available Guard Methods
+
+- `T NotNull<T>(this T? value, string paramName)`: Throws `ArgumentNullException` if the value is null.
+- `string NotNullOrEmpty(this string? value, string paramName)`: Throws `ArgumentNullException` or `ArgumentException` if the string is null or empty.
+- `string NotNullOrWhiteSpace(this string? value, string paramName)`: Throws `ArgumentNullException` or `ArgumentException` if the string is null, empty, or whitespace.
+- `Guid NotEmpty(this Guid value, string paramName)`: Throws `ArgumentException` if the Guid is empty.
+- `int MustBePositive(this int value, string paramName)`: Throws `ArgumentException` if the integer is not positive.
+- `int MustBeNonNegative(this int value, string paramName)`: Throws `ArgumentException` if the integer is negative.
+- `IEnumerable<T> NotEmpty<T>(this IEnumerable<T>? collection, string paramName)`: Throws `ArgumentNullException` or `ArgumentException` if the collection is null or empty.
+- `void MustBeTrue(this bool condition, string message)`: Throws `ArgumentNullException` or `ArgumentException` if the condition is false.
+- `void MustBeFalse(this bool condition, string message)`: Throws `ArgumentNullException` or `ArgumentException` if the condition is true.
+
 ## ConcurrentCollectionExtensions
 
 The `ConcurrentCollectionExtensions` class provides extension methods for concurrent collections (`ConcurrentDictionary` and `ConcurrentQueue`) to simplify common operations when working with thread-safe collections in the actor framework. These extensions reduce boilerplate code and provide thread-safe access patterns for managing collections in concurrent scenarios.
