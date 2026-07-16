@@ -158,9 +158,97 @@ await workerService.StopAsync();
 - `BackgroundWorkerService`: Manages and executes background workers with lifecycle control.
 - `WorkerStatus`: Provides status information for a background worker including execution counts, error tracking, and runtime state.
 
-## ActorMetricsRepository
+## MessagePersistenceRepository
 
-The `ActorMetricsRepository` class provides functionality for tracking and retrieving metrics for individual actors within the actor system. It maintains historical metrics snapshots and aggregates, enabling detailed performance analysis, monitoring, and trend analysis for specific actors over time.
+The `MessagePersistenceRepository` class provides append-only log semantics for persisting and retrieving messages in the actor system. It enables durable message storage with sequence tracking, delivery status monitoring, and statistics collection, making it ideal for message replay, recovery scenarios, and system monitoring.
+
+### Usage Example
+
+```csharp
+// Initialize the message persistence repository
+var connectionManager = new ConnectionManager();
+var messageRepository = new MessagePersistenceRepository(connectionManager);
+
+// Create actors and send messages
+var actorSystem = new ActorSystem("PersistenceDemoSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+var message = new Message("process", new Dictionary<string, object> { { "data", 42 } });
+var envelope = new Envelope(message, workerActor, rootActor);
+
+// Persist the message
+bool persisted = await messageRepository.PersistAsync(envelope);
+Console.WriteLine($"Message persisted: {persisted}");
+
+// Retrieve messages for an actor
+var actorMessages = await messageRepository.GetActorMessagesAsync(workerActor.Id);
+Console.WriteLine($"Messages for actor: {actorMessages.Count}");
+
+// Get undelivered messages
+var undelivered = await messageRepository.GetUndeliveredMessagesAsync();
+Console.WriteLine($"Undelivered messages: {undelivered.Count}");
+
+// Mark message as delivered
+await messageRepository.MarkAsDeliveredAsync(envelope.EnvelopeId);
+
+// Get statistics
+var stats = messageRepository.GetStatistics();
+Console.WriteLine($"Total: {stats.TotalMessages}, Delivered: {stats.DeliveredMessages}, Delivery Rate: {stats.GetDeliveryRate():F2}%");
+Console.WriteLine($"Sequence: {stats.CurrentSequenceNumber}, Oldest: {stats.OldestMessageTime}, Newest: {stats.NewestMessageTime}");
+
+// Get messages by sequence range
+var rangeMessages = await messageRepository.GetMessagesAsync(1, 100);
+Console.WriteLine($"Messages in range: {rangeMessages.Count}");
+
+// Clear repository when needed
+messageRepository.Clear();
+```
+
+### Properties and Methods
+
+- `void Clear()`: Clears all persisted messages and resets the sequence number.
+- `long GetCurrentSequenceNumber()`: Gets the current sequence number.
+- `long GetMessageCount()`: Gets the total count of persisted messages.
+- `Task<IReadOnlyList<PersistedMessage>> GetActorMessagesAsync(Guid actorId)`: Gets messages for a specific actor.
+- `Task<IReadOnlyList<PersistedMessage>> GetMessagesAsync(long fromSequence, long toSequence)`: Gets messages between two sequence numbers.
+- `Task<IReadOnlyList<PersistedMessage>> GetUndeliveredMessagesAsync()`: Gets undelivered messages.
+- `PersistenceStatistics GetStatistics()`: Gets persistence statistics.
+- `Task<bool> MarkAsDeliveredAsync(Guid envelopeId)`: Marks a message as delivered.
+- `Task<bool> PersistAsync(Envelope envelope)`: Persists a message envelope.
+
+### PersistedMessage Class
+
+The `PersistedMessage` class represents a persisted message in the repository.
+
+#### Properties
+
+- `Guid EnvelopeId { get; set; }`: Gets or sets the envelope ID.
+- `string MessageType { get; set; }`: Gets or sets the message type.
+- `Guid? SenderId { get; set; }`: Gets or sets the sender ID.
+- `Guid RecipientId { get; set; }`: Gets or sets the recipient ID.
+- `DateTime PersistedAt { get; set; }`: Gets or sets the timestamp when persisted.
+- `bool IsDelivered { get; set; }`: Gets or sets the delivery status.
+- `long SequenceNumber { get; set; }`: Gets or sets the sequence number.
+
+### PersistenceStatistics Class
+
+The `PersistenceStatistics` class provides statistics about message persistence.
+
+#### Properties
+
+- `long TotalMessages { get; set; }`: Gets or sets the total message count.
+- `long DeliveredMessages { get; set; }`: Gets or sets the delivered message count.
+- `long UndeliveredMessages { get; set; }`: Gets or sets the undelivered message count.
+- `long CurrentSequenceNumber { get; set; }`: Gets or sets the current sequence number.
+- `DateTime? OldestMessageTime { get; set; }`: Gets or sets the oldest message timestamp.
+- `DateTime? NewestMessageTime { get; set; }`: Gets or sets the newest message timestamp.
+
+#### Methods
+
+- `double GetDeliveryRate()`: Gets the delivery rate as a percentage.
+
+## ActorMetricsRepository
 
 ### Usage Example
 
