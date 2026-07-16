@@ -577,6 +577,87 @@ The `PersistenceStatistics` class provides statistics about message persistence.
 
 - `double GetDeliveryRate()`: Gets the delivery rate as a percentage.
 
+## IMessageFormatter
+
+The `IMessageFormatter` interface defines a contract for formatting messages into different output formats such as JSON, text, or CSV. Formatters implement this interface to provide consistent message serialization across the actor system, enabling features like message logging, monitoring, and export functionality.
+
+### Usage Example
+
+```csharp
+// Create a message to format
+var message = new Message("process-order", new Dictionary<string, object>
+{
+    { "orderId", "order-123" },
+    { "amount", 99.99 },
+    { "customerId", "cust-456" }
+});
+
+// Use the built-in JSON formatter
+var jsonFormatter = new JsonMessageFormatter();
+string jsonOutput = jsonFormatter.Format(message);
+Console.WriteLine(jsonOutput);
+
+// Use the text formatter for human-readable output
+var textFormatter = new TextMessageFormatter();
+string textOutput = textFormatter.Format(message);
+Console.WriteLine(textOutput);
+
+// Use the CSV formatter for data export
+var csvFormatter = new CsvMessageFormatter();
+csvFormatter.IncludeHeaders = true;
+string csvOutput = csvFormatter.Format(message);
+Console.WriteLine(csvOutput);
+
+// Access content type information
+Console.WriteLine($"JSON Content-Type: {jsonFormatter.ContentType}");
+Console.WriteLine($"Text Content-Type: {textFormatter.ContentType}");
+Console.WriteLine($"CSV Content-Type: {csvFormatter.ContentType}");
+```
+
+### Properties and Methods
+
+- `string ContentType { get; }`: Gets the MIME content type that this formatter produces (e.g., "application/json", "text/plain", "text/csv").
+- `string Format(Message message)`: Formats the given message into the appropriate output format.
+
+### MessageFormatterFactory
+
+The `MessageFormatterFactory` class provides a registry for creating and retrieving formatters by key. It includes built-in formatters for JSON, text, and CSV formats.
+
+#### Usage Example
+
+```csharp
+// Create a formatter factory
+var factory = new MessageFormatterFactory();
+
+// Register a custom formatter
+factory.Register("xml", new XmlMessageFormatter());
+
+// Get a formatter by key
+var jsonFormatter = factory.GetFormatter("json");
+if (jsonFormatter != null)
+{
+    string formatted = jsonFormatter.Format(message);
+    Console.WriteLine(formatted);
+}
+
+// Format a message using the factory
+string output = factory.Format(message, "text");
+Console.WriteLine(output);
+```
+
+#### Properties and Methods
+
+- `MessageFormatterFactory()`: Initializes a new formatter factory with built-in formatters for JSON, text, and CSV formats.
+- `void Register(string key, IMessageFormatter formatter)`: Registers a formatter with a specific key.
+- `IMessageFormatter? GetFormatter(string key)`: Gets a formatter by its registration key.
+- `string Format(Message message, string formatterKey)`: Formats a message using the formatter registered under the specified key.
+
+### Built-in Formatters
+
+- **JsonMessageFormatter**: Formats messages as pretty-printed JSON with `ContentType = "application/json"`.
+- **TextMessageFormatter**: Formats messages as human-readable text with headers and metadata with `ContentType = "text/plain"`.
+- **CsvMessageFormatter**: Formats messages as CSV with optional headers with `ContentType = "text/csv"`. Includes `IncludeHeaders` property to control header output.
+
 ## ActorDiscoveryService
 
 The `ActorDiscoveryService` class provides capability-based actor discovery, enabling actors to be located dynamically by their registered capabilities and metadata tags. This service maintains indices of actors by their capabilities and tags, allowing for efficient discovery without coupling callers to concrete actor paths or identifiers.
