@@ -213,6 +213,46 @@ The framework provides several predefined configuration profiles:
 - **Reliable**: Optimized for durability and fault tolerance (persistence and snapshotting enabled)
 - **Cluster**: Configured for distributed actor systems with cluster mode enabled
 
+## ActorPathExtensions
+
+The `ActorPathExtensions` class provides utility methods for working with `ActorPath` objects, enabling common operations like hierarchy traversal, parent-child relationship checks, and relative path calculation. These extensions simplify path manipulation throughout the actor system and are essential for supervision hierarchies, actor discovery, and message routing.
+
+### Usage Example
+
+```csharp
+// Create actor paths in a hierarchy
+var rootPath = new ActorPath("/root");
+var userPath = new ActorPath("/root/users");
+var user1Path = new ActorPath("/root/users/user1");
+var orderPath = new ActorPath("/root/orders/order123");
+
+// Check parent-child relationships
+bool isChild = user1Path.IsChildOf(rootPath);      // true
+bool isChild2 = orderPath.IsChildOf(rootPath);      // true
+bool isChild3 = user1Path.IsChildOf(userPath);      // true
+bool isChild4 = user1Path.IsChildOf(orderPath);      // false
+
+// Get relative paths
+string? relativeToRoot = user1Path.GetRelativePath(rootPath);      // "users/user1"
+string? relativeToUsers = user1Path.GetRelativePath(userPath);      // "user1"
+string? relativeToOrders = user1Path.GetRelativePath(orderPath);     // null (not a descendant)
+
+// Get all ancestors including current path
+var ancestors = user1Path.GetAncestors().ToList();
+Console.WriteLine($"Ancestors count: {ancestors.Count}");  // 3: /root/users/user1, /root/users, /root
+
+// Check if paths are in hierarchy
+bool isDescendant = user1Path.IsDescendantOf(rootPath);  // true
+bool isDescendant2 = rootPath.IsDescendantOf(user1Path); // false
+```
+
+### Available Methods
+
+- `string? GetRelativePath(ActorPath parent)`: Gets the relative path from a parent actor to this actor. Returns null if this path is not a descendant of the specified parent.
+- `IEnumerable<ActorPath> GetAncestors()`: Gets all ancestor paths from this path to the root, including the current path itself.
+- `bool IsChildOf(ActorPath parent)`: Determines if this path is a child of the specified parent path.
+- `bool IsDescendantOf(ActorPath ancestor)`: Determines if this path is a descendant of the specified ancestor path.
+
 ## Architecture
 
 
