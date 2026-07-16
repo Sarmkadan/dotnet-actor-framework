@@ -40,6 +40,63 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## ActorStateRepository
+
+The `ActorStateRepository` class provides functionality for persisting and retrieving actor state snapshots. It enables reliable state management for actors by allowing developers to save, load, delete, and inspect state snapshots associated with specific actor paths and IDs.
+
+### Usage Example
+
+```csharp
+// Assuming 'repository' is an instance of ActorStateRepository
+var actorId = Guid.NewGuid();
+var actorPath = ActorPath.Parse("/my/actor");
+var state = new Dictionary<string, object> { { "balance", 100.0 } };
+
+// Save actor state
+await repository.SaveStateAsync(actorId, actorPath, state, 1);
+
+// Check if state exists
+bool exists = await repository.HasState(actorId, actorPath);
+
+// Load actor state
+var loadedState = await repository.LoadStateAsync(actorId, actorPath);
+
+// Retrieve a state snapshot
+var snapshot = await repository.GetSnapshotAsync(actorId, actorPath);
+if (snapshot != null)
+{
+    Console.WriteLine($"Snapshot loaded. Sequence: {snapshot.SequenceNr}, SavedAt: {snapshot.SavedAt}");
+}
+
+// Delete actor state
+await repository.DeleteStateAsync(actorId, actorPath);
+```
+
+### Properties and Methods
+
+- `Guid ActorId { get; }`: Gets the unique identifier of the actor associated with this repository instance.
+- `ActorPath ActorPath { get; }`: Gets the path of the referenced actor.
+- `object State { get; }`: Gets the current state stored in this repository.
+- `DateTime SavedAt { get; }`: Gets the timestamp when the state was last saved.
+- `long SequenceNr { get; }`: Gets the sequence number for state persistence.
+- `int Version { get; }`: Gets the version number of the state.
+- `Task<bool> SaveStateAsync(Guid actorId, ActorPath actorPath, Dictionary<string, object> state, long sequenceNr)`: Saves the state of an actor.
+- `Task<Dictionary<string, object>?> LoadStateAsync(Guid actorId, ActorPath actorPath)`: Loads the state of an actor.
+- `Task<bool> DeleteStateAsync(Guid actorId, ActorPath actorPath)`: Deletes the state of an actor.
+- `Task<ActorStateSnapshot?> GetSnapshotAsync(Guid actorId, ActorPath actorPath)`: Gets the state snapshot for an actor.
+- `Task<bool> HasState(Guid actorId, ActorPath actorPath)`: Checks if state exists for an actor.
+
+### ActorStateSnapshot Class
+
+The `ActorStateSnapshot` class represents a point-in-time snapshot of an actor's state.
+
+- `Guid ActorId { get; }`: Gets the actor ID.
+- `ActorPath ActorPath { get; }`: Gets the actor path.
+- `object State { get; }`: Gets the deserialized state.
+- `DateTime SavedAt { get; }`: Gets the timestamp when the state was saved.
+- `long SequenceNr { get; }`: Gets the sequence number of the snapshot.
+- `int Version { get; }`: Gets the snapshot version.
+
 ## IBackgroundWorker
 
 The `IBackgroundWorker` interface defines a contract for background work tasks that execute asynchronously. Background workers are designed to handle non-blocking work on a scheduled interval, making them ideal for periodic tasks such as data synchronization, cleanup operations, or polling services.
