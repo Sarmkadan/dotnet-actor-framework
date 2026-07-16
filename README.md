@@ -399,6 +399,102 @@ The `MetricsSnapshot` class represents a point-in-time snapshot of system metric
 - `double ErrorRate { get; set; }`: Gets or sets the error rate as a percentage.
 - `bool IsHealthy { get; }`: Gets whether the system is healthy (no errors and error rate < 5%).
 
+## ConnectionManager
+
+The `ConnectionManager` class manages database connections and provides connection pooling capabilities. It maintains a pool of reusable database connections, tracks connection usage statistics, and provides methods for validating, opening, and closing connections. The connection manager is designed to optimize database resource usage by reusing connections rather than creating new ones for each operation.
+
+### Usage Example
+
+```csharp
+// Initialize the connection manager with a connection string
+var connectionManager = new ConnectionManager();
+connectionManager.Initialize("Server=localhost;Database=MyDatabase;User Id=sa;Password=your_password;");
+
+// Get a connection from the pool
+var connection = connectionManager.GetConnection("orders-db");
+
+try
+{
+    // Open the connection
+    connection.Open();
+    
+    // Use the connection for database operations
+    Console.WriteLine($"Connection opened: {connection.Key}");
+    Console.WriteLine($"Created at: {connection.CreatedAt}");
+    Console.WriteLine($"Last used: {connection.LastUsedAt}");
+    Console.WriteLine($"Is open: {connection.IsOpen}");
+    
+    // Perform database operations here...
+}
+finally
+{
+    // Close the connection (returns it to the pool)
+    connection.Close();
+    connectionManager.ReleaseConnection("orders-db");
+}
+
+// Validate the connection
+bool isValid = await connectionManager.ValidateConnectionAsync();
+Console.WriteLine("Connection valid: {isValid}");
+
+// Get connection statistics
+var stats = connectionManager.GetStatistics();
+Console.WriteLine($"Pool size: {stats.PoolSize}, Active: {stats.ActiveConnections}, Connected: {stats.IsConnected}");
+Console.WriteLine($"Connection created at: {stats.CreatedAt}");
+
+// Check idle time for a connection
+var pooledConnection = connectionManager.GetConnection("orders-db");
+var idleTime = pooledConnection.GetIdleTime();
+Console.WriteLine($"Idle time: {idleTime.TotalSeconds} seconds");
+```
+
+### Properties and Methods
+
+- `string Key { get; }`: Gets the unique identifier for this connection.
+- `string ConnectionString { get; }`: Gets the connection string associated with this connection.
+- `DateTime CreatedAt { get; }`: Gets the UTC timestamp when this connection was created.
+- `DateTime LastUsedAt { get; }`: Gets the UTC timestamp when this connection was last used.
+- `bool IsOpen { get; }`: Gets whether the connection is currently open.
+
+- `void Initialize(string connectionString)`: Initializes the connection manager with a connection string.
+- `PooledConnection GetConnection(string key = "default")`: Gets or creates a connection from the pool.
+- `void ReleaseConnection(string key = "default")`: Releases a connection back to the pool.
+- `Task<bool> ValidateConnectionAsync()`: Validates the current connection by opening and closing it.
+- `ConnectionStatistics GetStatistics()`: Gets connection statistics.
+- `void Dispose()`: Clears the connection pool and disposes all connections.
+
+### PooledConnection Class
+
+The `PooledConnection` class represents a connection from the connection pool.
+
+#### Properties
+
+- `string Key { get; }`: Gets the connection key.
+- `string ConnectionString { get; }`: Gets the connection string.
+- `DateTime CreatedAt { get; }`: Gets the creation timestamp.
+- `DateTime LastUsedAt { get; }`: Gets the last used timestamp.
+- `bool IsOpen { get; }`: Gets whether the connection is open.
+
+#### Methods
+
+- `void Open()`: Opens the connection.
+- `void Close()`: Closes the connection.
+- `void UpdateLastUsed()`: Updates the last used timestamp.
+- `TimeSpan GetIdleTime()`: Gets the idle time since last use.
+- `void Dispose()`: Disposes the connection.
+
+### ConnectionStatistics Class
+
+The `ConnectionStatistics` class provides statistics about connections.
+
+#### Properties
+
+- `bool IsConnected { get; set; }`: Gets whether the connection manager is connected.
+- `int PoolSize { get; set; }`: Gets the current pool size.
+- `int ActiveConnections { get; set; }`: Gets the number of active connections.
+- `string? ConnectionString { get; set; }`: Gets the connection string.
+- `DateTime CreatedAt { get; set; }`: Gets the creation timestamp.
+
 ## Envelope
 
 The `Envelope` class wraps a message with metadata about sender and recipient, providing essential information for message delivery, tracking, and retry logic within the actor system.
