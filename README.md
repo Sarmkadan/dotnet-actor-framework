@@ -101,6 +101,72 @@ await workerService.StopAsync();
 - `BackgroundWorkerService`: Manages and executes background workers with lifecycle control.
 - `WorkerStatus`: Provides status information for a background worker including execution counts, error tracking, and runtime state.
 
+## MetricsCollectorWorker
+
+The `MetricsCollectorWorker` is a background worker that periodically collects and aggregates metrics from the actor system. It provides real-time monitoring of system health, actor status, message throughput, and error rates, enabling proactive performance analysis and alerting.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and metrics collector
+var actorSystem = new ActorSystem("MetricsDemoSystem");
+var metricsCollector = new MetricsCollector(actorSystem);
+
+// Create and register the metrics collector worker
+var metricsWorker = new MetricsCollectorWorker(actorSystem, metricsCollector);
+metricsWorker.Interval = TimeSpan.FromSeconds(15); // Collect metrics every 15 seconds
+
+var workerService = new BackgroundWorkerService();
+workerService.RegisterWorker(metricsWorker);
+
+await workerService.StartAsync();
+
+// Monitor system metrics over time
+var snapshot1 = metricsWorker.GetLatestSnapshot();
+Console.WriteLine($"Snapshot at {snapshot1.Timestamp}: {snapshot1.TotalActors} actors, {snapshot1.TotalMessages} messages, {snapshot1.ErrorRate:P} error rate");
+
+await Task.Delay(TimeSpan.FromMinutes(1));
+
+var snapshot2 = metricsWorker.GetLatestSnapshot();
+Console.WriteLine($"Snapshot at {snapshot2.Timestamp}: {snapshot2.TotalActors} actors, {snapshot2.TotalMessages} messages, {snapshot2.ErrorRate:P} error rate");
+
+// Check if system is healthy
+if (snapshot2.IsHealthy)
+{
+    Console.WriteLine("System is healthy!");
+}
+else
+{
+    Console.WriteLine("Warning: System has issues!");
+}
+
+// Shutdown
+await workerService.StopAsync();
+```
+
+### Properties and Methods
+
+- `WorkerId { get; }`: Gets the unique identifier for the worker ("metrics-collector").
+- `Interval { get; set; }`: Gets or sets the interval at which metrics are collected.
+- `Task ExecuteAsync(CancellationToken cancellationToken)`: Collects and updates the latest metrics snapshot.
+- `GetLatestSnapshot() => MetricsSnapshot`: Gets the most recent metrics snapshot.
+
+### MetricsSnapshot Class
+
+The `MetricsSnapshot` class represents a point-in-time snapshot of system metrics.
+
+#### Properties
+
+- `DateTime Timestamp { get; set; }`: Gets or sets the timestamp when the snapshot was taken.
+- `int TotalActors { get; set; }`: Gets or sets the total number of actors in the system.
+- `int HealthyActors { get; set; }`: Gets or sets the number of healthy actors.
+- `int ErrorActors { get; set; }`: Gets or sets the number of actors with errors.
+- `long TotalMessages { get; set; }`: Gets or sets the total number of messages processed.
+- `long TotalErrors { get; set; }`: Gets or sets the total number of errors encountered.
+- `double AverageLatencyMs { get; set; }`: Gets or sets the average message processing latency in milliseconds.
+- `double ErrorRate { get; set; }`: Gets or sets the error rate as a percentage.
+- `bool IsHealthy { get; }`: Gets whether the system is healthy (no errors and error rate < 5%).
+
 ## Envelope
 
 The `Envelope` class wraps a message with metadata about sender and recipient, providing essential information for message delivery, tracking, and retry logic within the actor system.
