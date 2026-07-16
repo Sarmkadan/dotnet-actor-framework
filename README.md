@@ -399,6 +399,75 @@ actorRegistry.ClearAll();
 - `List<T> DequeueAll<T>(this ConcurrentQueue<T> queue)`: Dequeues all available items from a concurrent queue.
 - `int GetCount<T>(this ConcurrentQueue<T> queue)`: Gets the current count of items in a concurrent queue.
 
+## ActorPathTests
+
+The `ActorPathTests` class provides unit tests for the `ActorPath` class, verifying that actor path construction, validation, hierarchy operations, and equality comparison work correctly. These tests ensure that actor paths are properly validated, can form hierarchical relationships, correctly identify parent-child relationships, and maintain proper equality semantics throughout the actor system.
+
+### Usage Example
+
+```csharp
+// Test valid nested path construction and properties
+var path = new ActorPath("/system/workers/processor");
+
+// Verify path properties
+Console.WriteLine($"Path: {path.Path}");
+Console.WriteLine($"Name: {path.Name}");
+Console.WriteLine($"Segments: {string.Join("/", path.Segments)}");
+Console.WriteLine($"Depth: {path.GetDepth()}");
+Console.WriteLine($"Parent: {path.Parent?.Path}");
+
+// Test path validation with exception handling
+try
+{
+    var invalidPath = new ActorPath("no-leading-slash");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation error: {ex.Message}");
+}
+
+// Test child path creation
+var parent = new ActorPath("/system/workers");
+var child = parent.GetChild("processor");
+Console.WriteLine($"Child path: {child.Path}");
+
+// Test hierarchy relationships
+var root = new ActorPath("/system");
+var nested = new ActorPath("/system/workers/processor");
+var unrelated = new ActorPath("/monitoring");
+
+Console.WriteLine($"Nested is descendant of root: {nested.IsDescendantOf(root)}");
+Console.WriteLine($"Unrelated is descendant of root: {unrelated.IsDescendantOf(root)}");
+Console.WriteLine($"Root is descendant of nested: {root.IsDescendantOf(nested)}");
+
+// Test equality
+var path1 = new ActorPath("/system/workers");
+var path2 = new ActorPath("/system/workers");
+Console.WriteLine($"Paths are equal: {path1 == path2}");
+Console.WriteLine($"Hash codes match: {path1.GetHashCode() == path2.GetHashCode()}");
+
+// Test IsChildOf extension method
+Console.WriteLine($"Direct child is child of parent: {child.IsChildOf(parent)}");
+Console.WriteLine($"Deep descendant is child of parent: {nested.IsChildOf(root)}");
+Console.WriteLine($"Parent is child of child: {parent.IsChildOf(child)}");
+```
+
+### Test Methods
+
+- `Constructor_WithValidNestedPath_SetsNameSegmentsAndDepth`: Verifies that constructing an `ActorPath` with a valid nested path correctly sets the name, segments, depth, and parent path.
+
+- `Constructor_WithNullOrWhitespacePath_ThrowsArgumentException`: Validates that constructing an `ActorPath` with a null or whitespace string throws an `ArgumentException`.
+
+- `Constructor_WithInvalidPathFormat_ThrowsWithDescriptiveMessage`: Ensures that constructing an `ActorPath` with an invalid path format throws an `ArgumentException` with a descriptive message.
+
+- `GetChild_WithValidChildName_BuildsCorrectHierarchy`: Verifies that `ActorPath.GetChild(string)` correctly builds a child path and sets the appropriate properties.
+
+- `IsDescendantOf_WhenPathNested_ReturnsTrue_AndSiblingReturnsFalse`: Validates that `ActorPath.IsDescendantOf(ActorPath)` correctly identifies descendant relationships and distinguishes siblings.
+
+- `Equality_WithIdenticalPathStrings_PathsAreEqual`: Verifies that two `ActorPath` instances with identical path strings are considered equal and have the same hash code.
+
+- `IsChildOf_ExtensionMethod_ReturnsTrueForAnyDescendant`: Verifies that the `ActorPath.IsChildOf(ActorPath)` extension method correctly identifies any descendant as a child and does not consider a parent as a child.
+
 ## ActorPathExtensions
 
 The `ActorPathExtensions` class provides utility methods for working with `ActorPath` objects, enabling common operations like hierarchy traversal, parent-child relationship checks, and relative path calculation. These extensions simplify path manipulation throughout the actor system and are essential for supervision hierarchies, actor discovery, and message routing.
