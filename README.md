@@ -1227,6 +1227,79 @@ The `SupervisionStrategy` enum defines the available supervision strategies:
 - `Escalate`: Escalates the failure to the supervisor.
 - `Backoff`: Implements exponential backoff before resuming.
 
+## SystemMetricsApi
+
+The `SystemMetricsApi` class provides a centralized API for accessing system metrics and health information from the DotNetActorFramework. It aggregates data from the actor system and metrics collector to provide comprehensive insights into system performance, actor health, message processing statistics, and error rates. This API is designed for monitoring, alerting, and diagnostic purposes, enabling developers to track system health and identify performance bottlenecks.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and metrics collector
+var actorSystem = new ActorSystem("MonitoringDemoSystem");
+var metricsCollector = new MetricsCollector(actorSystem);
+
+// Create the SystemMetricsApi instance
+var metricsApi = new SystemMetricsApi(actorSystem, metricsCollector);
+
+// Get overall system health summary
+var healthSummary = metricsApi.GetSystemHealth();
+Console.WriteLine($"System Health: {healthSummary.IsHealthy}");
+Console.WriteLine($"Total Actors: {healthSummary.TotalActors}, Healthy: {healthSummary.HealthyActors}");
+Console.WriteLine($"Total Messages: {healthSummary.TotalMessages}, Errors: {healthSummary.TotalErrors}");
+Console.WriteLine($"Error Rate: {healthSummary.ErrorRate:P2}, Health: {healthSummary.HealthPercentage:P2}");
+Console.WriteLine($"Average Latency: {healthSummary.AverageLatencyMs:F2}ms");
+
+// Get metrics for specific message types
+var messageMetrics = metricsApi.GetMessageTypeMetrics("ProcessOrder");
+if (messageMetrics != null)
+{
+    Console.WriteLine($"Message Type: {messageMetrics.MessageType}");
+    Console.WriteLine($"  Processed: {messageMetrics.ProcessedCount}");
+    Console.WriteLine($"  Errors: {messageMetrics.ErrorCount}");
+    Console.WriteLine($"  Avg Latency: {messageMetrics.AverageLatencyMs:F2}ms");
+    Console.WriteLine($"  Error Rate: {messageMetrics.ErrorRate:P2}");
+}
+
+// Get metrics for specific actors
+var actorMetrics = metricsApi.GetActorMetrics("/root/order-processor");
+if (actorMetrics != null)
+{
+    Console.WriteLine($"Actor: {actorMetrics.ActorPath}");
+    Console.WriteLine($"  Processed: {actorMetrics.ProcessedCount}");
+    Console.WriteLine($"  Errors: {actorMetrics.ErrorCount}");
+    Console.WriteLine($"  Avg Latency: {actorMetrics.AverageLatencyMs:F2}ms");
+    Console.WriteLine($"  Error Rate: {actorMetrics.ErrorRate:P2}");
+}
+
+// Get top message types by volume
+var topMessageTypes = metricsApi.GetTopMessageTypes(5);
+Console.WriteLine($"Top 5 Message Types:");
+foreach (var msgType in topMessageTypes)
+{
+    Console.WriteLine($"  {msgType.MessageType}: {msgType.ProcessedCount} messages");
+}
+
+// Get slowest actors by latency
+var slowestActors = metricsApi.GetSlowesttActors(5);
+Console.WriteLine($"Slowest 5 Actors:");
+foreach (var actor in slowestActors)
+{
+    Console.WriteLine($"  {actor.ActorPath}: {actor.AverageLatencyMs:F2}ms avg latency");
+}
+
+// Get most error-prone actors
+var errorProneActors = metricsApi.GetErrorProneActors(5);
+Console.WriteLine($"Most Error-Prone 5 Actors:");
+foreach (var actor in errorProneActors)
+{
+    Console.WriteLine($"  {actor.ActorPath}: {actor.ErrorRate:P2} error rate");
+}
+
+// Reset metrics for benchmarking
+metricsApi.ResetMetrics();
+Console.WriteLine("Metrics reset for fresh measurements.");
+```
+
 ## MetricsCollectorWorker
 
 The `MetricsCollectorWorker` is a background worker that periodically collects and aggregates metrics from the actor system. It provides real-time monitoring of system health, actor status, message throughput, and error rates, enabling proactive performance analysis and alerting.
