@@ -815,6 +815,54 @@ The `DispatcherStatistics` class provides statistics about message dispatch oper
 - `int DeadLetterCount { get; set; }`: Gets the number of messages in the dead letter queue.
 - `double SuccessRate { get; set; }`: Gets the success rate as a percentage.
 
+## CoreFunctionalityTests
+
+The `CoreFunctionalityTests` class provides unit tests for foundational functionality of the DotNetActorFramework. It verifies core components like actor registry operations, mailbox service behavior, and basic message handling to ensure the framework operates correctly at its most fundamental level. These tests serve as both validation of core functionality and documentation of expected behavior for framework users.
+
+### Usage Example
+
+```csharp
+// Initialize the actor registry and test actor operations
+var registry = new ActorRegistry();
+
+// Create and register an actor
+var actorPath = new ActorPath("/system/test-actor");
+var actorRef = new ActorRef(actorPath, Guid.NewGuid());
+registry.Register(actorRef);
+
+// Test actor registry operations
+var retrievedActor = registry.GetByPath(actorPath);
+Console.WriteLine($"Actor retrieved: {retrievedActor != null}");
+Console.WriteLine($"Registry contains actor: {registry.Contains(actorPath)}");
+
+// Test mailbox service operations
+var options = new ActorSystemOptions { DefaultMailboxCapacity = 10 };
+var mailboxService = new MailboxService(options);
+var actorId = Guid.NewGuid();
+var mailbox = mailboxService.CreateMailbox(actorId);
+
+// Create and enqueue a message
+await mailboxService.EnqueueAsync(actorId, 
+    new Envelope(new Message<string>("test-data") { Priority = 1 }, actorRef));
+Console.WriteLine($"Mailbox size: {mailboxService.GetMailboxSize(actorId)}");
+
+// Dequeue the message
+var dequeued = await mailboxService.DequeueAsync(actorId);
+Console.WriteLine($"Message dequeued: {dequeued != null}");
+
+// Clear the registry when done
+registry.Clear();
+Console.WriteLine($"Registry cleared. Count: {registry.GetCount()}");
+```
+
+### Test Methods
+
+- `ActorRegistry_RegisterAndGet_ShouldReturnCorrectActor`: Verifies that actors can be registered and retrieved from the registry by their path.
+- `ActorRegistry_Clear_ShouldRemoveAllActors`: Ensures that clearing the registry removes all registered actors.
+- `MailboxService_CreateAndEnqueue_ShouldHoldMessage`: Tests that creating and enqueueing a message to a mailbox properly stores the message.
+- `MailboxService_EnqueueAndDequeue_ShouldReturnSameMessage`: Validates that messages can be enqueued and dequeued, returning the same message.
+- `MailboxService_EnqueueToFullMailbox_ShouldFail`: Confirms that attempting to enqueue to a full mailbox fails appropriately.
+
 ## ClusterActorRegistry
 
 The `ClusterActorRegistry` class manages actor references across different nodes in a cluster. It tracks which actors are hosted on which cluster nodes, enabling distributed actor discovery and management. This registry is essential for cluster-aware actor systems where actors can be distributed across multiple nodes and need to be discovered dynamically.
