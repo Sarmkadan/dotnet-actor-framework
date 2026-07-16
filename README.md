@@ -5,6 +5,71 @@ mailboxes, supervision strategies, middleware, metrics and pluggable
 persistence, composed via `Microsoft.Extensions.DependencyInjection` or a
 fluent builder.
 
+## ActorCacheService
+
+The `ActorCacheService` class provides caching functionality for actor references and paths, reducing lookup overhead and improving performance when frequently accessing the same actors. It implements an LRU (Least Recently Used) eviction policy when capacity is reached and supports time-based expiration for cached entries.
+
+### Usage Example
+
+```csharp
+// Initialize the actor cache service with default settings (1000 entries, 5 minute TTL)
+var actorCache = new ActorCacheService();
+
+// Create an actor system and actors
+var actorSystem = new ActorSystem("CachingDemoSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Cache actor references for frequent access
+actorCache.Set(rootActor.Path, rootActor);
+actorCache.Set(workerActor.Path, workerActor);
+
+// Retrieve cached actor references
+var cachedRoot = actorCache.Get(rootActor.Path);
+if (cachedRoot != null)
+{
+    Console.WriteLine($"Found cached actor: {cachedRoot.Path}");
+}
+
+// Check if an actor is in cache
+bool containsWorker = actorCache.Contains(workerActor.Path);
+Console.WriteLine($"Worker in cache: {containsWorker}");
+
+// Remove an entry from cache
+bool removed = actorCache.Remove(rootActor.Path);
+Console.WriteLine($"Removed from cache: {removed}");
+
+// Clear all cached entries
+actorCache.Clear();
+
+// Get cache statistics
+Console.WriteLine($"Cache contains {actorCache.Count} entries");
+
+// Remove expired entries
+int expiredRemoved = actorCache.RemoveExpired();
+Console.WriteLine($"Removed {expiredRemoved} expired entries");
+```
+
+### Properties and Methods
+
+- `ActorCacheService(int maxCapacity = 1000, TimeSpan? ttl = null)`: Initializes a new actor cache service with configurable maximum capacity and time-to-live for cached entries.
+- `void Set(ActorPath path, ActorRef actorRef)`: Adds or updates an actor reference in the cache.
+- `ActorRef? Get(ActorPath path)`: Retrieves an actor reference from the cache, returning null if not found or expired.
+- `bool Contains(ActorPath path)`: Checks if a path is in the cache.
+- `bool Remove(ActorPath path)`: Removes an entry from the cache.
+- `void Clear()`: Clears all cached entries.
+- `int Count { get; }`: Gets the number of items currently in the cache.
+- `int RemoveExpired()`: Removes expired entries from the cache and returns the count of removed entries.
+
+### CachedActorRef Class
+
+The internal `CachedActorRef` class represents a cached actor reference with metadata:
+
+- `ActorRef ActorRef { get; }`: Gets the actor reference.
+- `DateTime CachedAt { get; }`: Gets the timestamp when the actor was cached.
+- `DateTime LastAccessedAt { get; set; }`: Gets or sets the timestamp of the last access.
+
+
 ## ActorSystemBuilder
 
 The `ActorSystemBuilder` class provides a fluent interface for constructing and configuring an `ActorSystem` instance. It allows you to chain configuration methods to customize various aspects of the actor system such as logging, error handling, rate limiting, metrics collection, authentication, caching, event bus, background workers, and mailbox capacity. The builder pattern enables clean, readable configuration that can be easily modified and extended.
