@@ -17,6 +17,101 @@ envelopes and invokes `Actor.ReceiveAsync`; failures are routed to
 `SupervisionService` (restart / stop / resume / escalate / backoff). Everything
 below is API-level reference for the individual types.
 
+## MailboxService
+
+The `MailboxService` class manages message mailboxes for actors in the actor system. Each actor has a bounded FIFO mailbox where messages are queued and processed sequentially by the actor's `ReceiveAsync` method. The service supports both standard FIFO mailboxes and priority-based mailboxes, with configurable capacity and automatic backpressure when mailboxes are full.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system with mailbox configuration
+var options = new ActorSystemOptions
+{
+    DefaultMailboxCapacity = 1000,
+    DefaultMailboxType = MailboxType.Standard
+};
+
+var actorSystem = new ActorSystem(options);
+var mailboxService = new MailboxService(options);
+
+// Create an actor
+var actorId = Guid.NewGuid();
+var actorPath = new ActorPath("/user/order-processor");
+
+// Create a mailbox for the actor with custom capacity
+var mailbox = mailboxService.CreateMailbox(actorId, capacity: 500);
+
+// Enqueue messages to the actor
+for (int i = 0; i < 10; i++)
+{
+    var message = new Message("process-order", new Dictionary<string, object>
+    {
+        { "orderId", $"order-{i}" },
+        { "amount", i * 10.5 }
+    });
+    
+    var envelope = new Envelope(message, actorPath);
+    await mailboxService.EnqueueAsync(actorId, envelope);
+}
+
+// Check mailbox status
+Console.WriteLine($"Mailbox size: {mailboxService.GetMailboxSize(actorId)}");
+Console.WriteLine($"Is mailbox full: {mailboxService.IsMailboxFull(actorId)}");
+Console.WriteLine($"Mailbox load factor: {mailbox.GetLoadFactor():F2}");
+
+// Dequeue and process messages
+while (await mailboxService.DequeueAsync(actorId) is { } envelope)
+{
+    Console.WriteLine($"Processing message: {envelope.Message.Command}");
+    // Process the message...
+}
+
+// Get system-wide mailbox statistics
+var stats = mailboxService.GetStatistics();
+Console.WriteLine($"Total mailboxes: {stats.TotalMailboxes}");
+Console.WriteLine($"Total messages: {stats.TotalMessages}");
+Console.WriteLine($"Average load factor: {stats.AverageLoadFactor:F2}");
+
+// Clean up when actor is terminated
+mailboxService.RemoveMailbox(actorId);
+```
+
+### Properties and Methods
+
+- `MailboxService(ActorSystemOptions options)`: Initializes a new mailbox service with the specified configuration.
+- `IMailbox CreateMailbox(Guid actorId, int capacity = 0, MailboxType? mailboxType = null)`: Creates a new mailbox for an actor with optional custom capacity and mailbox type.
+- `IMailbox? GetMailbox(Guid actorId)`: Gets the mailbox for an actor, or null if it doesn't exist.
+- `Task EnqueueAsync(Guid actorId, Envelope envelope)`: Enqueues a message into an actor's mailbox.
+- `Task<Envelope?> DequeueAsync(Guid actorId)`: Dequeues the next message from an actor's mailbox.
+- `int GetMailboxSize(Guid actorId)`: Gets the number of messages in an actor's mailbox.
+- `bool IsMailboxFull(Guid actorId)`: Checks if an actor's mailbox is full.
+- `void RemoveMailbox(Guid actorId)`: Removes a mailbox for an actor.
+- `MailboxStatistics GetStatistics()`: Gets statistics about all mailboxes in the system.
+- `void Clear()`: Clears all mailboxes in the system.
+
+### IMailbox Interface
+
+The `IMailbox` interface defines the contract for actor mailboxes:
+
+- `Guid ActorId { get; }`: Gets the unique identifier of the actor.
+- `int Capacity { get; }`: Gets the capacity of the mailbox.
+- `Task<bool> EnqueueAsync(Envelope envelope)`: Attempts to enqueue a message into the mailbox.
+- `Task<Envelope?> DequeueAsync()`: Attempts to dequeue the next message from the mailbox.
+- `int GetSize()`: Gets the current number of messages in the mailbox.
+- `bool IsFull { get; }`: Gets whether the mailbox is full.
+- `double GetLoadFactor()`: Gets the load factor of the mailbox (0-1).
+- `void Dispose()`: Disposes the mailbox resources.
+
+### MailboxStatistics Class
+
+The `MailboxStatistics` class provides aggregated statistics about all mailboxes:
+
+- `int TotalMailboxes { get; set; }`: Gets the total number of mailboxes.
+- `long TotalMessages { get; set; }`: Gets the total number of messages across all mailboxes.
+- `long TotalCapacity { get; set; }`: Gets the total capacity across all mailboxes.
+- `int FullMailboxes { get; set; }`: Gets the number of mailboxes that are full.
+- `double AverageLoadFactor { get; set; }`: Gets the average load factor across all mailboxes.
+
 ## ActorMetrics
 
 The `ActorMetrics` class tracks performance and behavior metrics for an actor, providing insights into its message processing and error rates.
