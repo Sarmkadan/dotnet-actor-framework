@@ -69,6 +69,64 @@ The internal `CachedActorRef` class represents a cached actor reference with met
 - `DateTime CachedAt { get; }`: Gets the timestamp when the actor was cached.
 - `DateTime LastAccessedAt { get; set; }`: Gets or sets the timestamp of the last access.
 
+## UnreliableActor
+
+The `UnreliableActor` class demonstrates fault tolerance patterns by intentionally failing on early attempts before eventually succeeding. This pattern is useful for testing supervision strategies and understanding how actors recover from transient failures. The actor tracks its attempt count internally and throws exceptions on the first few attempts before completing successfully, allowing supervision mechanisms to demonstrate their effectiveness.
+
+### Usage Example
+
+```csharp
+// Create an actor system with supervision enabled
+var services = new ServiceCollection();
+services.AddActorFramework(options =>
+{
+    options.SystemName = "FaultToleranceDemo";
+    options.DefaultSupervisionStrategy = SupervisionStrategy.Restart;
+    options.BackoffInitialDelayMs = 100;
+    options.BackoffMaxDelayMs = 5000;
+});
+
+var sp = services.BuildServiceProvider();
+var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
+var system = await config.InitializeAsync();
+
+// Create an unreliable actor
+var unreliablePath = new ActorPath("/user/unreliable-worker");
+var unreliableActor = await config.CreateActorAsync(unreliablePath);
+
+// Send a risky operation message that will fail initially
+var riskyOperation = new ControlMessage("risky-operation");
+await unreliableActor.ReceiveAsync(riskyOperation);
+
+// The actor will fail on attempts 1 and 2, then succeed on attempt 3
+// Supervision will automatically restart the actor between failures
+
+// Check health after supervision
+await Task.Delay(2000); // Allow supervision to work
+var health = config.GetHealthSummary();
+Console.WriteLine($"System recovered: {health.RunningActors} actors running, {health.ErroredActors} errors");
+
+// Shutdown
+await system.ShutdownAsync();
+```
+
+### Key Members
+
+- `UnreliableActor(ActorPath path)`: Initializes a new unreliable actor with the specified path.
+- `ReceiveAsync(Message message)`: Handles incoming messages, intentionally failing on early attempts before succeeding.
+- `OnStopAsync()`: Called when the actor is stopped, reporting the total attempt count.
+
+### Behavior
+
+The `UnreliableActor` is designed to simulate transient failures that can be recovered through supervision strategies:
+
+- First 2 attempts: Throws `InvalidOperationException`
+- Attempt 3+: Successfully processes the message
+- Tracks attempt count internally via `_attemptCount` field
+- Reports final attempt count when stopped via `OnStopAsync()`
+
+This pattern is particularly useful for testing supervision strategies like `Restart`, `Resume`, or `Escalate` without requiring external failure injection.
+
 ## DateTimeExtensions
 
 The `DateTimeExtensions` class provides utility methods for working with `DateTime` objects, offering convenient ways to calculate elapsed time, check time conditions, and format timestamps. These extensions are particularly useful for actor lifecycle management, timeout handling, and logging within the actor framework.
