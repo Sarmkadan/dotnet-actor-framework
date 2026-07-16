@@ -478,6 +478,71 @@ var whitelistMiddleware = new AuthenticationMiddleware(whitelistProvider);
 - `Task<bool> AuthenticateAsync(string senderId)`: Always returns true (allows all senders).
 - `Task<bool> ValidateTokenAsync(string token)`: Always returns true (allows all tokens).
 
+## ErrorHandlingMiddleware
+
+The `ErrorHandlingMiddleware` class provides centralized error handling for message processing in the actor system. It wraps message processing in a try-catch block and delegates error handling to configurable strategies, enabling consistent error management across all actors. This middleware is particularly useful for implementing retry logic, suppressing non-critical errors, or fail-fast behavior.
+
+### Usage Example
+
+```csharp
+// Create an actor system
+var actorSystem = new ActorSystem("ErrorHandlingDemoSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+
+// Create a worker actor
+var workerActor = await actorSystem.CreateActorAsync(
+    new ActorPath("/root/worker"),
+    rootActor
+);
+
+// Configure error handling strategy (retry with exponential backoff)
+var retryStrategy = new RetryErrorStrategy(
+    maxRetries: 5,
+    initialDelay: TimeSpan.FromMilliseconds(100),
+    backoffMultiplier: 2.0
+);
+
+// Create error handling middleware
+var errorMiddleware = new ErrorHandlingMiddleware(retryStrategy);
+
+// Use middleware in actor configuration
+// (assuming actor system supports middleware pipeline)
+
+// Example with different strategies
+var suppressStrategy = new SuppressErrorStrategy(); // Fire-and-forget
+var failFastStrategy = new FailFastErrorStrategy(); // Immediate failure
+```
+
+### Properties and Methods
+
+- `ErrorHandlingMiddleware(ErrorHandlingStrategy strategy)`: Initializes a new instance with the specified error handling strategy.
+- `Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)`: Wraps message processing in error handling logic.
+
+### ErrorHandlingStrategy
+
+The abstract base class for all error handling strategies.
+
+- `abstract Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)`: Handles an error that occurred during message processing.
+
+### SuppressErrorStrategy
+
+Silently suppresses errors (fire-and-forget semantics).
+
+- `Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)`: Returns `true` to indicate the error was handled (suppressed).
+
+### RetryErrorStrategy
+
+Retries message processing with exponential backoff up to a configured maximum number of attempts.
+
+- `RetryErrorStrategy(int maxRetries = 3, TimeSpan? initialDelay = null, double backoffMultiplier = 2.0)`: Initializes a new instance with configurable retry parameters.
+- `Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)`: Increments retry count, waits with exponential backoff, and returns `true` if retries remain, `false` if max retries exceeded.
+
+### FailFastErrorStrategy
+
+Immediately re-throws the exception wrapped in an `InvalidOperationException`.
+
+- `Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)`: Throws an `InvalidOperationException` containing the original exception.
+
 ## ConnectionManager
 
 The `ConnectionManager` class manages database connections and provides connection pooling capabilities. It maintains a pool of reusable database connections, tracks connection usage statistics, and provides methods for validating, opening, and closing connections. The connection manager is designed to optimize database resource usage by reusing connections rather than creating new ones for each operation.
