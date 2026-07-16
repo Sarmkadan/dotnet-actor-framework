@@ -727,6 +727,110 @@ The `AggregateMetrics` class represents aggregated metrics across multiple snaps
 - `double ErrorRate { get; set; }`: Gets or sets the average error rate.
 - `double SuccessRate { get; set; }`: Gets or sets the average success rate.
 
+## SupervisionService
+
+The `SupervisionService` class manages supervision strategies for handling actor failures in the DotNetActorFramework. It implements various strategies including restart, stop, escalate, resume, and backoff to provide fault tolerance and recovery mechanisms for actors. The service tracks failure statistics, restart counts, and implements exponential backoff for failed actors, enabling robust error handling and system recovery.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and supervision service
+var actorSystem = new ActorSystem("SupervisionDemoSystem");
+var registry = new ActorRegistry();
+var mailboxService = new MailboxService(new ActorSystemOptions());
+var dispatcher = new MessageDispatcher(mailboxService, registry);
+
+var supervisionService = new SupervisionService(registry, dispatcher);
+
+// Create actors in the hierarchy
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Simulate a failure and handle it with different strategies
+try
+{
+    // Actor processing that might fail
+    await workerActor.ReceiveAsync(new Message("process-data", new Dictionary<string, object>()));
+}
+catch (Exception ex)
+{
+    // Handle failure with restart strategy
+    await supervisionService.HandleFailureAsync(workerActor, ex, SupervisionStrategy.Restart);
+    
+    // Get statistics after handling failure
+    var stats = supervisionService.GetStatistics();
+    Console.WriteLine($"Total failures: {stats.TotalFailures}");
+    Console.WriteLine($"Total restarts: {stats.TotalRestarts}");
+    Console.WriteLine($"Average failures per actor: {stats.AverageFailuresPerActor:F2}");
+}
+
+// Reset failure context for an actor
+supervisionService.ResetContext(workerActor.Id);
+
+// Get supervision context for a specific actor
+var context = supervisionService.GetContext(workerActor.Id);
+if (context != null)
+{
+    Console.WriteLine($"Actor ID: {context.ActorId}");
+    Console.WriteLine($"Failure count: {context.FailureCount}");
+    Console.WriteLine($"Restart count: {context.RestartCount}");
+    Console.WriteLine($"Time since last failure: {context.GetTimeSinceLastFailure()}");
+}
+```
+
+### Properties and Methods
+
+- `SupervisionService(ActorRegistry registry, MessageDispatcher dispatcher)`: Initializes a new supervision service with the specified actor registry and message dispatcher.
+
+- `Task HandleFailureAsync(ActorRef actor, Exception exception, SupervisionStrategy strategy)`: Handles an actor failure according to the specified supervision strategy.
+
+- `void ResetContext(Guid actorId)`: Resets the supervision context for a specific actor.
+
+- `SupervisionStatistics GetStatistics()`: Gets supervision statistics including total failures, restarts, and average failures per actor.
+
+- `SupervisionContext? GetContext(Guid actorId)`: Gets the supervision context for a specific actor.
+
+- `Dictionary<Guid, SupervisionContext> GetAllContexts()`: Gets all supervision contexts.
+
+
+### SupervisionContext Class
+
+The `SupervisionContext` class tracks failure and restart statistics for a supervised actor.
+
+- `Guid ActorId { get; }`: Gets the unique identifier of the supervised actor.
+
+- `int FailureCount { get; set; }`: Gets or sets the number of failures encountered by the actor.
+
+- `int RestartCount { get; set; }`: Gets or sets the number of times the actor has been restarted.
+
+- `DateTime LastFailureTime { get; set; }`: Gets or sets the timestamp of the last failure.
+
+- `void ResetFailures()`: Resets the failure and restart counters.
+
+- `TimeSpan GetTimeSinceLastFailure()`: Gets the time elapsed since the last failure.
+
+### SupervisionStatistics Class
+
+The `SupervisionStatistics` class provides aggregated statistics about supervision operations.
+
+- `int TotalActorsSupervised { get; set; }`: Gets or sets the total number of actors being supervised.
+
+- `long TotalFailures { get; set; }`: Gets or sets the total number of failures across all supervised actors.
+
+- `long TotalRestarts { get; set; }`: Gets or sets the total number of restarts across all supervised actors.
+
+- `double AverageFailuresPerActor { get; set; }`: Gets or sets the average number of failures per actor.
+
+### SupervisionStrategy Enum
+
+The `SupervisionStrategy` enum defines the available supervision strategies:
+
+- `Restart`: Restarts the failed actor.
+- `Stop`: Stops the failed actor.
+- `Resume`: Resumes processing after a failure without restarting.
+- `Escalate`: Escalates the failure to the supervisor.
+- `Backoff`: Implements exponential backoff before resuming.
+
 ## MetricsCollectorWorker
 
 The `MetricsCollectorWorker` is a background worker that periodically collects and aggregates metrics from the actor system. It provides real-time monitoring of system health, actor status, message throughput, and error rates, enabling proactive performance analysis and alerting.
