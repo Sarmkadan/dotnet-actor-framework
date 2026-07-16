@@ -321,3 +321,43 @@ if (retrievedUser != null)
 // Shutdown the system
 await actorSystem.ShutdownAsync();
 ```
+
+## MockActorContext
+
+The `MockActorContext` class facilitates unit testing by allowing developers to isolate actors and inspect their message interactions. It records sent and received messages, providing a controlled environment to verify actor behavior without a fully functional actor system.
+
+### Usage Example
+
+```csharp
+// Setup the mock context for an actor path
+var path = new ActorPath("/test/actor");
+var mockContext = new MockActorContext(path);
+
+// Simulate message processing
+var message = new Message("process", new Dictionary<string, object> { { "data", 42 } });
+mockContext.RecordReceivedMessage(message);
+
+// Verify interactions
+Console.WriteLine($"ActorId: {mockContext.ActorId}");
+Console.WriteLine($"Messages Received: {mockContext.GetMessageCount()}");
+Console.WriteLine($"Did receive 'Message' type: {mockContext.DidReceiveMessageType("Message")}");
+
+// Inspect captured messages
+var received = mockContext.GetReceivedMessages();
+Console.WriteLine($"First message data: {received[0].Data["data"]}");
+```
+
+### Properties and Methods
+
+- `ActorPath ActorPath { get; }`: Gets the path of the mocked actor.
+- `Guid ActorId { get; }`: Gets the unique ID of the mock context.
+- `void RecordReceivedMessage(Message message)`: Records a message received by the actor.
+- `void RecordSentMessage(Message message)`: Records a message sent by the actor.
+- `IReadOnlyList<Message> GetReceivedMessages()`: Returns all received messages.
+- `IReadOnlyList<Message> GetSentMessages()`: Returns all sent messages.
+- `IReadOnlyList<Message> GetReceivedMessagesOfType(string messageType)`: Returns received messages of a specific type.
+- `int GetMessageCount()`: Gets total received message count.
+- `int GetSentMessageCount()`: Gets total sent message count.
+- `void Clear()`: Clears all recorded messages.
+- `bool DidReceiveMessageType(string messageType)`: Checks if a specific message type was received.
+- `bool DidReceiveMessageCount(int count)`: Checks if the received message count matches.
