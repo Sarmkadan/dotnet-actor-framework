@@ -273,6 +273,72 @@ The framework provides several predefined configuration profiles:
 - **Reliable**: Optimized for durability and fault tolerance (persistence and snapshotting enabled)
 - **Cluster**: Configured for distributed actor systems with cluster mode enabled
 
+## ConcurrentCollectionExtensions
+
+The `ConcurrentCollectionExtensions` class provides extension methods for concurrent collections (`ConcurrentDictionary` and `ConcurrentQueue`) to simplify common operations when working with thread-safe collections in the actor framework. These extensions reduce boilerplate code and provide thread-safe access patterns for managing collections in concurrent scenarios.
+
+### Usage Example
+
+```csharp
+// Initialize concurrent collections for message processing
+var messageQueue = new ConcurrentQueue<Message>();
+var actorRegistry = new ConcurrentDictionary<Guid, ActorRef>();
+
+// Enqueue multiple messages at once
+var messages = new List<Message>
+{
+    new Message("process-order", new Dictionary<string, object> { { "orderId", "order-123" } }),
+    new Message("process-payment", new Dictionary<string, object> { { "paymentId", "pay-456" } }),
+    new Message("process-shipping", new Dictionary<string, object> { { "trackingId", "track-789" } })
+};
+
+messageQueue.EnqueueRange(messages);
+
+// Get all messages from the queue
+var allMessages = messageQueue.DequeueAll();
+Console.WriteLine($"Processed {allMessages.Count} messages");
+
+// Register actors in a thread-safe registry
+var rootActor = new ActorRef(Guid.NewGuid(), new ActorPath("/root"));
+var workerActor = new ActorRef(Guid.NewGuid(), new ActorPath("/root/worker"));
+
+actorRegistry.TryAdd(rootActor.Id, rootActor);
+actorRegistry.TryAdd(workerActor.Id, workerActor);
+
+// Get all registered actors
+var allActors = actorRegistry.GetAllValues().ToList();
+Console.WriteLine($"Registered {allActors.Count} actors");
+
+// Get actor by ID with default fallback
+var unknownActor = actorRegistry.GetValueOrDefault(Guid.NewGuid(), rootActor);
+Console.WriteLine($"Fallback actor: {unknownActor.Path}");
+
+// Remove actors matching a predicate
+int removedCount = actorRegistry.RemoveWhere((id, actor) => actor.Path.ToString().Contains("temp"));
+Console.WriteLine($"Removed {removedCount} temporary actors");
+
+// Get current collection sizes
+int queueSize = messageQueue.GetCount();
+int registrySize = actorRegistry.GetCount();
+Console.WriteLine($"Queue size: {queueSize}, Registry size: {registrySize}");
+
+// Clear collections when needed
+messageQueue.Clear();
+actorRegistry.ClearAll();
+```
+
+### Available Methods
+
+- `IEnumerable<TValue> GetAllValues<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary)`: Gets all values from a concurrent dictionary.
+- `IEnumerable<TKey> GetAllKeys<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary)`: Gets all keys from a concurrent dictionary.
+- `TValue? GetValueOrDefault<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key, TValue? defaultValue = default)`: Gets a value with a default fallback if not found.
+- `int GetCount<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary)`: Gets the count of items in a concurrent dictionary.
+- `void ClearAll<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary)`: Clears all items from a concurrent dictionary.
+- `int RemoveWhere<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, Func<TKey, TValue, bool> predicate)`: Removes entries matching a predicate.
+- `void EnqueueRange<T>(this ConcurrentQueue<T> queue, IEnumerable<T> items)`: Enqueues multiple items to a concurrent queue.
+- `List<T> DequeueAll<T>(this ConcurrentQueue<T> queue)`: Dequeues all available items from a concurrent queue.
+- `int GetCount<T>(this ConcurrentQueue<T> queue)`: Gets the current count of items in a concurrent queue.
+
 ## ActorPathExtensions
 
 The `ActorPathExtensions` class provides utility methods for working with `ActorPath` objects, enabling common operations like hierarchy traversal, parent-child relationship checks, and relative path calculation. These extensions simplify path manipulation throughout the actor system and are essential for supervision hierarchies, actor discovery, and message routing.
