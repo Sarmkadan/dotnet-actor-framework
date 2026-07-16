@@ -1989,6 +1989,63 @@ if (retrievedUser != null)
 await actorSystem.ShutdownAsync();
 ```
 
+## ActorManagementApi
+
+The `ActorManagementApi` class provides a centralized API for managing and monitoring actors within the DotNetActorFramework. It enables programmatic inspection of actor states, metrics retrieval, error tracking, and lifecycle management including graceful termination. This API is designed for operational tooling, monitoring dashboards, and administrative interfaces that need to interact with the actor system at runtime.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and management API
+var actorSystem = new ActorSystem("ManagementDemoSystem");
+var managementApi = new ActorManagementApi(actorSystem);
+
+// Create actors in the hierarchy
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Get information about a specific actor
+var actorInfo = managementApi.GetActor(workerActor.Id);
+if (actorInfo != null)
+{
+    Console.WriteLine($"Actor: {actorInfo.Path}");
+    Console.WriteLine($"Is Alive: {actorInfo.IsAlive}");
+    Console.WriteLine($"Created At: {actorInfo.CreatedAt}");
+}
+
+// List all actors in the system
+var allActors = managementApi.ListActors();
+Console.WriteLine($"Total actors: {allActors.Total}");
+
+// List actors by parent path
+var rootChildren = managementApi.ListActorsByParent(new ActorPath("/root"));
+Console.WriteLine($"Root has {rootChildren.Actors.Count} child actors");
+
+// Get metrics for all actors
+var metricsSummary = managementApi.GetActorMetrics();
+if (metricsSummary != null)
+{
+    Console.WriteLine($"Total actors: {metricsSummary.Total}");
+    Console.WriteLine($"Messages processed: {metricsSummary.MessagesProcessed}");
+    Console.WriteLine($"Error rate: {metricsSummary.ErrorRate:P2}");
+}
+
+// Terminate an actor gracefully
+var response = await managementApi.TerminateActorAsync(workerActor.Id);
+if (response.Success)
+{
+    Console.WriteLine($"Actor terminated: {response.Message}");
+}
+
+// Get error actors (actors with high error rates)
+var errorActors = managementApi.GetErrorActors();
+Console.WriteLine($"Actors with errors: {errorActors.Actors.Count}");
+
+// Get total actor count
+var actorCount = managementApi.GetActorCount();
+Console.WriteLine($"Total actors in system: {actorCount}");
+```
+
 ## MockActorContext
 
 The `MockActorContext` class facilitates unit testing by allowing developers to isolate actors and inspect their message interactions. It records sent and received messages, providing a controlled environment to verify actor behavior without a fully functional actor system.
