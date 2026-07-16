@@ -717,6 +717,84 @@ Console.WriteLine($"Control message deserialized: {controlResult != null}");
 - `IStateSerializer`: Interface for serializing actor state objects.
 - `IEnvelopeSerializer`: Interface for serializing message envelopes.
 
+## DependencyInjectionSetup
+
+The `DependencyInjectionSetup` class provides extension methods for configuring the DotNetActorFramework with Microsoft.Extensions.DependencyInjection. These methods simplify the setup of the actor system, persistence services, and other framework components by registering them as services in the dependency injection container. The extension methods support different configuration profiles (high-performance, reliable, cluster) and allow custom configuration through callback functions.
+
+### Usage Example
+
+```csharp
+// Configure services with default settings
+var services = new ServiceCollection();
+services.AddActorFramework();
+
+// Configure services with custom options
+var customServices = new ServiceCollection();
+customServices.AddActorFramework(options =>
+{
+    options.DefaultMailboxCapacity = 2000;
+    options.EnableMessagePersistence = true;
+    options.EnableMetricsCollection = true;
+    options.SnapshotIntervalSeconds = 300;
+    options.MaxMessageRetries = 3;
+});
+
+// Configure high-performance services (optimized for throughput)
+var highPerformanceServices = new ServiceCollection();
+highPerformanceServices.AddActorFrameworkHighPerformance();
+
+// Configure reliable services (optimized for durability and fault tolerance)
+var reliableServices = new ServiceCollection();
+reliableServices.AddActorFrameworkReliable("Server=localhost;Database=ActorFramework;User Id=sa;Password=your_password;");
+
+// Configure cluster services (for distributed actor systems)
+var clusterServices = new ServiceCollection();
+clusterServices.AddActorFrameworkCluster(
+    clusterAddress: "node1.example.com:8080",
+    connectionString: "Server=localhost;Database=ActorFramework;User Id=sa;Password=your_password;"
+);
+
+// Build the service provider and resolve required services
+var serviceProvider = services.BuildServiceProvider();
+
+// Resolve the actor system configuration
+var actorSystemConfig = serviceProvider.GetRequiredService<ActorSystemConfiguration>();
+
+// Resolve other framework services
+var actorRegistry = serviceProvider.GetRequiredService<ActorRegistry>();
+var mailboxService = serviceProvider.GetRequiredService<MailboxService>();
+var messageDispatcher = serviceProvider.GetRequiredService<MessageDispatcher>();
+var supervisionService = serviceProvider.GetRequiredService<SupervisionService>();
+
+// For cluster mode
+if (serviceProvider.GetService<ClusterActorRegistry>() != null)
+{
+    var clusterRegistry = serviceProvider.GetRequiredService<ClusterActorRegistry>();
+}
+```
+
+### Extension Methods
+
+- `AddActorFramework(this IServiceCollection services, Action<ActorSystemOptions>? configureOptions = null)`: Adds actor framework services with customizable configuration. Registers the actor system options, persistence services, repositories, and core services like ActorRegistry, MailboxService, MessageDispatcher, and SupervisionService.
+
+- `AddActorFrameworkHighPerformance(this IServiceCollection services)`: Adds actor framework services optimized for high throughput with minimal overhead. Disables message persistence and metrics collection for maximum performance.
+
+- `AddActorFrameworkReliable(this IServiceCollection services, string? connectionString = null)`: Adds actor framework services optimized for reliability and fault tolerance. Enables message persistence, actor state snapshotting, and sets appropriate retry limits.
+
+- `AddActorFrameworkCluster(this IServiceCollection services, string clusterAddress = "127.0.0.1:8080", string? connectionString = null)`: Adds actor framework services configured for cluster mode. Enables cluster mode, message persistence, metrics collection, and registers the ClusterActorRegistry service.
+
+- `ConfigureActorFramework(this IServiceCollection services, Action<ActorSystemOptions> configureOptions)`: Configures actor framework options using the Microsoft.Extensions.Options pattern. Allows updating options after initial registration.
+
+### Related Types
+
+- `ActorSystemOptions`: Configuration options for the actor system including mailbox capacity, persistence settings, and cluster configuration.
+- `ActorSystemConfiguration`: Main configuration service that coordinates the setup of the actor system.
+- `ActorRegistry`: Service for managing actor registrations and lookups.
+- `MailboxService`: Manages per-actor mailboxes for message queuing.
+- `MessageDispatcher`: Handles message routing and delivery between actors.
+- `SupervisionService`: Manages failure handling and supervision strategies for actors.
+- `ClusterActorRegistry`: Service for managing actors across a cluster of nodes.
+
 ## ActorDiscoveryService
 
 The `ActorDiscoveryService` class provides capability-based actor discovery, enabling actors to be located dynamically by their registered capabilities and metadata tags. This service maintains indices of actors by their capabilities and tags, allowing for efficient discovery without coupling callers to concrete actor paths or identifiers.
