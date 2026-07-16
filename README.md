@@ -814,6 +814,40 @@ Console.WriteLine($"Control message deserialized: {controlResult != null}");
 - `IStateSerializer`: Interface for serializing actor state objects.
 - `IEnvelopeSerializer`: Interface for serializing message envelopes.
 
+## ActorSystemConfiguration
+
+The `ActorSystemConfiguration` class serves as the central configuration service for the DotNetActorFramework actor system. It coordinates the setup and initialization of all core services including actor registry, mailbox service, message dispatcher, supervision service, and metrics collection. This configuration service maintains runtime statistics about system health, message throughput, actor status, and resource utilization, providing a comprehensive view of the actor system's operational state.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system configuration
+var actorSystemConfig = new ActorSystemConfiguration();
+
+// Initialize the actor system with configuration
+var actorSystem = await actorSystemConfig.InitializeAsync("ProductionSystem");
+
+// Create actors in the hierarchy
+var rootActor = await actorSystemConfig.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystemConfig.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Send messages between actors
+await actorSystemConfig.SendMessageAsync(rootActor, workerActor, 
+    new Message("process-data", new Dictionary<string, object> { { "data", 42 } }));
+
+// Monitor system health and statistics
+var healthSummary = await actorSystemConfig.GetHealthSummary();
+Console.WriteLine($"System Health: {healthSummary.GetHealthPercentage()}%");
+Console.WriteLine($"Total Messages: {healthSummary.TotalMessages}, Total Errors: {healthSummary.TotalErrors}");
+
+var statistics = actorSystemConfig.GetStatistics();
+Console.WriteLine($"Total Actors: {statistics.TotalActors}");
+Console.WriteLine($"Message Throughput: {statistics.MessagesPerSecond:F2} msg/s");
+
+// Shutdown the system gracefully
+await actorSystemConfig.ShutdownAsync();
+```
+
 ## DependencyInjectionSetup
 
 The `DependencyInjectionSetup` class provides extension methods for configuring the DotNetActorFramework with Microsoft.Extensions.DependencyInjection. These methods simplify the setup of the actor system, persistence services, and other framework components by registering them as services in the dependency injection container. The extension methods support different configuration profiles (high-performance, reliable, cluster) and allow custom configuration through callback functions.
