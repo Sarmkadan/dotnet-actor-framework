@@ -69,6 +69,66 @@ The internal `CachedActorRef` class represents a cached actor reference with met
 - `DateTime CachedAt { get; }`: Gets the timestamp when the actor was cached.
 - `DateTime LastAccessedAt { get; set; }`: Gets or sets the timestamp of the last access.
 
+## DateTimeExtensions
+
+The `DateTimeExtensions` class provides utility methods for working with `DateTime` objects, offering convenient ways to calculate elapsed time, check time conditions, and format timestamps. These extensions are particularly useful for actor lifecycle management, timeout handling, and logging within the actor framework.
+
+### Usage Example
+
+```csharp
+// Create a timestamp for "now" in actor processing
+var messageReceivedAt = DateTime.UtcNow;
+
+// Check if a timeout has elapsed
+if (messageReceivedAt.HasElapsed(TimeSpan.FromSeconds(30)))
+{
+    Console.WriteLine("Timeout elapsed for message processing");
+}
+
+// Get elapsed time for metrics
+var elapsed = messageReceivedAt.GetElapsed();
+Console.WriteLine($"Processing took {elapsed.TotalMilliseconds}ms");
+
+// Check if a scheduled event should fire
+var scheduledTime = DateTime.UtcNow.AddMinutes(5);
+if (scheduledTime.IsPast())
+{
+    Console.WriteLine("Scheduled event should fire now");
+}
+
+// Get human-readable time description for logs
+var oldTimestamp = DateTime.UtcNow.AddHours(-2);
+Console.WriteLine($"Message processed at: {oldTimestamp.GetTimeAgoDescription()}");
+
+// Format timestamp for log files
+var logTimestamp = DateTime.UtcNow;
+Console.WriteLine($"[{logTimestamp.GetLogTimestamp()}] Processing started");
+
+// Round to nearest second for consistent timestamps
+var preciseTime = DateTime.UtcNow.AddMilliseconds(500);
+var roundedTime = preciseTime.RoundToSecond();
+Console.WriteLine($"Rounded time: {roundedTime}");
+
+// Check if within a time window
+var windowStart = DateTime.UtcNow.AddMinutes(-10);
+var windowEnd = DateTime.UtcNow.AddMinutes(10);
+if (DateTime.UtcNow.IsWithinWindow(windowStart, windowEnd))
+{
+    Console.WriteLine("Current time is within the specified window");
+}
+```
+
+### Available Methods
+
+- `TimeSpan GetElapsed(this DateTime dateTime)`: Gets the elapsed time since this datetime.
+- `long GetElapsedMilliseconds(this DateTime dateTime)`: Gets the elapsed time in milliseconds.
+- `bool HasElapsed(this DateTime dateTime, TimeSpan duration)`: Determines if the specified duration has elapsed since this datetime.
+- `bool IsPast(this DateTime dateTime)`: Determines if this datetime is in the past.
+- `bool IsFuture(this DateTime dateTime)`: Determines if this datetime is in the future.
+- `string GetTimeAgoDescription(this DateTime dateTime)`: Gets a human-readable description of how long ago this datetime was.
+- `DateTime RoundToSecond(this DateTime dateTime)`: Truncates a datetime to whole seconds, discarding milliseconds.
+- `bool IsWithinWindow(this DateTime dateTime, DateTime start, DateTime end)`: Determines if the time is within the specified window.
+- `string GetLogTimestamp(this DateTime dateTime)`: Gets a formatted timestamp suitable for logging (ISO 8601 with milliseconds UTC).
 
 ## ActorSystemBuilder
 
