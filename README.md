@@ -765,6 +765,62 @@ else
 - `bool IsValidJson(this string json)`: Determines if a string is valid JSON.
 - `T? DeepCopy<T>(this T obj)`: Creates a deep copy of an object by serializing and deserializing it.
 
+## ProcessorActor
+
+The `ProcessorActor` class processes control messages with configurable delays and integrates with the metrics collection system. It serves as a worker actor that handles processing tasks while the `MonitorActor` tracks system health metrics. The processor demonstrates how to implement custom actor behavior with lifecycle management and metrics integration.
+
+### Usage Example
+
+```csharp
+// Create an actor system with metrics enabled
+var services = new ServiceCollection();
+services.AddActorFramework(options =>
+{
+    options.SystemName = "ProcessingSystem";
+    options.EnableMetricsCollection = true;
+});
+
+var sp = services.BuildServiceProvider();
+var config = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(sp);
+var system = await config.InitializeAsync();
+
+// Create a processor actor
+var processorPath = new ActorPath("/user/data-processor");
+var processorRef = await config.CreateActorAsync(processorPath);
+
+// Send a control message to process with a delay
+var processMessage = new ControlMessage("process",
+    new Dictionary<string, object> { { "delay", 250 } });
+await config.SendMessageAsync(processorRef, processorRef, processMessage);
+
+// Create a monitor actor to track system metrics
+var monitorPath = new ActorPath("/user/monitor");
+var monitorRef = await config.CreateActorAsync(monitorPath);
+
+// Let the system run for monitoring
+await Task.Delay(10000);
+
+// Shutdown
+await system.ShutdownAsync();
+```
+
+### Key Members
+
+- `ProcessorActor(ActorPath path)`: Initializes a new processor actor with the specified hierarchical path.
+- `ReceiveAsync(Message message)`: Processes incoming control messages, particularly the "process" command with configurable delays.
+
+### Behavior
+
+The `ProcessorActor` is designed to handle processing tasks within a monitored actor system:
+
+- Receives `ControlMessage` with command "process" and processes them with configurable delays
+- Integrates with the metrics system via `Metrics.RecordSuccess()` to track successful operations
+- Works alongside `MonitorActor` for system health monitoring and metrics reporting
+- Demonstrates actor lifecycle integration with the metrics collection system
+
+Processor actors are typically used in scenarios where you need to process tasks while simultaneously monitoring system health and performance metrics.
+
+
 ## Architecture
 
 
