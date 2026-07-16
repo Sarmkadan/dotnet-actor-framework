@@ -323,6 +323,73 @@ batcher.Dispose();
 - Expired batches trigger the `BatchExpired` event if a handler is attached
 - If no handler is attached to `BatchExpired`, batches are retained until filled or explicitly flushed to prevent message loss
 
+## SerializationExtensions
+
+The `SerializationExtensions` class provides utility methods for serializing and deserializing objects to and from JSON format. It offers convenient extension methods for converting objects to JSON strings, byte arrays, and back to objects with proper error handling and validation. These utilities are particularly useful for message serialization, state persistence, and data transfer scenarios within the actor framework.
+
+### Usage Example
+
+```csharp
+// Create a sample data object to serialize
+var order = new
+{
+    OrderId = "ORD-12345",
+    CustomerId = "CUST-789",
+    Items = new[] { "Laptop", "Mouse", "Keyboard" },
+    TotalAmount = 2999.99,
+    IsPriority = true
+};
+
+// Serialize to compact JSON string
+string jsonCompact = order.ToJson();
+Console.WriteLine(jsonCompact);
+
+// Serialize to pretty-printed JSON string
+string jsonPretty = order.ToJsonPretty();
+Console.WriteLine(jsonPretty);
+
+// Serialize to JSON bytes
+byte[] jsonBytes = order.ToJsonBytes();
+Console.WriteLine($"Serialized to {jsonBytes.Length} bytes");
+
+// Deserialize from JSON string
+var deserializedOrder = jsonCompact.FromJson<Order>();
+Console.WriteLine($"Deserialized order: {deserializedOrder?.OrderId}");
+
+// Deserialize from JSON bytes
+var orderFromBytes = jsonBytes.FromJsonBytes<Order>();
+Console.WriteLine($"Deserialized from bytes: {orderFromBytes?.OrderId}");
+
+// Validate JSON before deserialization
+bool isValid = jsonCompact.IsValidJson();
+Console.WriteLine($"Is valid JSON: {isValid}");
+
+// Create a deep copy of an object
+var orderCopy = order.DeepCopy();
+Console.WriteLine($"Deep copy created: {orderCopy?.OrderId}");
+
+// Try deserialization with error handling
+if (jsonCompact.TryFromJson(out Order? result, out string? error))
+{
+    Console.WriteLine($"Successfully deserialized: {result?.OrderId}");
+}
+else
+{
+    Console.WriteLine($"Deserialization failed: {error}");
+}
+```
+
+### Available Methods
+
+- `string ToJson<T>(this T obj)`: Serializes an object to a compact JSON string. Returns "null" for null objects.
+- `string ToJsonPretty<T>(this T obj)`: Serializes an object to a pretty-printed JSON string. Returns "null" for null objects.
+- `byte[] ToJsonBytes<T>(this T obj)`: Serializes an object to UTF-8 encoded JSON bytes. Returns an empty array for null objects.
+- `T? FromJson<T>(this string json)`: Deserializes a JSON string to an object. Returns null if deserialization fails or input is null/empty.
+- `T? FromJsonBytes<T>(this byte[] data)`: Deserializes JSON bytes to an object. Returns null if deserialization fails or input is null/empty.
+- `bool TryFromJson<T>(this string json, out T? result, out string? error)`: Attempts to deserialize JSON with error information. Returns true if successful.
+- `bool IsValidJson(this string json)`: Determines if a string is valid JSON.
+- `T? DeepCopy<T>(this T obj)`: Creates a deep copy of an object by serializing and deserializing it.
+
 ## Architecture
 
 
