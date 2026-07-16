@@ -69,6 +69,68 @@ The internal `CachedActorRef` class represents a cached actor reference with met
 - `DateTime CachedAt { get; }`: Gets the timestamp when the actor was cached.
 - `DateTime LastAccessedAt { get; set; }`: Gets or sets the timestamp of the last access.
 
+## WorkerActor
+
+The `WorkerActor` class represents a leaf node in the actor hierarchy that performs individual work items within a parent-child supervision structure. Worker actors are designed to handle specific tasks delegated by their parent supervisor, process messages asynchronously, and maintain their own internal state. Each worker tracks its work items and metrics independently, making it ideal for parallelizable workloads and distributed processing scenarios.
+
+Worker actors participate in the actor lifecycle through initialization, message processing, and graceful shutdown, with supervision strategies automatically handling failures according to the parent's configuration.
+
+### Usage Example
+
+```csharp
+// Create an actor system and worker actor
+var actorSystem = new ActorSystem("WorkerDemoSystem");
+var workerPath = new ActorPath("/user/workers/data-processor");
+var workerActor = new WorkerActor(workerPath);
+
+// Initialize the actor system and worker
+var config = new ActorSystemConfiguration();
+await config.InitializeAsync("WorkerSystem");
+var workerRef = await config.CreateActorAsync(workerPath);
+
+// Send work messages to the worker
+var dispatcher = new MessageDispatcher(new MailboxService(new ActorSystemOptions()), new ActorRegistry());
+
+// Process individual work items
+for (int i = 0; i < 5; i++)
+{
+    var workMessage = new ControlMessage("work", new Dictionary<string, object>
+    {
+        { "taskId", i },
+        { "duration", 100 },
+        { "data", $"task-data-{i}" }
+    });
+    
+    await dispatcher.SendAsync(workerRef, workMessage);
+}
+
+// Monitor worker metrics
+var metrics = workerRef.GetMetricsSummary();
+Console.WriteLine($"Worker processed {metrics.MessageCount} messages with {metrics.ErrorCount} errors");
+
+// Gracefully terminate the worker
+await workerRef.TerminateAsync();
+```
+
+### Key Members
+
+- `WorkerActor(ActorPath path)`: Initializes a new worker actor with the specified hierarchical path.
+- `ReceiveAsync(Message message)`: Processes incoming work messages and handles task execution.
+- `OnStopAsync()`: Called when the actor is stopping to perform cleanup operations.
+
+### Behavior
+
+The `WorkerActor` is designed as a worker node in a supervised hierarchy:
+
+- Receives work messages via `ControlMessage` with command "work"
+- Tracks work item count internally via `_workItems` field
+- Processes work asynchronously with configurable duration
+- Records success metrics upon completion
+- Provides visibility into processed work items during shutdown
+
+Worker actors are typically created and managed by parent supervisor actors, which distribute work across a pool of workers for parallel processing and load balancing.
+
+
 ## UnreliableActor
 
 The `UnreliableActor` class demonstrates fault tolerance patterns by intentionally failing on early attempts before eventually succeeding. This pattern is useful for testing supervision strategies and understanding how actors recover from transient failures. The actor tracks its attempt count internally and throws exceptions on the first few attempts before completing successfully, allowing supervision mechanisms to demonstrate their effectiveness.
