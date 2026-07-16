@@ -478,6 +478,48 @@ var whitelistMiddleware = new AuthenticationMiddleware(whitelistProvider);
 - `Task<bool> AuthenticateAsync(string senderId)`: Always returns true (allows all senders).
 - `Task<bool> ValidateTokenAsync(string token)`: Always returns true (allows all tokens).
 
+## RateLimitingMiddleware
+
+The `RateLimitingMiddleware` class enforces per-actor rate limiting on message delivery using a token bucket algorithm. Each actor has its own bucket that refills at a fixed rate and holds up to a configurable maximum number of tokens, allowing for controlled message throughput and burst absorption.
+
+When the rate limit is exceeded, messages are silently dropped and the middleware returns `false` without calling the next pipeline stage. This prevents system overload while maintaining predictable performance characteristics.
+
+### Usage Example
+
+```csharp
+// Create a rate limiter with 1000 tokens per second (1000 messages per second per actor)
+// Default bucket capacity is 10 seconds worth of burst (10000 tokens)
+var rateLimiter = new RateLimiter(tokensPerSecond: 1000);
+
+// Create the rate limiting middleware
+var rateLimitingMiddleware = new RateLimitingMiddleware(rateLimiter);
+
+// Use in actor system configuration
+var actorSystem = new ActorSystem("RateLimitedSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+
+// Messages will be rate-limited per recipient actor
+// Example: sending 2000 messages to the same actor in one second
+// First 1000 messages succeed, next 1000 are dropped
+
+// Check rate limit status for an actor
+var status = rateLimiter.GetStatus(rootActor.Path);
+Console.WriteLine($"Current tokens: {status.CurrentTokens}/{status.Capacity}, IsLimited: {status.IsLimited}");
+
+// Manually add tokens to a bucket (useful for testing or recovery scenarios)
+// Note: In production, tokens are automatically refilled every 100ms
+```
+
+### Properties and Methods
+
+- `RateLimitingMiddleware(RateLimiter rateLimiter)`: Initializes a new instance with the specified rate limiter.
+- `Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)`: Attempts to consume a rate-limit token for the envelope's recipient. Returns `true` when forwarded, `false` when dropped due to rate limiting.
+
+- `RateLimiter(int tokensPerSecond = 1000, int? bucketCapacity = null)`: Initializes a new rate limiter with configurable tokens per second and bucket capacity.
+- `bool TryConsumeToken(ActorPath path)`: Attempts to consume a token from the actor's rate limit bucket.
+- `RateLimitStatus GetStatus(ActorPath path)`: Gets the current rate limit status for an actor.
+- `void Dispose()`: Disposes the rate limiter and stops the refill timer.
+
 ## ErrorHandlingMiddleware
 
 The `ErrorHandlingMiddleware` class provides centralized error handling for message processing in the actor system. It wraps message processing in a try-catch block and delegates error handling to configurable strategies, enabling consistent error management across all actors. This middleware is particularly useful for implementing retry logic, suppressing non-critical errors, or fail-fast behavior.
