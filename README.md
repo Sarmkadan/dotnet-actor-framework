@@ -416,6 +416,115 @@ The `MetricsSnapshot` class represents a point-in-time snapshot of system metric
 - `double ErrorRate { get; set; }`: Gets or sets the error rate as a percentage.
 - `bool IsHealthy { get; }`: Gets whether the system is healthy (no errors and error rate < 5%).
 
+## MetricsCollectionMiddleware
+
+The `MetricsCollectionMiddleware` class collects detailed metrics about message processing within the actor system. It tracks per-actor and per-message-type latency, throughput, and error rates, providing valuable insights into system performance and identifying potential bottlenecks. This middleware runs at the end of the pipeline (Order = 200) to capture complete end-to-end processing times after all other middleware has executed.
+
+Metrics are stored in an associated `MetricsCollector` instance which provides methods to query specific actor or message type metrics, as well as overall system metrics.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and metrics collector
+var actorSystem = new ActorSystem("MetricsDemoSystem");
+var metricsCollector = new MetricsCollector();
+
+// Create the metrics collection middleware
+var metricsMiddleware = new MetricsCollectionMiddleware(metricsCollector);
+
+// Register the middleware in the actor system configuration
+// (assuming actor system supports middleware pipeline configuration)
+
+// Process some messages through the system
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Messages will be automatically tracked by the middleware
+
+// Retrieve metrics after processing
+var messageMetrics = metricsCollector.GetMessageTypeMetrics("ProcessMessage");
+if (messageMetrics != null)
+{
+    Console.WriteLine($"Message Type: {messageMetrics.MessageType}");
+    Console.WriteLine($"  Processed: {messageMetrics.ProcessedCount}");
+    Console.WriteLine($"  Errors: {messageMetrics.ErrorCount}");
+    Console.WriteLine($"  Avg Latency: {messageMetrics.GetAverageLatencyMs():F2}ms");
+    Console.WriteLine($"  Error Rate: {messageMetrics.GetErrorRate():F2}%");
+}
+
+var actorMetrics = metricsCollector.GetActorMetrics("/root/worker");
+if (actorMetrics != null)
+{
+    Console.WriteLine($"Actor: {actorMetrics.ActorPath}");
+    Console.WriteLine($"  Processed: {actorMetrics.ProcessedCount}");
+    Console.WriteLine($"  Errors: {actorMetrics.ErrorCount}");
+    Console.WriteLine($"  Avg Latency: {actorMetrics.GetAverageLatencyMs():F2}ms");
+    Console.WriteLine($"  Error Rate: {actorMetrics.GetErrorRate():F2}%");
+}
+
+// Get overall system metrics
+var systemMetrics = metricsCollector.GetSystemMetrics();
+Console.WriteLine($"System Metrics:");
+Console.WriteLine($"  Total Messages: {systemMetrics.TotalMessagesProcessed}");
+Console.WriteLine($"  Total Errors: {systemMetrics.TotalErrors}");
+Console.WriteLine($"  Avg Latency: {systemMetrics.AverageLatencyMs:F2}ms");
+Console.WriteLine($"  Message Types: {systemMetrics.MessageTypeCount}");
+Console.WriteLine($"  Actors: {systemMetrics.ActorCount}");
+
+// Reset metrics when needed
+metricsCollector.Reset();
+```
+
+### Properties and Methods
+
+- `MetricsCollectionMiddleware(MetricsCollector collector)`: Initializes a new instance with the specified metrics collector.
+- `Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)`: Middleware entry point that records message processing metrics.
+
+#### MetricsCollector Class
+
+The `MetricsCollector` class collects and stores metrics about message processing.
+
+- `void RecordMessageProcessed(string actorPath, string messageType, long elapsedMs, bool success)`: Records that a message was processed with timing and success information.
+- `MessageTypeMetrics? GetMessageTypeMetrics(string messageType)`: Gets metrics for a specific message type.
+- `ActorMetrics? GetActorMetrics(string actorPath)`: Gets metrics for a specific actor.
+- `IReadOnlyList<MessageTypeMetrics> GetAllMessageMetrics()`: Gets all message type metrics.
+- `IReadOnlyList<ActorMetrics> GetAllActorMetrics()`: Gets all actor metrics.
+- `SystemMetrics GetSystemMetrics()`: Gets overall system metrics.
+- `void Reset()`: Resets all collected metrics.
+
+#### MessageTypeMetrics Class
+
+The `MessageTypeMetrics` class tracks metrics for a specific message type.
+
+- `string MessageType { get; set; }`: Gets or sets the message type name.
+- `long ProcessedCount { get; set; }`: Gets or sets the number of messages processed.
+- `long ErrorCount { get; set; }`: Gets or sets the number of errors encountered.
+- `long TotalLatencyMs { get; set; }`: Gets or sets the total latency in milliseconds.
+- `double GetAverageLatencyMs()`: Gets the average processing latency in milliseconds.
+- `double GetErrorRate()`: Gets the error rate as a percentage.
+
+#### ActorMetrics Class
+
+The `ActorMetrics` class tracks metrics for a specific actor.
+
+- `string ActorPath { get; set; }`: Gets or sets the actor path.
+- `long ProcessedCount { get; set; }`: Gets or sets the number of messages processed.
+- `long ErrorCount { get; set; }`: Gets or sets the number of errors encountered.
+- `long TotalLatencyMs { get; set; }`: Gets or sets the total latency in milliseconds.
+- `double GetAverageLatencyMs()`: Gets the average processing latency in milliseconds.
+- `double GetErrorRate()`: Gets the error rate as a percentage.
+
+#### SystemMetrics Class
+
+The `SystemMetrics` class provides overall system metrics summary.
+
+- `long TotalMessagesProcessed { get; set; }`: Gets or sets the total number of messages processed.
+- `long TotalErrors { get; set; }`: Gets or sets the total number of errors encountered.
+- `double AverageLatencyMs { get; set; }`: Gets or sets the average latency in milliseconds.
+- `int MessageTypeCount { get; set; }`: Gets or sets the number of distinct message types processed.
+- `int ActorCount { get; set; }`: Gets or sets the number of actors that have processed messages.
+- `double GetErrorRate()`: Gets the overall error rate as a percentage.
+
 ## AuthenticationMiddleware
 
 The `AuthenticationMiddleware` class provides authentication for message senders in the actor system. It validates that messages come from authorized sources before passing them to subsequent middleware or the target actor, preventing unauthorized message processing.
