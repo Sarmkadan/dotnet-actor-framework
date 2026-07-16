@@ -243,6 +243,61 @@ The `DispatcherStatistics` class provides statistics about message dispatch oper
 - `int DeadLetterCount { get; set; }`: Gets the number of messages in the dead letter queue.
 - `double SuccessRate { get; set; }`: Gets the success rate as a percentage.
 
+## ClusterActorRegistry
+
+The `ClusterActorRegistry` class manages actor references across different nodes in a cluster. It tracks which actors are hosted on which cluster nodes, enabling distributed actor discovery and management. This registry is essential for cluster-aware actor systems where actors can be distributed across multiple nodes and need to be discovered dynamically.
+
+### Usage Example
+
+```csharp
+// Initialize the cluster actor registry
+var registry = new ClusterActorRegistry();
+
+// Create actors in the actor system
+var actorSystem = new ActorSystem("ClusterDemoSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Register actors on specific cluster nodes (using node addresses as identifiers)
+// In a real cluster, nodeAddress would be the actual node identifier like "node1.example.com:1234"
+registry.RegisterActor("node1.example.com:1234", rootActor);
+registry.RegisterActor("node2.example.com:5678", workerActor);
+
+// Retrieve actors by node address
+var actorsOnNode1 = registry.GetActorsByNode("node1.example.com:1234");
+Console.WriteLine($"Actors on node1: {actorsOnNode1.Count()}");
+
+var actorsOnNode2 = registry.GetActorsByNode("node2.example.com:5678");
+Console.WriteLine($"Actors on node2: {actorsOnNode2.Count()}");
+
+// Get all registered node addresses
+var allNodes = registry.GetAllNodeAddresses();
+Console.WriteLine($"Total nodes in cluster: {registry.GetNodeCount()}");
+foreach (var node in allNodes)
+{
+    Console.WriteLine($"  - {node}");
+}
+
+// Unregister an actor from a node when it terminates
+registry.UnregisterActor("node2.example.com:5678", workerActor);
+
+// Remove a node when it disconnects from the cluster
+registry.RemoveNode("node1.example.com:1234");
+
+// Get updated node count
+Console.WriteLine($"Nodes remaining: {registry.GetNodeCount()}");
+```
+
+### Properties and Methods
+
+- `ClusterActorRegistry(ILogger<ClusterActorRegistry>? logger = null)`: Initializes a new cluster actor registry with optional logging.
+- `void RegisterActor(string nodeAddress, ActorRef actorRef)`: Registers an actor as being hosted on a specific cluster node.
+- `bool UnregisterActor(string nodeAddress, ActorRef actorRef)`: Unregisters a specific actor from a cluster node. Returns true if the actor was found and removed.
+- `bool RemoveNode(string nodeAddress)`: Removes all actors associated with a disconnected or unreachable cluster node. Returns true if the node was found and removed.
+- `IEnumerable<ActorRef> GetActorsByNode(string nodeAddress)`: Retrieves all actors registered on a specific cluster node.
+- `IEnumerable<string> GetAllNodeAddresses()`: Gets all registered node addresses.
+- `int GetNodeCount()`: Gets the total count of registered nodes.
+
 ## ActorRegistry
 
 The `ActorRegistry` class serves as the central registry for managing actor registrations, lookups, and hierarchy indexing within the system. It provides thread-safe mechanisms to register, retrieve, and terminate actors based on their path or ID, enabling efficient actor discovery and management across the actor system.
