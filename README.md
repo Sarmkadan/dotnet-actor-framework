@@ -253,6 +253,76 @@ bool isDescendant2 = rootPath.IsDescendantOf(user1Path); // false
 - `bool IsChildOf(ActorPath parent)`: Determines if this path is a child of the specified parent path.
 - `bool IsDescendantOf(ActorPath ancestor)`: Determines if this path is a descendant of the specified ancestor path.
 
+## MessageBatcher
+
+The `MessageBatcher` class provides efficient message batching functionality for grouping messages together to reduce processing overhead and improve throughput. It groups messages by a batch key (such as message type or destination) and processes them in configurable batch sizes or after a timeout period. The batcher automatically flushes batches when they reach capacity or when the timeout expires, with optional event notification for expired batches.
+
+### Usage Example
+
+```csharp
+// Initialize a message batcher with batch size of 50 messages and 3-second timeout
+var batcher = new MessageBatcher(batchSize: 50, TimeSpan.FromSeconds(3));
+
+// Subscribe to batch expiration events (optional)
+batcher.BatchExpired += (batchKey, messages) => 
+{
+    Console.WriteLine($"Batch '{batchKey}' expired with {messages.Count} messages");
+    // Process the batch of messages
+    foreach (var message in messages)
+    {
+        Console.WriteLine($"Processing message: {message.Command}");
+    }
+};
+
+// Add messages to batches
+var message1 = new Message("process-order", new Dictionary<string, object> { { "orderId", "order-123" } });
+var message2 = new Message("process-order", new Dictionary<string, object> { { "orderId", "order-456" } });
+
+// Messages with the same batch key are grouped together
+var batch1 = batcher.AddMessage("order-processing", message1);
+var batch2 = batcher.AddMessage("order-processing", message2);
+
+// When batch reaches capacity (50 messages), AddMessage returns the batch contents
+if (batch1 != null)
+{
+    Console.WriteLine($"Batch completed with {batch1.Count()} messages");
+}
+
+// Flush a specific batch manually
+var flushedMessages = batcher.FlushBatch("order-processing");
+if (flushedMessages != null)
+{
+    Console.WriteLine($"Manually flushed batch with {flushedMessages.Count()} messages");
+}
+
+// Flush all batches
+var allBatches = batcher.FlushAll();
+foreach (var kvp in allBatches)
+{
+    Console.WriteLine($"Flushed batch '{kvp.Key}' with {kvp.Value.Count()} messages");
+}
+
+// Dispose when done to clean up resources
+batcher.Dispose();
+```
+
+### Properties and Methods
+
+- `MessageBatcher(int batchSize = 100, TimeSpan? batchTimeout = null)`: Initializes a new message batcher with configurable batch size and timeout.
+- `IEnumerable<Message>? AddMessage(string batchKey, Message message)`: Adds a message to a batch. Returns the batch contents when the batch is full, or null while the batch is still filling.
+- `IEnumerable<Message>? FlushBatch(string batchKey)`: Flushes all pending messages in a specific batch. Returns the messages if any were flushed.
+- `Dictionary<string, IEnumerable<Message>> FlushAll()`: Flushes all batches and returns a dictionary of batch keys to their message collections.
+- `void Dispose()`: Disposes the batcher and cleans up resources.
+- `event Action<string, IReadOnlyList<Message>>? BatchExpired`: Event raised when a batch exceeds the batch timeout (optional notification).
+
+### Batch Behavior
+
+- Messages are grouped by their batch key
+- Batches automatically flush when they reach the configured batch size
+- Batches also flush when the batch timeout expires (default: 5 seconds)
+- Expired batches trigger the `BatchExpired` event if a handler is attached
+- If no handler is attached to `BatchExpired`, batches are retained until filled or explicitly flushed to prevent message loss
+
 ## Architecture
 
 
