@@ -577,6 +577,71 @@ The `PersistenceStatistics` class provides statistics about message persistence.
 
 - `double GetDeliveryRate()`: Gets the delivery rate as a percentage.
 
+## ActorDiscoveryService
+
+The `ActorDiscoveryService` class provides capability-based actor discovery, enabling actors to be located dynamically by their registered capabilities and metadata tags. This service maintains indices of actors by their capabilities and tags, allowing for efficient discovery without coupling callers to concrete actor paths or identifiers.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and discovery service
+var actorSystem = new ActorSystem("DiscoveryDemoSystem");
+var discoveryService = new ActorDiscoveryService();
+
+// Create actors with different capabilities
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+discoveryService.Register(rootActor, new[] { "root", "admin" }, new[] { "system", "core" });
+
+var userActor = await actorSystem.CreateActorAsync(new ActorPath("/root/users"), rootActor);
+discoveryService.Register(userActor, new[] { "user-management", "read" }, new[] { "users", "management" });
+
+var orderActor = await actorSystem.CreateActorAsync(new ActorPath("/root/orders"), rootActor);
+discoveryService.Register(orderActor, new[] { "order-processing", "write" }, new[] { "orders", "processing" });
+
+// Discover actors by capability
+var rootActors = discoveryService.Discover("root");
+Console.WriteLine($"Root actors found: {rootActors.Count}"); // Should find rootActor
+
+var userManagementActors = discoveryService.Discover("user-management");
+Console.WriteLine($"User management actors: {userManagementActors.Count}"); // Should find userActor
+
+// Discover actors by tag
+var systemActors = discoveryService.DiscoverByTag("system");
+Console.WriteLine($"System actors: {systemActors.Count}"); // Should find rootActor
+
+var managementActors = discoveryService.DiscoverByTag("management");
+Console.WriteLine($"Management actors: {managementActors.Count}"); // Should find userActor
+
+// Get all registered entries
+var allEntries = discoveryService.GetAll();
+Console.WriteLine($"Total registered entries: {allEntries.Count}");
+
+// Unregister an actor when it terminates
+if (discoveryService.Unregister(userActor))
+{
+    Console.WriteLine("User actor successfully unregistered");
+}
+
+// The service automatically filters out dead actors during discovery
+```
+
+### Properties and Methods
+
+- `void Register(ActorRef actorRef, IEnumerable<string> capabilities, IEnumerable<string>? tags = null)`: Registers an actor with one or more capabilities and optional metadata tags. Subsequent registrations for the same actor overwrite previous entries.
+- `bool Unregister(ActorRef actorRef)`: Removes an actor from all capability and tag indices. Returns true if the actor was found and removed.
+- `IReadOnlyList<ActorRef> Discover(string capability)`: Returns all live actors registered under the specified capability (case-insensitive).
+- `IReadOnlyList<ActorRef> DiscoverByTag(string tag)`: Returns all live actors that carry the given metadata tag (case-insensitive).
+- `IReadOnlyList<ActorDiscoveryEntry> GetAll()`: Returns a point-in-time snapshot of all registered discovery entries.
+
+### ActorDiscoveryEntry Record
+
+The `ActorDiscoveryEntry` record captures an actor's discovery registration details:
+
+- `ActorRef ActorRef { get; }`: The registered actor reference.
+- `string[] Capabilities { get; }`: Capability identifiers under which this actor is discoverable.
+- `string[] Tags { get; }`: Metadata tags associated with this actor.
+- `DateTime RegisteredAt { get; }`: The UTC timestamp when this entry was created.
+
 ## ActorMetricsRepository
 
 ### Usage Example
