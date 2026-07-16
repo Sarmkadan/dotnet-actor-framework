@@ -899,6 +899,76 @@ Console.WriteLine($"Registry cleared. Count: {registry.GetCount()}");
 - `MailboxService_EnqueueAndDequeue_ShouldReturnSameMessage`: Validates that messages can be enqueued and dequeued, returning the same message.
 - `MailboxService_EnqueueToFullMailbox_ShouldFail`: Confirms that attempting to enqueue to a full mailbox fails appropriately.
 
+## MiddlewarePipelineTests
+
+The `MiddlewarePipelineTests` class provides unit tests for the `MiddlewarePipeline` class and related message types (`ControlMessage`, `FailureMessage`) in the DotNetActorFramework. These tests verify that middleware registration, execution, and error handling work correctly, ensuring that the middleware pipeline properly processes messages and handles exceptions according to the framework's specifications.
+
+### Usage Example
+
+```csharp
+// Initialize a middleware pipeline for testing
+var pipeline = new MiddlewarePipeline();
+
+// Create an actor reference for testing
+var actorPath = new ActorPath("/system/test-actor");
+var actorRef = new ActorRef(actorPath, Guid.NewGuid());
+
+// Create an envelope with a control message
+var controlMessage = new ControlMessage("start-processing");
+var envelope = new Envelope(controlMessage, actorRef);
+
+// Register middleware with the pipeline
+var auditMiddleware = new AuditMiddleware();
+pipeline.Register(auditMiddleware);
+
+// Execute the middleware pipeline with a final handler
+var executionResult = await pipeline.ExecuteAsync(envelope, async e =>
+{
+    Console.WriteLine($"Final handler processing message: {((ControlMessage)e.Message).Command}");
+    await Task.CompletedTask;
+});
+
+Console.WriteLine($"Pipeline execution successful: {executionResult}");
+
+// Test error handling with middleware that throws
+var errorMiddleware = new ErrorThrowingMiddleware();
+pipeline.Register(errorMiddleware);
+
+var errorResult = await pipeline.ExecuteAsync(envelope, _ => Task.CompletedTask);
+Console.WriteLine($"Error handling successful: {errorResult} (false indicates middleware exception was caught)");
+
+// Test null envelope validation
+try
+{
+    await pipeline.ExecuteAsync(null!, _ => Task.CompletedTask);
+}
+catch (ArgumentNullException ex)
+{
+    Console.WriteLine($"Null envelope validation works: {ex.ParamName == "envelope"}");
+}
+
+// Test message type validation
+try
+{
+    var invalidMessage = new ControlMessage(string.Empty);
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Empty command validation works: {ex.Message.Contains("Command cannot be null or empty")}");
+}
+```
+
+### Test Methods
+
+- `Register_WithNullMiddleware_ThrowsArgumentNullException`: Verifies that registering null middleware throws an `ArgumentNullException`.
+- `Register_WithMockedMiddleware_MiddlewareAppearsInGetMiddleware`: Tests that registered middleware appears in the middleware list with correct name and order.
+- `ExecuteAsync_WithNoMiddleware_InvokesFinalHandlerAndReturnsTrue`: Validates that executing a pipeline with no middleware invokes the final handler and returns true.
+- `ExecuteAsync_WhenRegisteredMiddlewareThrows_ReturnsFalse`: Confirms that when middleware throws an exception, the pipeline returns false to indicate failure.
+- `ExecuteAsync_WithNullEnvelope_ThrowsArgumentNullException`: Tests that passing a null envelope throws an `ArgumentNullException`.
+- `ControlMessage_WithEmptyCommand_ThrowsArgumentException`: Validates that creating a `ControlMessage` with an empty command throws an `ArgumentException`.
+- `ControlMessage_WithValidCommand_StoresCommandAndDefaultsParameters`: Ensures that a valid `ControlMessage` stores the command and has default parameters.
+- `FailureMessage_WithValidReasonAndException_StoresReasonAndStackTrace`: Tests that a `FailureMessage` correctly stores the failure reason and exception stack trace.
+
 ## ClusterActorRegistry
 
 The `ClusterActorRegistry` class manages actor references across different nodes in a cluster. It tracks which actors are hosted on which cluster nodes, enabling distributed actor discovery and management. This registry is essential for cluster-aware actor systems where actors can be distributed across multiple nodes and need to be discovered dynamically.
