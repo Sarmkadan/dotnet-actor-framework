@@ -416,6 +416,68 @@ The `MetricsSnapshot` class represents a point-in-time snapshot of system metric
 - `double ErrorRate { get; set; }`: Gets or sets the error rate as a percentage.
 - `bool IsHealthy { get; }`: Gets whether the system is healthy (no errors and error rate < 5%).
 
+## AuthenticationMiddleware
+
+The `AuthenticationMiddleware` class provides authentication for message senders in the actor system. It validates that messages come from authorized sources before passing them to subsequent middleware or the target actor, preventing unauthorized message processing.
+
+### Usage Example
+
+```csharp
+// Create an authentication provider (token-based)
+var authProvider = new TokenAuthenticationProvider("secret-token-123");
+
+// Register allowed senders with their tokens
+authProvider.RegisterSender("order-processor", "secret-token-123");
+
+// Create the authentication middleware
+var authMiddleware = new AuthenticationMiddleware(authProvider);
+
+// Use in actor system configuration
+var actorSystem = new ActorSystem("SecureSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+
+// The middleware will automatically validate sender tokens
+// Only messages from registered senders with valid tokens will be processed
+
+// Example with whitelist provider
+var whitelistProvider = new WhitelistAuthenticationProvider("trusted-worker-1", "trusted-worker-2");
+whitelistProvider.AddSender("new-trusted-worker");
+
+var whitelistMiddleware = new AuthenticationMiddleware(whitelistProvider);
+```
+
+### Properties and Methods
+
+- `AuthenticationMiddleware(IAuthenticationProvider authProvider)`: Initializes a new instance of the authentication middleware.
+- `Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)`: Authenticates the envelope's sender before forwarding to the next pipeline stage.
+
+### Authentication Providers
+
+#### IAuthenticationProvider Interface
+
+- `Task<bool> AuthenticateAsync(string senderId)`: Authenticates a sender ID.
+- `Task<bool> ValidateTokenAsync(string token)`: Validates an authentication token.
+
+#### TokenAuthenticationProvider Class
+
+- `TokenAuthenticationProvider(params string[] validTokens)`: Initializes a new instance with valid tokens.
+- `void RegisterSender(string senderId, string token)`: Registers a sender with an authentication token.
+- `Task<bool> AuthenticateAsync(string senderId)`: Authenticates a sender by checking their registered token.
+- `Task<bool> ValidateTokenAsync(string token)`: Validates a token against the allowed tokens.
+
+#### WhitelistAuthenticationProvider Class
+
+- `WhitelistAuthenticationProvider(params string[] allowedSenders)`: Initializes a new instance with allowed senders.
+- `void AddSender(string senderId)`: Adds a sender to the whitelist.
+- `void RemoveSender(string senderId)`: Removes a sender from the whitelist.
+- `Task<bool> AuthenticateAsync(string senderId)`: Authenticates a sender by checking if they're in the whitelist.
+- `Task<bool> ValidateTokenAsync(string token)`: Always returns false (not used by whitelist provider).
+
+#### NoOpAuthenticationProvider Class
+
+- `Task<bool> AuthenticateAsync(string senderId)`: Always returns true (allows all senders).
+- `Task<bool> ValidateTokenAsync(string token)`: Always returns true (allows all tokens).
+
 ## ConnectionManager
 
 The `ConnectionManager` class manages database connections and provides connection pooling capabilities. It maintains a pool of reusable database connections, tracks connection usage statistics, and provides methods for validating, opening, and closing connections. The connection manager is designed to optimize database resource usage by reusing connections rather than creating new ones for each operation.
