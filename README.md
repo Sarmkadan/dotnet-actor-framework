@@ -1771,6 +1771,142 @@ else
 await workerService.StopAsync();
 ```
 
+## ActorSystemDiagnostics
+
+The `ActorSystemDiagnostics` class provides comprehensive monitoring and diagnostics capabilities for the DotNetActorFramework actor system. It captures performance snapshots, memory statistics, garbage collection metrics, actor hierarchy analysis, and system-wide health information. This class is essential for production monitoring, performance tuning, and troubleshooting actor system behavior by providing both real-time diagnostics and historical data through snapshots.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system diagnostics
+var actorSystem = new ActorSystem("DiagnosticsDemoSystem");
+var diagnostics = new ActorSystemDiagnostics(actorSystem);
+
+// Create actors in the hierarchy
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+var userActor = await actorSystem.CreateActorAsync(new ActorPath("/root/users/user1"), rootActor);
+
+// Take a performance snapshot
+var snapshot = diagnostics.TakeSnapshot();
+Console.WriteLine($"Snapshot taken at: {snapshot.Timestamp}");
+Console.WriteLine($"Total actors: {snapshot.TotalActors}, Healthy: {snapshot.HealthyActors}, Errors: {snapshot.ErrorActors}");
+Console.WriteLine($"Total messages: {snapshot.TotalMessages}, Total errors: {snapshot.TotalErrors}");
+Console.WriteLine($"Memory usage: {snapshot.MemoryUsageMb} MB");
+Console.WriteLine($"CPU usage: {snapshot.CpuUsagePercent:F2}%");
+
+// Get the latest snapshot
+var latestSnapshot = diagnostics.GetLatestSnapshot();
+if (latestSnapshot != null)
+{
+    Console.WriteLine($"Latest snapshot: {latestSnapshot.TotalMessages} messages processed");
+}
+
+// Get historical snapshots since a specific time
+var historicalSnapshots = diagnostics.GetSnapshotsSince(DateTime.UtcNow.AddMinutes(-30));
+Console.WriteLine($"Historical snapshots available: {historicalSnapshots.Count}");
+
+// Get memory statistics
+var memoryStats = diagnostics.GetMemoryStatistics();
+Console.WriteLine($"Working set: {memoryStats.WorkingSetMb} MB");
+Console.WriteLine($"Private memory: {memoryStats.PrivateMemoryMb} MB");
+Console.WriteLine($"Managed heap: {memoryStats.ManagedHeapMb} MB");
+
+// Get garbage collection statistics
+var gcStats = diagnostics.GetGcStatistics();
+Console.WriteLine($"GC collections: Gen0={gcStats.Gen0Collections}, Gen1={gcStats.Gen1Collections}, Gen2={gcStats.Gen2Collections}");
+Console.WriteLine($"GC pause time: {gcStats.TotalPauseTimeMs} ms");
+
+// Analyze actor hierarchy
+var hierarchyAnalysis = diagnostics.AnalyzeActorHierarchy();
+Console.WriteLine($"Hierarchy depth: {hierarchyAnalysis.MaxDepth}");
+Console.WriteLine($"Total actors in hierarchy: {hierarchyAnalysis.TotalActors}");
+
+// Find heaviest actors (most messages processed)
+var heaviestActors = diagnostics.FindHeaviestActors(10);
+Console.WriteLine($"Top 10 heaviest actors:");
+foreach (var actorInfo in heaviestActors)
+{
+    Console.WriteLine($"  {actorInfo.ActorPath}: {actorInfo.MessageCount} messages");
+}
+
+// Clear snapshots when needed
+diagnostics.ClearSnapshots();
+Console.WriteLine("Snapshots cleared.");
+```
+
+### Properties
+
+- `DateTime Timestamp`: Gets the timestamp when the diagnostics were captured.
+- `int TotalActors`: Gets the total number of actors in the system.
+- `int HealthyActors`: Gets the count of healthy actors.
+- `int ErrorActors`: Gets the count of actors with errors.
+- `long TotalMessages`: Gets the total number of messages processed.
+- `long TotalErrors`: Gets the total number of errors encountered.
+- `long MemoryUsageMb`: Gets the memory usage in megabytes.
+- `double CpuUsagePercent`: Gets the CPU usage percentage.
+
+### Methods
+
+- `ActorSystemDiagnostics(ActorSystem actorSystem)`: Initializes a new diagnostics instance for the specified actor system.
+- `PerformanceSnapshot TakeSnapshot()`: Takes a performance snapshot of the current system state.
+- `PerformanceSnapshot? GetLatestSnapshot()`: Gets the most recent performance snapshot, or null if none exist.
+- `IReadOnlyList<PerformanceSnapshot> GetSnapshotsSince(DateTime since)`: Gets all performance snapshots taken since the specified timestamp.
+- `MemoryStatistics GetMemoryStatistics()`: Gets current memory usage statistics.
+- `GcStatistics GetGcStatistics()`: Gets garbage collection statistics.
+- `ActorPathAnalysis AnalyzeActorHierarchy()`: Analyzes the actor hierarchy structure.
+- `List<ActorLoadInfo> FindHeaviestActors(int count = 10)`: Finds the actors with the highest message processing load.
+- `void ClearSnapshots()`: Clears all stored performance snapshots.
+
+### PerformanceSnapshot Class
+
+The `PerformanceSnapshot` class represents a point-in-time snapshot of actor system performance:
+
+- `DateTime Timestamp`: Gets the timestamp when the snapshot was taken.
+- `int TotalActors`: Gets the total number of actors.
+- `int HealthyActors`: Gets the count of healthy actors.
+- `int ErrorActors`: Gets the count of actors with errors.
+- `long TotalMessages`: Gets the total number of messages processed.
+- `long TotalErrors`: Gets the total number of errors encountered.
+- `long MemoryUsageMb`: Gets the memory usage in megabytes.
+- `double CpuUsagePercent`: Gets the CPU usage percentage.
+- `long WorkingSetMb`: Gets the working set memory usage.
+- `long PrivateMemoryMb`: Gets the private memory usage.
+- `long ManagedHeapMb`: Gets the managed heap memory usage.
+
+### MemoryStatistics Class
+
+The `MemoryStatistics` class provides detailed memory usage information:
+
+- `long WorkingSetMb`: Gets the working set memory size in megabytes.
+- `long PrivateMemoryMb`: Gets the private memory size in megabytes.
+- `long ManagedHeapMb`: Gets the managed heap memory size in megabytes.
+
+### GcStatistics Class
+
+The `GcStatistics` class provides garbage collection metrics:
+
+- `int Gen0Collections`: Gets the number of Gen 0 garbage collections.
+- `int Gen1Collections`: Gets the number of Gen 1 garbage collections.
+- `int Gen2Collections`: Gets the number of Gen 2 garbage collections.
+- `long TotalPauseTimeMs`: Gets the total garbage collection pause time in milliseconds.
+
+### ActorPathAnalysis Class
+
+The `ActorPathAnalysis` class provides actor hierarchy analysis:
+
+- `int MaxDepth`: Gets the maximum depth of the actor hierarchy.
+- `int TotalActors`: Gets the total number of actors in the hierarchy.
+- `List<string> RootPaths`: Gets the root paths in the hierarchy.
+
+### ActorLoadInfo Class
+
+The `ActorLoadInfo` class represents actor processing load information:
+
+- `string ActorPath`: Gets the actor path.
+- `long MessageCount`: Gets the number of messages processed.
+- `long ErrorCount`: Gets the number of errors encountered.
+
 ### Properties and Methods
 
 - `WorkerId { get; }`: Gets the unique identifier for the worker ("metrics-collector").
