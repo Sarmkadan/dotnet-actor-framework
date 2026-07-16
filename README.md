@@ -1411,6 +1411,100 @@ The `ConnectionStatistics` class provides statistics about connections.
 - `string? ConnectionString { get; set; }`: Gets the connection string.
 - `DateTime CreatedAt { get; set; }`: Gets the creation timestamp.
 
+## IHealthCheckFormatter
+
+The `IHealthCheckFormatter` interface defines a contract for formatting system health check information into different output formats such as JSON, text, or CSV. Formatters implement this interface to provide consistent health information serialization across the actor system, enabling features like health monitoring, logging, and export functionality.
+
+### Usage Example
+
+```csharp
+// Create a system health summary
+var healthSummary = new SystemHealthSummary(
+    systemName: "ProductionSystem",
+    systemId: Guid.NewGuid(),
+    createdAt: DateTime.UtcNow,
+    totalActors: 100,
+    healthyActors: 95,
+    unhealthyActors: 3,
+    errorActors: 2,
+    totalMessages: 5000,
+    totalErrors: 15
+);
+
+// Use the built-in JSON formatter
+var jsonFormatter = new JsonHealthCheckFormatter();
+string jsonOutput = jsonFormatter.Format(healthSummary);
+Console.WriteLine(jsonOutput);
+
+// Use the text formatter for human-readable output
+var textFormatter = new TextHealthCheckFormatter();
+string textOutput = textFormatter.Format(healthSummary);
+Console.WriteLine(textOutput);
+
+// Use the CSV formatter for data export
+var csvFormatter = new CsvHealthCheckFormatter();
+string csvOutput = csvFormatter.Format(healthSummary);
+Console.WriteLine(csvOutput);
+
+// Access content type information
+Console.WriteLine($"JSON Content-Type: {jsonFormatter.ContentType}");
+Console.WriteLine($"Text Content-Type: {textFormatter.ContentType}");
+Console.WriteLine($"CSV Content-Type: {csvFormatter.ContentType}");
+
+// Use the formatter factory for dynamic formatter selection
+var factory = new HealthCheckFormatterFactory();
+string output = factory.Format(healthSummary, "text");
+Console.WriteLine(output);
+
+// Register a custom formatter
+factory.Register("xml", new CustomHealthCheckFormatter());
+```
+
+### Properties and Methods
+
+- `string ContentType { get; }`: Gets the MIME content type that this formatter produces (e.g., "application/json", "text/plain", "text/csv").
+- `string Format(SystemHealthSummary health)`: Formats the given health summary into the appropriate output format.
+
+### HealthCheckFormatterFactory
+
+The `HealthCheckFormatterFactory` class provides a registry for creating and retrieving health check formatters by key. It includes built-in formatters for JSON, text, and CSV formats.
+
+#### Usage Example
+
+```csharp
+// Create a formatter factory
+var factory = new HealthCheckFormatterFactory();
+
+// Register a custom formatter
+factory.Register("custom", new CustomHealthCheckFormatter());
+
+// Get a formatter by key
+var jsonFormatter = factory.GetFormatter("json");
+if (jsonFormatter != null)
+{
+    string formatted = jsonFormatter.Format(healthSummary);
+    Console.WriteLine(formatted);
+}
+
+// Format a health summary using the factory
+string output = factory.Format(healthSummary, "csv");
+Console.WriteLine(output);
+```
+
+#### Properties and Methods
+
+- `HealthCheckFormatterFactory()`: Initializes a new formatter factory with built-in formatters for JSON, text, and CSV formats.
+- `void Register(string key, IHealthCheckFormatter formatter)`: Registers a formatter with a specific key.
+- `IHealthCheckFormatter? GetFormatter(string key)`: Gets a formatter by its registration key.
+- `string Format(SystemHealthSummary health, string formatterKey)`: Formats a health summary using the formatter registered under the specified key.
+
+### Built-in Formatters
+
+- **JsonHealthCheckFormatter**: Formats health summaries as pretty-printed JSON with `ContentType = "application/json"`.
+- **TextHealthCheckFormatter**: Formats health summaries as human-readable text with headers and metrics with `ContentType = "text/plain"`.
+- **CsvHealthCheckFormatter**: Formats health summaries as CSV with headers with `ContentType = "text/csv"`.
+
+
 ## Envelope
 
 The `Envelope` class wraps a message with metadata about sender and recipient, providing essential information for message delivery, tracking, and retry logic within the actor system.
