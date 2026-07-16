@@ -1,4 +1,21 @@
-// ... (rest of the file remains unchanged)
+# DotNetActorFramework
+
+An in-process actor framework for .NET: addressable actors with per-actor
+mailboxes, supervision strategies, middleware, metrics and pluggable
+persistence, composed via `Microsoft.Extensions.DependencyInjection` or a
+fluent builder.
+
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md) for the full picture: module
+breakdown, message flow, concurrency model, design decisions with their
+trade-offs, extension points, and an honest list of current limitations.
+
+Short version: `MessageDispatcher` wraps messages in envelopes and enqueues
+them into bounded per-actor mailboxes (`MailboxService`); the host pulls
+envelopes and invokes `Actor.ReceiveAsync`; failures are routed to
+`SupervisionService` (restart / stop / resume / escalate / backoff). Everything
+below is API-level reference for the individual types.
 
 ## ActorMetrics
 
