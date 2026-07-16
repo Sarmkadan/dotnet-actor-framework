@@ -57,6 +57,77 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## ActorRegistry
+
+The `ActorRegistry` class serves as the central registry for managing actor registrations, lookups, and hierarchy indexing within the system. It provides thread-safe mechanisms to register, retrieve, and terminate actors based on their path or ID, enabling efficient actor discovery and management across the actor system.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and registry
+var actorSystem = new ActorSystem("RegistryDemoSystem");
+var registry = new ActorRegistry();
+
+// Create actors in the hierarchy
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("root", ""));
+registry.Register(rootActor);
+
+var userActor = await actorSystem.CreateActorAsync(new ActorPath("users", "user1"), rootActor);
+registry.Register(userActor);
+
+var orderActor = await actorSystem.CreateActorAsync(new ActorPath("orders", "order123"), rootActor);
+registry.Register(orderActor);
+
+// Retrieve actors by path
+var retrievedUser = registry.GetByPath(new ActorPath("users", "user1"));
+Console.WriteLine($"Found user actor: {retrievedUser?.Path}");
+
+// Retrieve actors by ID
+var userById = registry.GetById(userActor.Id);
+Console.WriteLine($"Found user by ID: {userById?.Path}");
+
+// Get child actors
+var rootChildren = registry.GetChildren(new ActorPath("root", ""));
+Console.WriteLine($"Root has {rootChildren.Count} children");
+
+// Get descendant actors
+var rootDescendants = registry.GetDescendants(new ActorPath("root", ""));
+Console.WriteLine($"Root has {rootDescendants.Count} descendants");
+
+// Get all registered actors
+var allActors = registry.GetAll();
+Console.WriteLine($"Total registered actors: {allActors.Count}");
+
+// Check if actor exists
+bool containsUser = registry.Contains(new ActorPath("users", "user1"));
+Console.WriteLine($"Registry contains user actor: {containsUser}");
+
+// Get actor count
+int actorCount = registry.GetCount();
+Console.WriteLine($"Total actors registered: {actorCount}");
+
+// Remove an actor from registry
+registry.Unregister(userActor);
+Console.WriteLine($"Actors after unregister: {registry.GetCount()}");
+
+// Clear the entire registry
+registry.Clear();
+Console.WriteLine($"Actors after clear: {registry.GetCount()}");
+```
+
+### Properties and Methods
+
+- `void Register(ActorRef actorRef)`: Registers an actor in the registry and updates the hierarchy index.
+- `void Unregister(ActorRef actorRef)`: Unregisters an actor from the registry.
+- `ActorRef? GetByPath(ActorPath path)`: Gets an actor reference by its path.
+- `ActorRef? GetById(Guid id)`: Gets an actor reference by its ID.
+- `IReadOnlyList<ActorRef> GetChildren(ActorPath parentPath)`: Gets all child actors for a given parent path.
+- `IReadOnlyList<ActorRef> GetDescendants(ActorPath parentPath)`: Gets all descendant actors for a given parent path.
+- `IReadOnlyList<ActorRef> GetAll()`: Gets all registered actors.
+- `bool Contains(ActorPath path)`: Checks if an actor is registered.
+- `int GetCount()`: Gets the total number of registered actors.
+- `void Clear()`: Clears all registrations.
+
 ## ActorStateRepository
 
 The `ActorStateRepository` class provides functionality for persisting and retrieving actor state snapshots. It enables reliable state management for actors by allowing developers to save, load, delete, and inspect state snapshots associated with specific actor paths and IDs.
