@@ -158,6 +158,93 @@ await workerService.StopAsync();
 - `BackgroundWorkerService`: Manages and executes background workers with lifecycle control.
 - `WorkerStatus`: Provides status information for a background worker including execution counts, error tracking, and runtime state.
 
+## ActorMetricsRepository
+
+The `ActorMetricsRepository` class provides functionality for tracking and retrieving metrics for individual actors within the actor system. It maintains historical metrics snapshots and aggregates, enabling detailed performance analysis, monitoring, and trend analysis for specific actors over time.
+
+### Usage Example
+
+```csharp
+// Initialize metrics repository for a specific actor
+var actorId = Guid.NewGuid();
+var actorPath = new ActorPath("/user/order-processor");
+var metricsRepository = new ActorMetricsRepository(actorId, actorPath);
+
+// Record metrics as the actor processes messages
+metricsRepository.RecordMetricsAsync(100, 5, 2, 150.5).Wait();
+
+// Retrieve historical metrics
+var history = await metricsRepository.GetHistoryAsync();
+Console.WriteLine($"Total snapshots: {history.Count}");
+
+// Get current metrics
+var currentMetrics = await metricsRepository.GetMetricsAsync();
+Console.WriteLine($"Actor {metricsRepository.ActorId}: Messages={metricsRepository.MessageCount}, Errors={metricsRepository.ErrorCount}, ErrorRate={metricsRepository.ErrorRate:P2}");
+
+// Get aggregated metrics
+var aggregate = await metricsRepository.GetAggregateMetricsAsync();
+Console.WriteLine($"Average processing time: {aggregate.AverageProcessingTimeMs:F2}ms, Success rate: {aggregate.SuccessRate:P2}");
+
+// Get latest snapshots
+var latest = await metricsRepository.GetLatestSnapshotsAsync(5);
+foreach (var snapshot in latest)
+{
+    Console.WriteLine($"[{snapshot.RecordedAt}] Messages: {snapshot.MessageCount}, Errors: {snapshot.ErrorCount}");
+}
+
+// Clear metrics history when needed
+metricsRepository.ClearHistory();
+```
+
+### Properties and Methods
+
+- `Guid ActorId { get; }`: Gets the unique identifier of the actor being tracked.
+- `string ActorPath { get; }`: Gets the path of the actor in the actor system.
+- `long MessageCount { get; }`: Gets the total number of messages processed by the actor.
+- `long ProcessedCount { get; }`: Gets the total number of messages successfully processed.
+- `long ErrorCount { get; }`: Gets the total number of errors encountered.
+- `double ErrorRate { get; }`: Gets the error rate as a percentage (0-1).
+- `double SuccessRate { get; }`: Gets the success rate as a percentage (0-1).
+- `double AverageProcessingTimeMs { get; }`: Gets the average processing time in milliseconds.
+- `DateTime RecordedAt { get; }`: Gets the timestamp when metrics were recorded.
+- `int TotalActorsTracked { get; }`: Gets the total number of actors being tracked by this repository.
+- `int TotalSnapshots { get; }`: Gets the total number of metrics snapshots stored.
+- `long TotalMessages { get; }`: Gets the total number of messages across all tracked actors.
+
+- `Task<bool> RecordMetricsAsync(long messageCount, long processedCount, long errorCount, double averageProcessingTimeMs)`: Records metrics for the actor.
+- `Task<IReadOnlyList<MetricsSnapshot>> GetHistoryAsync()`: Retrieves the complete history of metrics snapshots.
+- `Task<IReadOnlyList<MetricsSnapshot>> GetMetricsAsync()`: Retrieves current metrics snapshots.
+- `Task<AggregateMetrics> GetAggregateMetricsAsync()`: Retrieves aggregated metrics across all snapshots.
+- `Task<IReadOnlyList<MetricsSnapshot>> GetLatestSnapshotsAsync(int count)`: Retrieves the most recent metrics snapshots.
+- `void ClearHistory()`: Clears all stored metrics history.
+- `void Clear()`: Clears all metrics data.
+
+### MetricsSnapshot Class
+
+The `MetricsSnapshot` class represents a point-in-time snapshot of an actor's metrics.
+
+#### Properties
+
+- `Guid ActorId { get; set; }`: Gets or sets the actor ID.
+- `string ActorPath { get; set; }`: Gets or sets the actor path.
+- `long MessageCount { get; set; }`: Gets or sets the message count.
+- `long ProcessedCount { get; set; }`: Gets or sets the processed count.
+- `long ErrorCount { get; set; }`: Gets or sets the error count.
+- `double ErrorRate { get; set; }`: Gets or sets the error rate.
+- `double SuccessRate { get; set; }`: Gets or sets the success rate.
+- `double AverageProcessingTimeMs { get; set; }`: Gets or sets the average processing time in milliseconds.
+- `DateTime RecordedAt { get; set; }`: Gets or sets the timestamp when the snapshot was recorded.
+
+### AggregateMetrics Class
+
+The `AggregateMetrics` class represents aggregated metrics across multiple snapshots.
+
+#### Properties
+
+- `double AverageProcessingTimeMs { get; set; }`: Gets or sets the average processing time across all snapshots.
+- `double ErrorRate { get; set; }`: Gets or sets the average error rate.
+- `double SuccessRate { get; set; }`: Gets or sets the average success rate.
+
 ## MetricsCollectorWorker
 
 The `MetricsCollectorWorker` is a background worker that periodically collects and aggregates metrics from the actor system. It provides real-time monitoring of system health, actor status, message throughput, and error rates, enabling proactive performance analysis and alerting.
