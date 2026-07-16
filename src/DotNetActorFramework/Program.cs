@@ -44,7 +44,7 @@ public class Program
         try
         {
             // Initialize actor system
-            var configuration = ActivatorUtilities.CreateInstance<ActorSystemConfiguration>(serviceProvider);
+            var configuration = serviceProvider.GetRequiredService<ActorSystemConfiguration>();
             var actorSystem = await configuration.InitializeAsync();
 
             logger.LogInformation($"Actor system started: {actorSystem.Name}");

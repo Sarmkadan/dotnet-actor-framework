@@ -53,6 +53,10 @@ public static class DependencyInjectionSetup
         services.AddSingleton<MessageDispatcher>();
         services.AddSingleton<SupervisionService>();
 
+        // The init coordinator itself - consumers should be able to just
+        // GetRequiredService it instead of ActivatorUtilities gymnastics.
+        services.AddSingleton<ActorSystemConfiguration>();
+
         if (options.EnableClusterMode)
         {
             services.AddSingleton<ClusterActorRegistry>();
