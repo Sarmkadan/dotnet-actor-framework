@@ -658,6 +658,65 @@ Console.WriteLine(output);
 - **TextMessageFormatter**: Formats messages as human-readable text with headers and metadata with `ContentType = "text/plain"`.
 - **CsvMessageFormatter**: Formats messages as CSV with optional headers with `ContentType = "text/csv"`. Includes `IncludeHeaders` property to control header output.
 
+## IMessageSerializer
+
+The `IMessageSerializer` interface defines a contract for serializing and deserializing actor messages to and from byte arrays. This enables message persistence, network transmission, and interoperability with different storage systems or message brokers.
+
+### Usage Example
+
+```csharp
+// Create a message to serialize
+var message = new Message("process-order", new Dictionary<string, object>
+{
+    { "orderId", "order-123" },
+    { "amount", 99.99 },
+    { "customerId", "cust-456" }
+});
+
+// Use the built-in JSON serializer
+var serializer = new JsonMessageSerializer();
+
+// Serialize the message to bytes
+byte[] serializedData = serializer.Serialize(message);
+Console.WriteLine($"Serialized message size: {serializedData.Length} bytes");
+
+// Deserialize the message back
+Message? deserializedMessage = serializer.Deserialize(serializedData);
+if (deserializedMessage != null)
+{
+    Console.WriteLine("Deserialized message:");
+    Console.WriteLine($"  Command: {deserializedMessage.Command}");
+    Console.WriteLine($"  Data: {string.Join(", ", deserializedMessage.Data.Select(kvp => $"${kvp.Key}={kvp.Value}"))}");
+}
+
+// Serialize and deserialize with null handling
+var controlMessage = new ControlMessage("shutdown", new Dictionary<string, object>
+{
+    { "graceful", true },
+    { "delayMs", 5000 }
+});
+
+byte[] controlBytes = serializer.Serialize(controlMessage);
+Message? controlResult = serializer.Deserialize(controlBytes);
+Console.WriteLine($"Control message deserialized: {controlResult != null}");
+```
+
+### Properties and Methods
+
+- `byte[] Serialize(Message message)`: Serializes a message to a byte array using the configured serialization strategy.
+- `Message? Deserialize(byte[] data)`: Deserializes a message from a byte array, returning null if deserialization fails.
+
+### Implementations
+
+- **JsonMessageSerializer**: JSON-based serializer using System.Text.Json with camelCase naming policy and null value handling.
+
+### Related Types
+
+- `Message`: The message class containing command and data payload.
+- `ControlMessage`: Special message type for system control operations.
+- `IStateSerializer`: Interface for serializing actor state objects.
+- `IEnvelopeSerializer`: Interface for serializing message envelopes.
+
 ## ActorDiscoveryService
 
 The `ActorDiscoveryService` class provides capability-based actor discovery, enabling actors to be located dynamically by their registered capabilities and metadata tags. This service maintains indices of actors by their capabilities and tags, allowing for efficient discovery without coupling callers to concrete actor paths or identifiers.
