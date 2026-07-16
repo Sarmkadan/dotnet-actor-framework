@@ -40,6 +40,67 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## IBackgroundWorker
+
+The `IBackgroundWorker` interface defines a contract for background work tasks that execute asynchronously. Background workers are designed to handle non-blocking work on a scheduled interval, making them ideal for periodic tasks such as data synchronization, cleanup operations, or polling services.
+
+### Usage Example
+
+```csharp
+// Define a custom background worker
+public class DataCleanupWorker : IBackgroundWorker
+{
+    public string WorkerId => "data-cleanup-worker";
+    
+    public TimeSpan Interval => TimeSpan.FromMinutes(30);
+    
+    public async Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"[{WorkerId}] Starting cleanup at {DateTime.UtcNow}");
+        
+        // Perform cleanup logic here
+        await Task.Delay(1000, cancellationToken); // Simulate work
+        
+        Console.WriteLine($"[{WorkerId}] Cleanup completed successfully");
+    }
+}
+
+// Set up the background worker service
+var workerService = new BackgroundWorkerService();
+
+// Register the worker
+var cleanupWorker = new DataCleanupWorker();
+workerService.RegisterWorker(cleanupWorker);
+
+// Start all workers
+await workerService.StartAsync();
+
+// Monitor worker status
+var status = workerService.GetWorkerStatus("data-cleanup-worker");
+if (status != null)
+{
+    Console.WriteLine($"Worker Status: Running={status.IsRunning}, " +
+                     $"Executions={status.ExecutionCount}, " +
+                     $"LastError={status.LastError ?? "None"}");
+}
+
+// Stop all workers when application shuts down
+await workerService.StopAsync();
+```
+
+### Properties and Methods
+
+- `string WorkerId { get; }`: Gets the unique identifier for the worker.
+- `TimeSpan Interval { get; }`: Gets the interval at which this worker should execute.
+- `Task ExecuteAsync(CancellationToken cancellationToken)`: Executes the background work.
+- `Task OnStartAsync()`: Called when the worker is starting (default implementation returns `Task.CompletedTask`).
+- `Task OnStopAsync()`: Called when the worker is stopping (default implementation returns `Task.CompletedTask`).
+
+### Related Classes
+
+- `BackgroundWorkerService`: Manages and executes background workers with lifecycle control.
+- `WorkerStatus`: Provides status information for a background worker including execution counts, error tracking, and runtime state.
+
 ## Envelope
 
 The `Envelope` class wraps a message with metadata about sender and recipient, providing essential information for message delivery, tracking, and retry logic within the actor system.
