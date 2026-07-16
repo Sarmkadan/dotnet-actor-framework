@@ -152,6 +152,97 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## MessageDispatcher
+
+The `MessageDispatcher` class handles message delivery and routing between actors in the DotNetActorFramework. It wraps messages in envelopes, manages delivery guarantees with retry logic and backoff strategies, and tracks failed deliveries in a dead letter queue. The dispatcher works in conjunction with the `MailboxService` to enqueue messages to bounded per-actor mailboxes and provides comprehensive statistics about message delivery performance.
+
+### Usage Example
+
+```csharp
+// Initialize the actor system and dispatcher
+var actorSystem = new ActorSystem("DispatcherDemoSystem");
+var rootActor = await actorSystem.CreateActorAsync(new ActorPath("/root"));
+var workerActor = await actorSystem.CreateActorAsync(new ActorPath("/root/worker"), rootActor);
+
+// Create a message dispatcher with mailbox service and registry
+var mailboxService = new MailboxService(new ActorSystemOptions());
+var registry = new ActorRegistry();
+registry.Register(rootActor);
+registry.Register(workerActor);
+
+var dispatcher = new MessageDispatcher(mailboxService, registry);
+
+// Send a message from one actor to another
+var orderMessage = new Message("process-order", new Dictionary<string, object>
+{
+    { "orderId", "order-123" },
+    { "amount", 99.99 }
+});
+
+await dispatcher.SendAsync(rootActor, workerActor, orderMessage);
+
+// Broadcast a message to multiple actors
+var recipients = new List<ActorRef> { workerActor, rootActor };
+var notification = new Message("system-notification", new Dictionary<string, object>
+{
+    { "message", "System maintenance scheduled" }
+});
+
+await dispatcher.BroadcastAsync(recipients, notification);
+
+// Publish a control message
+await dispatcher.PublishControlAsync(workerActor, "shutdown", new Dictionary<string, object>
+{
+    { "graceful", true },
+    { "delayMs", 5000 }
+});
+
+// Get statistics about message delivery
+var stats = dispatcher.GetStatistics();
+Console.WriteLine($"Messages delivered: {stats.TotalDelivered}");
+Console.WriteLine($"Messages failed: {stats.TotalFailed}");
+Console.WriteLine($"Success rate: {stats.SuccessRate:F2}%");
+Console.WriteLine($"Dead letters: {stats.DeadLetterCount}");
+
+// Retrieve dead letters for investigation
+var deadLetters = dispatcher.GetDeadLetters();
+foreach (var envelope in deadLetters)
+{
+    Console.WriteLine($"Dead letter from: {envelope.Sender?.Path}, to: {envelope.Recipient.Path}");
+}
+
+// Get next message for an actor to process
+var nextMessage = await dispatcher.GetNextMessageAsync(workerActor.Id);
+if (nextMessage != null)
+{
+    Console.WriteLine($"Processing message: {nextMessage.Message.Command}");
+}
+```
+
+### Properties and Methods
+
+- `MessageDispatcher(MailboxService mailboxService, ActorRegistry registry)`: Initializes a new message dispatcher with the specified mailbox service and actor registry.
+- `Task<bool> DispatchAsync(Envelope envelope)`: Dispatches a message to an actor asynchronously with retry logic and returns true if successful.
+- `Task SendAsync(ActorRef sender, ActorRef recipient, Message message)`: Sends a message from one actor to another.
+- `Task SendAsync(ActorRef recipient, Message message)`: Sends a message to an actor without a sender.
+- `Task BroadcastAsync(IEnumerable<ActorRef> recipients, Message message, ActorRef? sender = null)`: Broadcasts a message to multiple actors.
+- `Task PublishControlAsync(ActorRef recipient, string command, Dictionary<string, object>? parameters = null)`: Publishes a control message to an actor.
+- `Task<Envelope?> GetNextMessageAsync(Guid actorId)`: Gets the next message for an actor to process from its mailbox.
+- `IReadOnlyList<Envelope> GetDeadLetters()`: Gets messages from the dead letter queue for investigation.
+- `DispatcherStatistics GetStatistics()`: Gets dispatcher statistics including delivery counts and success rate.
+
+### DispatcherStatistics Class
+
+The `DispatcherStatistics` class provides statistics about message dispatch operations.
+
+#### Properties
+
+- `long TotalDelivered { get; set; }`: Gets the total number of messages successfully delivered.
+- `long TotalFailed { get; set; }`: Gets the total number of messages that failed to deliver.
+- `long TotalProcessed { get; set; }`: Gets the total number of messages processed (delivered + failed).
+- `int DeadLetterCount { get; set; }`: Gets the number of messages in the dead letter queue.
+- `double SuccessRate { get; set; }`: Gets the success rate as a percentage.
+
 ## ActorRegistry
 
 The `ActorRegistry` class serves as the central registry for managing actor registrations, lookups, and hierarchy indexing within the system. It provides thread-safe mechanisms to register, retrieve, and terminate actors based on their path or ID, enabling efficient actor discovery and management across the actor system.
