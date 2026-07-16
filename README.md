@@ -724,6 +724,42 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## ActorMetricsTests
+
+The `ActorMetricsTests` class provides unit tests for the `ActorMetrics` class, verifying that metrics tracking functionality works correctly. It tests message counting, error rate calculation, processing time averaging, health status determination, and summary generation to ensure the metrics system operates as expected.
+
+### Usage Example
+
+```csharp
+// Initialize test metrics
+var metrics = new ActorMetrics(Guid.NewGuid(), new ActorPath("/system/test-actor"));
+
+// Test message counting
+metrics.RecordMessageReceived();
+metrics.RecordMessageReceived();
+Assert.Equal(2, metrics.MessageCount);
+
+// Test error rate calculation
+metrics.RecordError();
+double errorRate = metrics.GetErrorRate();
+Assert.Equal(33.33, errorRate, 0.01); // 1 error out of 3 messages = 33.33%
+
+// Test processing time averaging
+metrics.RecordProcessingTime(100);
+metrics.RecordProcessingTime(200);
+metrics.RecordProcessingTime(300);
+Assert.Equal(200.0, metrics.AverageProcessingTimeMs); // (100+200+300)/3 = 200ms
+
+// Test health status
+bool isUnhealthy = metrics.IsUnhealthy(25.0); // Error rate 33.33% > 25% threshold
+Assert.True(isUnhealthy);
+
+// Test summary generation
+var summary = metrics.GetSummary();
+Assert.Equal(3, summary.MessageCount);
+Assert.Equal(1, summary.ErrorCount);
+```
+
 ## MessageDispatcher
 
 The `MessageDispatcher` class handles message delivery and routing between actors in the DotNetActorFramework. It wraps messages in envelopes, manages delivery guarantees with retry logic and backoff strategies, and tracks failed deliveries in a dead letter queue. The dispatcher works in conjunction with the `MailboxService` to enqueue messages to bounded per-actor mailboxes and provides comprehensive statistics about message delivery performance.
