@@ -5,7 +5,7 @@ namespace DotNetActorFramework.Tests;
 
 /// <summary>
 /// Provides System.Text.Json serialization and deserialization extensions for <see cref="ActorPathTests"/>
-/// to enable JSON serialization of test data.
+/// instances to enable JSON serialization of test data.
 /// </summary>
 public static class ActorPathTestsJsonExtensions
 {
@@ -24,18 +24,7 @@ public static class ActorPathTestsJsonExtensions
     /// <returns>A JSON string representation of the <see cref="ActorPathTests"/> instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this ActorPathTests value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonSerializerOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+        => JsonSerializer.Serialize(value, indented ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true } : _jsonSerializerOptions);
 
     /// <summary>
     /// Deserializes a JSON string to an <see cref="ActorPathTests"/> instance.
