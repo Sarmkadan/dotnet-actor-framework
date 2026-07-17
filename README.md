@@ -677,6 +677,89 @@ bool isDescendant2 = rootPath.IsDescendantOf(user1Path); // false
 - `bool IsChildOf(ActorPath parent)`: Determines if this path is a child of the specified parent path.
 - `bool IsDescendantOf(ActorPath ancestor)`: Determines if this path is a descendant of the specified ancestor path.
 
+## DateTimeExtensionsValidation
+
+The `DateTimeExtensionsValidation` class provides validation extension methods for `DateTime` values used throughout the actor framework. It validates semantic correctness of DateTime values and their usage patterns with DateTimeExtensions methods, catching issues like default DateTime values, dates far in the past or future, and invalid time windows. These validation methods help prevent subtle bugs in actor lifecycle management, timeout handling, and logging scenarios.
+
+### Usage Example
+
+```csharp
+// Validate DateTime values before using DateTimeExtensions methods
+var messageReceivedAt = DateTime.UtcNow;
+
+// Check if a DateTime is valid for actor framework operations
+var validationErrors = messageReceivedAt.Validate();
+if (validationErrors.Count > 0)
+{
+    Console.WriteLine("DateTime validation failed:");
+    foreach (var error in validationErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+    return;
+}
+
+// Use validation helpers for specific DateTimeExtensions methods
+if (messageReceivedAt.IsValid())
+{
+    // Validate for HasElapsed usage
+    var timeoutErrors = messageReceivedAt.ValidateForHasElapsed(TimeSpan.FromSeconds(30));
+    if (timeoutErrors.Count == 0)
+    {
+        if (messageReceivedAt.HasElapsed(TimeSpan.FromSeconds(30)))
+        {
+            Console.WriteLine("Timeout has elapsed for message processing");
+        }
+    }
+    
+    // Validate for IsPast usage
+    if (messageReceivedAt.ValidateForIsPast().Count == 0 && messageReceivedAt.IsPast())
+    {
+        Console.WriteLine("Message timestamp is in the past");
+    }
+    
+    // Validate time window for scheduling
+    var scheduledTime = DateTime.UtcNow.AddMinutes(5);
+    var windowErrors = scheduledTime.ValidateForIsWithinWindow(
+        DateTime.UtcNow.AddMinutes(-10),
+        DateTime.UtcNow.AddMinutes(10)
+    );
+    
+    if (windowErrors.Count == 0 && scheduledTime.IsWithinWindow(
+        DateTime.UtcNow.AddMinutes(-10),
+        DateTime.UtcNow.AddMinutes(10)))
+    {
+        Console.WriteLine("Scheduled time is within the allowed window");
+    }
+    
+    // Use EnsureValid to throw exceptions on invalid data
+    try
+    {
+        messageReceivedAt.EnsureValid();
+        Console.WriteLine("DateTime passed all validations");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine($"Validation failed: {ex.Message}");
+    }
+}
+```
+
+### Available Methods
+
+- `IReadOnlyList<string> Validate(this DateTime dateTime)`: Validates that a DateTime value is semantically valid for use with DateTimeExtensions methods. Returns a list of validation problems or an empty list if valid.
+- `bool IsValid(this DateTime dateTime)`: Determines if a DateTime value is semantically valid.
+- `void EnsureValid(this DateTime dateTime)`: Ensures a DateTime value is semantically valid, throwing an ArgumentException with detailed errors if it is not.
+- `IReadOnlyList<string> ValidateForGetElapsed(this DateTime dateTime)`: Validates a DateTime for use with the GetElapsed method.
+- `IReadOnlyList<string> ValidateForGetElapsedMilliseconds(this DateTime dateTime)`: Validates a DateTime for use with the GetElapsedMilliseconds method.
+- `IReadOnlyList<string> ValidateForHasElapsed(this DateTime dateTime, TimeSpan duration)`: Validates a DateTime and duration for use with the HasElapsed method.
+- `IReadOnlyList<string> ValidateForIsPast(this DateTime dateTime)`: Validates a DateTime for use with the IsPast method.
+- `IReadOnlyList<string> ValidateForIsFuture(this DateTime dateTime)`: Validates a DateTime for use with the IsFuture method.
+- `IReadOnlyList<string> ValidateForGetTimeAgoDescription(this DateTime dateTime)`: Validates a DateTime for use with the GetTimeAgoDescription method.
+- `IReadOnlyList<string> ValidateForRoundToSecond(this DateTime dateTime)`: Validates a DateTime for use with the RoundToSecond method.
+- `IReadOnlyList<string> ValidateForIsWithinWindow(this DateTime dateTime, DateTime start, DateTime end)`: Validates a DateTime and window boundaries for use with the IsWithinWindow method.
+- `IReadOnlyList<string> ValidateForGetLogTimestamp(this DateTime dateTime)`: Validates a DateTime for use with the GetLogTimestamp method.
+
 ## MessageBatcher
 
 The `MessageBatcher` class provides efficient message batching functionality for grouping messages together to reduce processing overhead and improve throughput. It groups messages by a batch key (such as message type or destination) and processes them in configurable batch sizes or after a timeout period. The batcher automatically flushes batches when they reach capacity or when the timeout expires, with optional event notification for expired batches.
