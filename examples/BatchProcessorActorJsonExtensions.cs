@@ -9,7 +9,7 @@ using DotNetActorFramework.Models;
 /// <summary>
 /// Provides JSON serialization and deserialization extensions for <see cref="BatchProcessorActor"/>.
 /// </summary>
-public static class BatchProcessorActorJsonExtensions
+public sealed static class BatchProcessorActorJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -39,14 +39,14 @@ public static class BatchProcessorActorJsonExtensions
     /// Deserializes a JSON string into an <see cref="BatchProcessorActor"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized <see cref="BatchProcessorActor"/> instance, or null if the JSON is empty.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <returns>The deserialized <see cref="BatchProcessorActor"/> instance, or null if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null, empty, or consists only of whitespace.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized into a <see cref="BatchProcessorActor"/>.</exception>
     public static BatchProcessorActor? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
-        return JsonSerializer.Deserialize<BatchProcessorActor>(json, _jsonSerializerOptions);
+        return JsonSerializer.Deserialize<BatchProcessorActor>(json.Trim(), _jsonSerializerOptions);
     }
 
     /// <summary>
@@ -55,13 +55,14 @@ public static class BatchProcessorActorJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized actor if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null, empty, or consists only of whitespace.</exception>
     public static bool TryFromJson(string json, out BatchProcessorActor? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
-            value = JsonSerializer.Deserialize<BatchProcessorActor>(json, _jsonSerializerOptions);
+            value = JsonSerializer.Deserialize<BatchProcessorActor>(json.Trim(), _jsonSerializerOptions);
             return true;
         }
         catch (JsonException)
