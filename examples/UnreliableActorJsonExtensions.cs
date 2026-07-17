@@ -41,14 +41,11 @@ public static class UnreliableActorJsonExtensions
     /// Deserializes a JSON string into an <see cref="UnreliableActor"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized <see cref="UnreliableActor"/> instance, or null if the JSON is empty.</returns>
+    /// <returns>The deserialized <see cref="UnreliableActor"/> instance.</returns>
+    /// <exception cref="ArgumentException"><paramref name="json"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static UnreliableActor? FromJson(string json)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(json);
-
-        return JsonSerializer.Deserialize<UnreliableActor>(json, _jsonSerializerOptions);
-    }
+        => JsonSerializer.Deserialize<UnreliableActor>(ArgumentException.ThrowIfNullOrEmpty(json), _jsonSerializerOptions);
 
     /// <summary>
     /// Attempts to deserialize a JSON string into an <see cref="UnreliableActor"/> instance.
@@ -56,18 +53,22 @@ public static class UnreliableActorJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized actor if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException"><paramref name="json"/> is <see langword="null"/> or empty.</exception>
     public static bool TryFromJson(string json, out UnreliableActor? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        value = null;
+        if (ArgumentException.ThrowIfNullOrEmpty(json) is { Length: 0 })
+        {
+            return false;
+        }
 
         try
         {
             value = JsonSerializer.Deserialize<UnreliableActor>(json, _jsonSerializerOptions);
-            return true;
+            return value is not null;
         }
         catch (JsonException)
         {
-            value = null;
             return false;
         }
     }
