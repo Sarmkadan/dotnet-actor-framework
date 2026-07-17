@@ -2952,6 +2952,68 @@ if (retrievedUser != null)
 await actorSystem.ShutdownAsync();
 ```
 
+## InMemoryEventJournalExtensions
+
+The `InMemoryEventJournalExtensions` class provides extension methods for working with in-memory event journals. It offers convenient methods for appending, reading, counting, and checking events in the journal, making it easier to manage event data within the actor system.
+
+### Usage Example
+
+```csharp
+// Create an in-memory event journal
+var journal = new InMemoryEventJournal();
+
+// Append an event to the journal
+var event1 = new ActorEvent("order-created", new Dictionary<string, object> { { "orderId", "order-123" } }, 1);
+await journal.AppendEventAsync(event1);
+
+// Append another event
+var event2 = new ActorEvent("payment-processed", new Dictionary<string, object> { { "orderId", "order-123" }, { "amount", 99.99 } }, 2);
+await journal.AppendEventAsync(event2);
+
+// Read all events from the journal
+var allEvents = await journal.ReadAllEventsAsync();
+Console.WriteLine($"Events in journal: {allEvents.Count()}");
+
+// Count events in the journal
+var eventCount = await journal.CountEventsAsync();
+Console.WriteLine($"Total events: {eventCount}");
+
+// Check if events exist in the journal
+bool hasEvents = await journal.HasEventsAsync();
+Console.WriteLine($"Has events: {hasEvents}");
+
+// Get first event
+var firstEvent = await journal.GetFirstEventAsync();
+if (firstEvent != null)
+{
+    Console.WriteLine($"First event: {firstEvent.EventType}");
+}
+
+// Get last event
+var lastEvent = await journal.GetLastEventAsync();
+if (lastEvent != null)
+{
+    Console.WriteLine($"Last event: {lastEvent.EventType}");
+}
+
+// Get event at specific sequence number
+var eventAtSeq = await journal.GetEventAtSequenceAsync(1);
+if (eventAtSeq != null)
+{
+    Console.WriteLine($"Event at sequence 1: {eventAtSeq.EventType}");
+}
+```
+
+### Available Methods
+
+- `Task AppendEventAsync(ActorEvent @event)`: Appends an event to the in-memory journal.
+- `Task<IEnumerable<ActorEvent>> ReadAllEventsAsync()`: Retrieves all events from the journal.
+- `Task<long> CountEventsAsync()`: Gets the total count of events in the journal.
+- `Task<bool> HasEventsAsync()`: Checks if the journal contains any events.
+- `Task<ActorEvent?> GetFirstEventAsync()`: Gets the first event in the journal.
+- `Task<ActorEvent?> GetLastEventAsync()`: Gets the last event in the journal.
+- `Task<ActorEvent?> GetEventAtSequenceAsync(long sequenceNumber)`: Gets the event at the specified sequence number.
+
 ## ActorManagementApi
 
 The `ActorManagementApi` class provides a centralized API for managing and monitoring actors within the DotNetActorFramework. It enables programmatic inspection of actor states, metrics retrieval, error tracking, and lifecycle management including graceful termination. This API is designed for operational tooling, monitoring dashboards, and administrative interfaces that need to interact with the actor system at runtime.
