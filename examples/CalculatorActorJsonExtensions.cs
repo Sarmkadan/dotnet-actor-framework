@@ -1,7 +1,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Text.Json;
 using DotNetActorFramework.Models;
@@ -39,7 +39,7 @@ public static class CalculatorActorJsonExtensions
     /// Deserializes a JSON string into an <see cref="CalculatorActor"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized <see cref="CalculatorActor"/> instance, or null if the JSON is empty.</returns>
+    /// <returns>The deserialized <see cref="CalculatorActor"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static CalculatorActor? FromJson(string json)
@@ -55,6 +55,7 @@ public static class CalculatorActorJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized actor if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out CalculatorActor? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
