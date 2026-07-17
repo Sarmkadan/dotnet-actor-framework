@@ -45,6 +45,7 @@ public static class CoreFunctionalityTestsJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A CoreFunctionalityTests instance, or null if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static CoreFunctionalityTests? FromJson(string json)
     {
@@ -64,6 +65,7 @@ public static class CoreFunctionalityTestsJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized CoreFunctionalityTests instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out CoreFunctionalityTests? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
