@@ -1160,6 +1160,115 @@ Assert.Equal(3, summary.MessageCount);
 Assert.Equal(1, summary.ErrorCount);
 ```
 
+## SystemMetricsApiValidation
+
+The `SystemMetricsApiValidation` class provides validation helpers for `HealthSummary`, `MessageTypeMetricsInfo`, and `ActorMetricsInfo` instances returned by `SystemMetricsApi` methods. It validates all public members for null values, empty strings, out-of-range numbers, and default/invalid dates, ensuring data integrity when working with system metrics.
+
+### Usage Example
+
+```csharp
+// Create sample system metrics
+var healthSummary = new HealthSummary
+{
+    SystemName = "ProductionSystem",
+    SystemId = Guid.NewGuid(),
+    TotalActors = 10,
+    HealthyActors = 9,
+    UnhealthyActors = 1,
+    ErrorActors = 0,
+    TotalMessages = 1000,
+    TotalErrors = 5,
+    ErrorRate = 0.005,
+    HealthPercentage = 90.0,
+    AverageLatencyMs = 42.5,
+    Timestamp = DateTime.UtcNow
+};
+
+var messageMetrics = new MessageTypeMetricsInfo
+{
+    MessageType = "ProcessOrder",
+    ProcessedCount = 850,
+    ErrorCount = 3,
+    AverageLatencyMs = 35.2,
+    ErrorRate = 0.0035
+};
+
+var actorMetrics = new ActorMetricsInfo
+{
+    ActorPath = "/user/order-processor",
+    ProcessedCount = 420,
+    ErrorCount = 2,
+    AverageLatencyMs = 28.7,
+    ErrorRate = 0.0048
+};
+
+// Validate metrics using the extension methods
+var healthErrors = healthSummary.Validate();
+if (healthErrors.Count == 0)
+{
+    Console.WriteLine("Health summary is valid");
+}
+else
+{
+    Console.WriteLine("Health summary validation errors:");
+    foreach (var error in healthErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+
+// Check if metrics are valid
+bool isMessageMetricsValid = messageMetrics.IsValid();
+bool isActorMetricsValid = actorMetrics.IsValid();
+Console.WriteLine($"Message metrics valid: {isMessageMetricsValid}");
+Console.WriteLine($"Actor metrics valid: {isActorMetricsValid}");
+
+// Use EnsureValid to throw exceptions on invalid data
+try
+{
+    healthSummary.EnsureValid();
+    messageMetrics.EnsureValid();
+    actorMetrics.EnsureValid();
+    Console.WriteLine("All metrics passed validation");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation failed: {ex.Message}");
+}
+
+// Example with invalid data to demonstrate error handling
+var invalidHealthSummary = new HealthSummary
+{
+    SystemName = "", // Invalid: empty string
+    SystemId = Guid.Empty, // Invalid: empty Guid
+    TotalActors = -1, // Invalid: negative number
+    HealthyActors = 5,
+    UnhealthyActors = 0,
+    ErrorActors = 0,
+    TotalMessages = 0,
+    TotalErrors = 0,
+    ErrorRate = 1.5, // Invalid: > 1
+    HealthPercentage = 150, // Invalid: > 100
+    AverageLatencyMs = -10, // Invalid: negative
+    Timestamp = default // Invalid: default DateTime
+};
+
+var invalidErrors = invalidHealthSummary.Validate();
+Console.WriteLine($"Invalid health summary has {invalidErrors.Count} validation errors");
+```
+
+### Properties and Methods
+
+- `IReadOnlyList<string> Validate(this HealthSummary value)`: Validates a `HealthSummary` instance and returns a list of validation errors. Returns an empty list if the instance is valid.
+- `IReadOnlyList<string> Validate(this MessageTypeMetricsInfo value)`: Validates a `MessageTypeMetricsInfo` instance and returns a list of validation errors.
+- `IReadOnlyList<string> Validate(this ActorMetricsInfo value)`: Validates an `ActorMetricsInfo` instance and returns a list of validation errors.
+- `bool IsValid(this HealthSummary value)`: Determines whether a `HealthSummary` instance is valid.
+- `bool IsValid(this MessageTypeMetricsInfo value)`: Determines whether a `MessageTypeMetricsInfo` instance is valid.
+- `bool IsValid(this ActorMetricsInfo value)`: Determines whether an `ActorMetricsInfo` instance is valid.
+- `void EnsureValid(this HealthSummary value)`: Ensures a `HealthSummary` instance is valid, throwing an `ArgumentException` with detailed errors if it is not.
+- `void EnsureValid(this MessageTypeMetricsInfo value)`: Ensures a `MessageTypeMetricsInfo` instance is valid, throwing an `ArgumentException` with detailed errors if it is not.
+- `void EnsureValid(this ActorMetricsInfo value)`: Ensures an `ActorMetricsInfo` instance is valid, throwing an `ArgumentException` with detailed errors if it is not.
+
 ## MessageDispatcher
 
 The `MessageDispatcher` class handles message delivery and routing between actors in the DotNetActorFramework. It wraps messages in envelopes, manages delivery guarantees with retry logic and backoff strategies, and tracks failed deliveries in a dead letter queue. The dispatcher works in conjunction with the `MailboxService` to enqueue messages to bounded per-actor mailboxes and provides comprehensive statistics about message delivery performance.
