@@ -31,16 +31,10 @@ public static class AuthenticationMiddlewareJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the middleware.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <c>null</c>.</exception>
-    public static string ToJson(this AuthenticationMiddleware value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
+    public static string ToJson(this AuthenticationMiddleware value, bool indented = false) =>
+        JsonSerializer.Serialize(value, indented
             ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
-            : _jsonSerializerOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+            : _jsonSerializerOptions);
 
     /// <summary>
     /// Deserializes an <see cref="AuthenticationMiddleware"/> instance from a JSON string.
@@ -65,8 +59,9 @@ public static class AuthenticationMiddlewareJsonExtensions
     /// Attempts to deserialize an <see cref="AuthenticationMiddleware"/> instance from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized middleware instance, or <c>null</c> on failure.</param>
+    /// <param name="value">Receives the deserialized middleware instance, or <c>null</c> if deserialization fails.</param>
     /// <returns><c>true</c> if deserialization succeeded; otherwise, <c>false</c>.</returns>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid, though the exception is caught and converted to a <c>false</c> return value.</exception>
     public static bool TryFromJson(string json, out AuthenticationMiddleware? value)
     {
         value = null;
