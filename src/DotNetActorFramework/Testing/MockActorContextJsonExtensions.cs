@@ -34,7 +34,7 @@ public static class MockActorContextJsonExtensions
     /// <param name="value">The MockActorContext instance to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the MockActorContext.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
     public static string ToJson(this MockActorContext value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -46,7 +46,8 @@ public static class MockActorContextJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A deserialized MockActorContext instance, or null if deserialization fails.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentException"><paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized to MockActorContext.</exception>
     public static MockActorContext? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
@@ -54,9 +55,9 @@ public static class MockActorContextJsonExtensions
         {
             return JsonSerializer.Deserialize<MockActorContext>(json, CamelCaseOptions);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return null;
+            throw new JsonException("Failed to deserialize MockActorContext from JSON.", ex);
         }
     }
 
@@ -66,7 +67,7 @@ public static class MockActorContextJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized MockActorContext if successful.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentException"><paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out MockActorContext? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
