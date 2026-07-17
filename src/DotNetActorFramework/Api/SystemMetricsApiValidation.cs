@@ -30,7 +30,7 @@ public static class SystemMetricsApiValidation
         // Validate SystemName
         if (string.IsNullOrWhiteSpace(value.SystemName))
         {
-            errors.Add($"SystemName must be a non-empty string, but was '{(value.SystemName == null ? "null" : value.SystemName)}");
+            errors.Add($"SystemName must be a non-empty string, but was '{(value.SystemName == null ? "null" : value.SystemName)}'");
         }
 
         // Validate SystemId (Guid.Empty is invalid)
@@ -121,7 +121,7 @@ public static class SystemMetricsApiValidation
         // Validate MessageType
         if (string.IsNullOrWhiteSpace(value.MessageType))
         {
-            errors.Add($"MessageType must be a non-empty string, but was '{(value.MessageType == null ? "null" : value.MessageType)}");
+            errors.Add($"MessageType must be a non-empty string, but was '{(value.MessageType == null ? "null" : value.MessageType)}'");
         }
 
         // Validate ProcessedCount
@@ -168,7 +168,7 @@ public static class SystemMetricsApiValidation
         // Validate ActorPath
         if (string.IsNullOrWhiteSpace(value.ActorPath))
         {
-            errors.Add($"ActorPath must be a non-empty string, but was '{(value.ActorPath == null ? "null" : value.ActorPath)}");
+            errors.Add($"ActorPath must be a non-empty string, but was '{(value.ActorPath == null ? "null" : value.ActorPath)}'");
         }
 
         // Validate ProcessedCount
@@ -205,8 +205,10 @@ public static class SystemMetricsApiValidation
     /// </summary>
     /// <param name="value">The health summary to check.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static bool IsValid(this HealthSummary value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return value.Validate().Count == 0;
     }
 
@@ -215,8 +217,10 @@ public static class SystemMetricsApiValidation
     /// </summary>
     /// <param name="value">The message type metrics info to check.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static bool IsValid(this MessageTypeMetricsInfo value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return value.Validate().Count == 0;
     }
 
@@ -225,8 +229,10 @@ public static class SystemMetricsApiValidation
     /// </summary>
     /// <param name="value">The actor metrics info to check.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static bool IsValid(this ActorMetricsInfo value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return value.Validate().Count == 0;
     }
 
