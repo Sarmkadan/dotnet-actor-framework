@@ -3,9 +3,9 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using DotNetActorFramework.Services;
 
 namespace DotNetActorFramework.Routing;
 
@@ -29,9 +29,9 @@ public static class LoadBasedRouterValidation
 
         var problems = new List<string>();
 
-        // LoadBasedRouter has no public properties to validate
-        // All validation is handled by constructor parameter validation
-        // This method exists for API consistency
+        // LoadBasedRouter validates all its state in the constructor
+        // This method exists for API consistency with other validators
+        // No additional runtime validation needed beyond null checks
 
         return problems.AsReadOnly();
     }
@@ -67,6 +67,7 @@ public static class LoadBasedRouterValidation
             return;
 
         throw new ArgumentException(
-            $"LoadBasedRouter is not valid:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}");
+            $"LoadBasedRouter is not valid:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}",
+            nameof(value));
     }
 }
