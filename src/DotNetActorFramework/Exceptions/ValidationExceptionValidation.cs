@@ -3,7 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
-using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DotNetActorFramework.Exceptions;
 
@@ -18,6 +18,7 @@ public static class ValidationExceptionValidation
     /// <param name="value">The validation exception to validate.</param>
     /// <returns>A list of validation problems; empty if valid.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "ArgumentNullException.ThrowIfNull provides validation")]
     public static IReadOnlyList<string> Validate(this ValidationException value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -48,6 +49,7 @@ public static class ValidationExceptionValidation
     /// <param name="value">The validation exception to check.</param>
     /// <returns>True if valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "ArgumentNullException.ThrowIfNull provides validation")]
     public static bool IsValid(this ValidationException value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -60,6 +62,7 @@ public static class ValidationExceptionValidation
     /// <param name="value">The validation exception to validate.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is not valid, containing the validation problems.</exception>
+    [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "ArgumentNullException.ThrowIfNull provides validation")]
     public static void EnsureValid(this ValidationException value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -67,7 +70,10 @@ public static class ValidationExceptionValidation
         var problems = value.Validate();
         if (problems.Count > 0)
         {
-            throw new ArgumentException("ValidationException is not valid. Problems:\n" + string.Join("\n", problems));
+            throw new ArgumentException(
+                $"ValidationException is not valid. Problems:{Environment.NewLine}" +
+                string.Join(Environment.NewLine, problems),
+                nameof(value));
         }
     }
 
