@@ -1073,6 +1073,57 @@ Console.WriteLine($"IsUnhealthy: {metrics.IsUnhealthy()}, Summary: {metrics.GetS
 - `bool IsUnhealthy(double errorRateThreshold = 0.25)`: Checks if the actor is experiencing high error rates.
 - `ActorMetricsSummary GetSummary()`: Gets a summary of the metrics.
 
+## ActorSystemBuilderJsonExtensions
+
+The `ActorSystemBuilderJsonExtensions` class provides extension methods for serializing and deserializing `ActorSystemBuilder` instances to and from JSON format. This enables saving and restoring actor system configurations, sharing configurations between systems, and persisting builder state for later use. The extensions use System.Text.Json with camelCase property naming and cycle detection disabled.
+
+### Usage Example
+
+```csharp
+// Create and configure an actor system builder
+var builder = new ActorSystemBuilder("ProductionSystem")
+    .WithLogging()
+    .WithErrorHandling()
+    .WithRateLimiting(tokensPerSecond: 1000, bucketCapacity: 10000)
+    .WithMetrics()
+    .WithAuthentication(new TokenAuthenticationProvider("secret-token-123"))
+    .WithCaching(TimeSpan.FromMinutes(5));
+
+// Serialize the builder to JSON
+string json = builder.ToJson();
+Console.WriteLine(json);
+
+// Serialize with pretty printing for readability
+string prettyJson = builder.ToJson(indented: true);
+Console.WriteLine(prettyJson);
+
+// Deserialize back to a builder
+var deserializedBuilder = ActorSystemBuilderJsonExtensions.FromJson(json);
+
+// Try deserialization with error handling
+if (ActorSystemBuilderJsonExtensions.TryFromJson(json, out var safeBuilder))
+{
+    Console.WriteLine($"Successfully deserialized builder: {safeBuilder?.SystemName}");
+}
+
+// Access builder properties
+Console.WriteLine($"System name: {deserializedBuilder?.SystemName}");
+Console.WriteLine($"Options configured: {deserializedBuilder?.Options != null}");
+Console.WriteLine($"Middleware count: {deserializedBuilder?.Middleware?.Count}");
+```
+
+### Available Methods
+
+- `string ToJson(this ActorSystemBuilder builder, bool indented = false)`: Serializes an `ActorSystemBuilder` to a JSON string, with optional pretty printing.
+- `ActorSystemBuilder? FromJson(string json)`: Deserializes a JSON string to an `ActorSystemBuilder`, returning null if deserialization fails.
+- `bool TryFromJson(string json, out ActorSystemBuilder? value)`: Attempts to deserialize JSON with error handling, returning true if successful.
+
+### Properties Captured
+
+- `SystemName`: The name of the actor system being built
+- `Options`: The `ActorSystemOptions` configuration for the system
+- `Middleware`: The list of `IActorMiddleware` instances registered on the builder
+
 ## ActorMetricsTests
 
 The `ActorMetricsTests` class provides unit tests for the `ActorMetrics` class, verifying that metrics tracking functionality works correctly. It tests message counting, error rate calculation, processing time averaging, health status determination, and summary generation to ensure the metrics system operates as expected.
