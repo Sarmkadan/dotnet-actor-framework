@@ -46,7 +46,7 @@ public static class ActorSystemBuilderJsonExtensions
         {
             SystemName = value.GetType().GetField("_systemName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) as string ?? string.Empty,
             Options = value.GetType().GetProperty("Options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) as ActorSystemOptions ?? new ActorSystemOptions(),
-            Middleware = value.GetType().GetField("_middleware", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) as System.Collections.Generic.List<IActorMiddleware> ?? new System.Collections.Generic.List<IActorMiddleware>()
+            Middleware = value.GetType().GetField("_middleware", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) as System.Collections.Generic.List<IActorMiddleware> ?? []
         };
 
         return JsonSerializer.Serialize(builderState, options);
@@ -57,50 +57,19 @@ public static class ActorSystemBuilderJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>An <see cref="ActorSystemBuilder"/> instance, or null if deserialization fails.</returns>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is empty.</exception>
     public static ActorSystemBuilder? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
         ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
             var builderState = JsonSerializer.Deserialize<ActorSystemBuilderState>(json, _jsonSerializerOptions);
-            if (builderState == null)
-            {
-                return null;
-            }
-
-            var builder = new ActorSystemBuilder(builderState.SystemName ?? "DeserializedActorSystem");
-
-            // Apply the options if they exist
-            if (builderState.Options != null)
-            {
-                // Options are set during construction, so we need to apply them via reflection
-                var optionsProperty = builder.GetType().GetProperty("Options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (optionsProperty != null)
-                {
-                    optionsProperty.SetValue(builder, builderState.Options);
-                }
-            }
-
-            // Add middleware if they exist
-            if (builderState.Middleware != null && builderState.Middleware.Count > 0)
-            {
-                var middlewareField = builder.GetType().GetField("_middleware", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (middlewareField != null)
-                {
-                    var middlewareList = middlewareField.GetValue(builder) as System.Collections.Generic.List<IActorMiddleware>;
-                    if (middlewareList != null)
-                    {
-                        foreach (var middleware in builderState.Middleware)
-                        {
-                            middlewareList.Add(middleware);
-                        }
-                    }
-                }
-            }
-
-            return builder;
+            return builderState is null
+                ? null
+                : FromJson(builderState);
         }
         catch (JsonException)
         {
@@ -109,20 +78,55 @@ public static class ActorSystemBuilderJsonExtensions
     }
 
     /// <summary>
+    /// Deserializes an <see cref="ActorSystemBuilder"/> from a pre-deserialized <see cref="ActorSystemBuilderState"/>.
+    /// </summary>
+    /// <param name="builderState">The deserialized state to apply.</param>
+    /// <returns>An <see cref="ActorSystemBuilder"/> instance.</returns>
+    private static ActorSystemBuilder FromJson(ActorSystemBuilderState builderState)
+    {
+        var builder = new ActorSystemBuilder(builderState.SystemName ?? "DeserializedActorSystem");
+
+        // Apply the options if they exist
+        if (builderState.Options is not null)
+        {
+            // Options are set during construction, so we need to apply them via reflection
+            var optionsProperty = builder.GetType().GetProperty("Options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            optionsProperty?.SetValue(builder, builderState.Options);
+        }
+
+        // Add middleware if they exist
+        if (builderState.Middleware is { Count: > 0 })
+        {
+            var middlewareField = builder.GetType().GetField("_middleware", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (middlewareField?.GetValue(builder) is System.Collections.Generic.List<IActorMiddleware> middlewareList)
+            {
+                foreach (var middleware in builderState.Middleware)
+                {
+                    middlewareList.Add(middleware);
+                }
+            }
+        }
+
+        return builder;
+    }
+
+    /// <summary>
     /// Attempts to deserialize an <see cref="ActorSystemBuilder"/> from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized builder, or null if deserialization fails.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is empty.</exception>
     public static bool TryFromJson(string json, out ActorSystemBuilder? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
         ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
             value = FromJson(json);
-            return value != null;
+            return value is not null;
         }
         catch (JsonException)
         {
