@@ -29,7 +29,7 @@ public static class ActorStateRepositoryValidation
         }
 
         // Validate ActorPath
-        if (value.ActorPath == null)
+        if (value.ActorPath is null)
         {
             problems.Add("ActorPath cannot be null.");
         }
@@ -38,7 +38,7 @@ public static class ActorStateRepositoryValidation
             try
             {
                 // Test if ActorPath is valid by attempting to parse it
-                ActorPath.Parse(value.ActorPath.ToString());
+                ActorPath.Parse(value.ActorPath.Path);
             }
             catch (Exception ex)
             {
@@ -47,7 +47,7 @@ public static class ActorStateRepositoryValidation
         }
 
         // Validate State (if not null)
-        if (value.State != null && value.State is Dictionary<string, object> stateDict)
+        if (value.State is Dictionary<string, object> stateDict)
         {
             if (stateDict.Count == 0)
             {
@@ -94,10 +94,8 @@ public static class ActorStateRepositoryValidation
     /// </summary>
     /// <param name="value">The actor state repository to check.</param>
     /// <returns><see langword="true"/> if the repository is valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this ActorStateRepository value)
-    {
-        return value.Validate().Count == 0;
-    }
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    public static bool IsValid(this ActorStateRepository value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the specified actor state repository is valid.
