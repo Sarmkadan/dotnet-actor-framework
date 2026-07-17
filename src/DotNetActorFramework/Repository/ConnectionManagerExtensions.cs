@@ -22,18 +22,9 @@ public static class ConnectionManagerExtensions
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
 
-        if (!connectionManager.IsConnected)
-            return [];
-
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
-        {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool)
-            {
-                return pool.Keys.ToList().AsReadOnly();
-            }
-            return [];
-        }
+        return connectionManager.IsConnected
+            ? connectionManager.GetConnectionStatistics().Select(stat => stat.Key)
+            : [];
     }
 
     /// <summary>
@@ -46,14 +37,9 @@ public static class ConnectionManagerExtensions
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
 
-        if (!connectionManager.IsConnected)
-            return 0;
-
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
-        {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            return poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool ? pool.Count : 0;
-        }
+        return connectionManager.IsConnected
+            ? connectionManager.GetConnectionStatistics().Count
+            : 0;
     }
 
     /// <summary>
@@ -62,6 +48,7 @@ public static class ConnectionManagerExtensions
     /// <param name="connectionManager">The connection manager instance.</param>
     /// <returns>A collection of connection information tuples containing key, connection, and statistics.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionManager"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when reflection fails to access internal fields.</exception>
     public static IReadOnlyList<(string Key, PooledConnection Connection, TimeSpan IdleTime)> GetConnectionStatistics(this ConnectionManager connectionManager)
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
@@ -69,20 +56,18 @@ public static class ConnectionManagerExtensions
         if (!connectionManager.IsConnected)
             return [];
 
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
+        var lockObject = connectionManager.GetType()
+            .GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.GetValue(connectionManager) ?? new object();
+
+        lock (lockObject)
         {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (poolField?.GetValue(connectionManager) is not Dictionary<string, PooledConnection> pool)
-                return [];
+            var poolField = connectionManager.GetType()
+                .GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            var result = new List<(string Key, PooledConnection Connection, TimeSpan IdleTime)>();
-
-            foreach (var kvp in pool)
-            {
-                result.Add((kvp.Key, kvp.Value, kvp.Value.GetIdleTime()));
-            }
-
-            return result.AsReadOnly();
+            return poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool
+                ? GetConnectionStatisticsInternal(pool)
+                : [];
         }
     }
 
@@ -92,6 +77,7 @@ public static class ConnectionManagerExtensions
     /// <param name="connectionManager">The connection manager instance.</param>
     /// <returns>The oldest idle connection, or null if no connections are available.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionManager"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when reflection fails to access internal fields.</exception>
     public static (string Key, PooledConnection Connection, TimeSpan IdleTime)? GetOldestIdleConnection(this ConnectionManager connectionManager)
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
@@ -99,24 +85,18 @@ public static class ConnectionManagerExtensions
         if (!connectionManager.IsConnected)
             return null;
 
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
+        var lockObject = connectionManager.GetType()
+            .GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.GetValue(connectionManager) ?? new object();
+
+        lock (lockObject)
         {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (poolField?.GetValue(connectionManager) is not Dictionary<string, PooledConnection> pool)
-                return null;
+            var poolField = connectionManager.GetType()
+                .GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            (string Key, PooledConnection Connection, TimeSpan IdleTime)? oldest = null;
-
-            foreach (var kvp in pool)
-            {
-                var idleTime = kvp.Value.GetIdleTime();
-                if (oldest == null || idleTime > oldest.Value.IdleTime)
-                {
-                    oldest = (kvp.Key, kvp.Value, idleTime);
-                }
-            }
-
-            return oldest;
+            return poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool
+                ? GetOldestIdleConnectionInternal(pool)
+                : null;
         }
     }
 
@@ -126,6 +106,7 @@ public static class ConnectionManagerExtensions
     /// <param name="connectionManager">The connection manager instance.</param>
     /// <returns>The total idle time across all connections.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionManager"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when reflection fails to access internal fields.</exception>
     public static TimeSpan GetTotalIdleTime(this ConnectionManager connectionManager)
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
@@ -133,19 +114,18 @@ public static class ConnectionManagerExtensions
         if (!connectionManager.IsConnected)
             return TimeSpan.Zero;
 
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
+        var lockObject = connectionManager.GetType()
+            .GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.GetValue(connectionManager) ?? new object();
+
+        lock (lockObject)
         {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (poolField?.GetValue(connectionManager) is not Dictionary<string, PooledConnection> pool)
-                return TimeSpan.Zero;
+            var poolField = connectionManager.GetType()
+                .GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            var totalIdleTime = TimeSpan.Zero;
-            foreach (var kvp in pool)
-            {
-                totalIdleTime += kvp.Value.GetIdleTime();
-            }
-
-            return totalIdleTime;
+            return poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool
+                ? GetTotalIdleTimeInternal(pool)
+                : TimeSpan.Zero;
         }
     }
 
@@ -155,6 +135,7 @@ public static class ConnectionManagerExtensions
     /// <param name="connectionManager">The connection manager instance.</param>
     /// <returns>The average idle time, or TimeSpan.Zero if no connections are available.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionManager"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when reflection fails to access internal fields.</exception>
     public static TimeSpan GetAverageIdleTime(this ConnectionManager connectionManager)
     {
         ArgumentNullException.ThrowIfNull(connectionManager);
@@ -162,19 +143,60 @@ public static class ConnectionManagerExtensions
         if (!connectionManager.IsConnected)
             return TimeSpan.Zero;
 
-        lock (connectionManager.GetType().GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(connectionManager) ?? new object())
+        var lockObject = connectionManager.GetType()
+            .GetField("_lockObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.GetValue(connectionManager) ?? new object();
+
+        lock (lockObject)
         {
-            var poolField = connectionManager.GetType().GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (poolField?.GetValue(connectionManager) is not Dictionary<string, PooledConnection> pool || pool.Count == 0)
-                return TimeSpan.Zero;
+            var poolField = connectionManager.GetType()
+                .GetField("_connectionPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            var totalIdleTime = TimeSpan.Zero;
-            foreach (var kvp in pool)
-            {
-                totalIdleTime += kvp.Value.GetIdleTime();
-            }
-
-            return TimeSpan.FromTicks(totalIdleTime.Ticks / pool.Count);
+            return poolField?.GetValue(connectionManager) is Dictionary<string, PooledConnection> pool && pool.Count > 0
+                ? GetAverageIdleTimeInternal(pool)
+                : TimeSpan.Zero;
         }
+    }
+
+    private static IReadOnlyList<(string Key, PooledConnection Connection, TimeSpan IdleTime)> GetConnectionStatisticsInternal(Dictionary<string, PooledConnection> pool)
+    {
+        var result = new List<(string Key, PooledConnection Connection, TimeSpan IdleTime)>(pool.Count);
+        foreach (var kvp in pool)
+        {
+            result.Add((kvp.Key, kvp.Value, kvp.Value.GetIdleTime()));
+        }
+        return result.AsReadOnly();
+    }
+
+    private static (string Key, PooledConnection Connection, TimeSpan IdleTime)? GetOldestIdleConnectionInternal(Dictionary<string, PooledConnection> pool)
+    {
+        (string Key, PooledConnection Connection, TimeSpan IdleTime)? oldest = null;
+
+        foreach (var kvp in pool)
+        {
+            var idleTime = kvp.Value.GetIdleTime();
+            if (oldest == null || idleTime > oldest.Value.IdleTime)
+            {
+                oldest = (kvp.Key, kvp.Value, idleTime);
+            }
+        }
+
+        return oldest;
+    }
+
+    private static TimeSpan GetTotalIdleTimeInternal(Dictionary<string, PooledConnection> pool)
+    {
+        var totalIdleTime = TimeSpan.Zero;
+        foreach (var kvp in pool)
+        {
+            totalIdleTime += kvp.Value.GetIdleTime();
+        }
+        return totalIdleTime;
+    }
+
+    private static TimeSpan GetAverageIdleTimeInternal(Dictionary<string, PooledConnection> pool)
+    {
+        var totalIdleTime = GetTotalIdleTimeInternal(pool);
+        return TimeSpan.FromTicks(totalIdleTime.Ticks / pool.Count);
     }
 }
