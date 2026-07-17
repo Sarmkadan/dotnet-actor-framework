@@ -71,25 +71,28 @@ public static class ExternalServiceClientValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                $"ExternalServiceClient is invalid:{Environment.NewLine}  - {string.Join($"{Environment.NewLine}  - ", problems)}");
+                $"ExternalServiceClient is invalid:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", problems)}");
         }
     }
 
     // Reflection-based accessors for private fields to avoid breaking encapsulation
     private static string GetBaseUrl(this ExternalServiceClient client)
     {
+        ArgumentNullException.ThrowIfNull(client);
         var field = typeof(ExternalServiceClient).GetField("_baseUrl", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return field?.GetValue(client) as string ?? string.Empty;
     }
 
     private static int GetMaxRetries(this ExternalServiceClient client)
     {
+        ArgumentNullException.ThrowIfNull(client);
         var field = typeof(ExternalServiceClient).GetField("_maxRetries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return field?.GetValue(client) as int? ?? 0;
     }
 
     private static TimeSpan GetRetryDelay(this ExternalServiceClient client)
     {
+        ArgumentNullException.ThrowIfNull(client);
         var field = typeof(ExternalServiceClient).GetField("_retryDelay", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return field?.GetValue(client) as TimeSpan? ?? TimeSpan.Zero;
     }
