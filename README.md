@@ -870,6 +870,61 @@ The `ProcessorActor` is designed to handle processing tasks within a monitored a
 Processor actors are typically used in scenarios where you need to process tasks while simultaneously monitoring system health and performance metrics.
 
 
+## ConnectionManagerExtensions
+
+The `ConnectionManagerExtensions` class provides extension methods for the `ConnectionManager` class to enhance connection management functionality. These extensions offer convenient ways to monitor and manage database connections, retrieve connection statistics, and identify idle connections for connection pooling optimization and monitoring scenarios.
+
+### Usage Example
+
+```csharp
+// Initialize a connection manager with connection pooling
+var connectionString = "Server=localhost;Database=ActorFramework;User Id=sa;Password=your_password;";
+var connectionManager = new ConnectionManager(connectionString);
+
+// Check if connection is established
+bool isConnected = connectionManager.IsConnected;
+Console.WriteLine($"Connection established: {isConnected}");
+
+// Get all active connection keys
+var connectionKeys = connectionManager.GetConnectionKeys();
+Console.WriteLine($"Active connections: {connectionKeys.Count()} connections");
+
+// Get total number of connections
+int totalConnections = connectionManager.GetTotalConnections();
+Console.WriteLine($"Total connections: {totalConnections}");
+
+// Get detailed connection statistics
+var connectionStats = connectionManager.GetConnectionStatistics();
+foreach (var stat in connectionStats)
+{
+    Console.WriteLine($"Connection {stat.Key}: Idle time = {stat.IdleTime.TotalSeconds:F2}s");
+}
+
+// Get the oldest idle connection
+var oldestConnection = connectionManager.GetOldestIdleConnection();
+if (oldestConnection != null)
+{
+    Console.WriteLine($"Oldest idle connection: {oldestConnection.Value.Key} (idle for {oldestConnection.Value.IdleTime.TotalSeconds:F2}s)");
+}
+
+// Get total idle time across all connections
+TimeSpan totalIdleTime = connectionManager.GetTotalIdleTime();
+Console.WriteLine($"Total idle time: {totalIdleTime.TotalSeconds:F2}s");
+
+// Get average idle time
+TimeSpan averageIdleTime = connectionManager.GetAverageIdleTime();
+Console.WriteLine($"Average idle time: {averageIdleTime.TotalSeconds:F2}s");
+```
+
+### Available Methods
+
+- `IEnumerable<string> GetConnectionKeys(this ConnectionManager connectionManager)`: Gets all active connection keys from the connection pool.
+- `int GetTotalConnections(this ConnectionManager connectionManager)`: Gets the total number of active connections across all pools.
+- `IReadOnlyList<(string Key, PooledConnection Connection, TimeSpan IdleTime)> GetConnectionStatistics(this ConnectionManager connectionManager)`: Gets all pooled connections with their statistics.
+- `(string Key, PooledConnection Connection, TimeSpan IdleTime)? GetOldestIdleConnection(this ConnectionManager connectionManager)`: Gets the oldest idle connection from the pool.
+- `TimeSpan GetTotalIdleTime(this ConnectionManager connectionManager)`: Gets the total idle time of all connections in the pool.
+- `TimeSpan GetAverageIdleTime(this ConnectionManager connectionManager)`: Gets the average idle time of connections in the pool.
+
 ## Architecture
 
 
