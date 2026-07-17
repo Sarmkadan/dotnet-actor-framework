@@ -250,6 +250,55 @@ if (DateTime.UtcNow.IsWithinWindow(windowStart, windowEnd))
 - `bool IsWithinWindow(this DateTime dateTime, DateTime start, DateTime end)`: Determines if the time is within the specified window.
 - `string GetLogTimestamp(this DateTime dateTime)`: Gets a formatted timestamp suitable for logging (ISO 8601 with milliseconds UTC).
 
+## EnvelopeExtensions
+
+The `EnvelopeExtensions` class provides extension methods for working with `Envelope` objects, enabling type-safe message extraction, envelope cloning, and formatted logging. These utilities simplify common envelope operations throughout the actor system, particularly for message processing, debugging, and monitoring scenarios.
+
+### Usage Example
+
+```csharp
+// Create a message and envelope
+var message = new Message("process-order", new Dictionary<string, object>
+{
+    { "orderId", "order-123" },
+    { "amount", 99.99 }
+});
+
+var recipient = new ActorRef(new ActorPath("/user/order-processor"), Guid.NewGuid());
+var sender = new ActorRef(new ActorPath("/user/api-gateway"), Guid.NewGuid());
+var envelope = new Envelope(message, recipient, sender);
+
+// Check if envelope contains a specific message type
+bool isOrderMessage = envelope.IsMessageType<Message>();
+Console.WriteLine($"Is message type: {isOrderMessage}");
+
+// Try to extract message with type checking
+if (envelope.TryGetMessage<Message>(out var typedMessage))
+{
+    Console.WriteLine($"Extracted message: {typedMessage.Command}");
+}
+
+// Clone an envelope for retry scenarios
+var clonedEnvelope = envelope.Clone();
+Console.WriteLine($"Original: {envelope.EnvelopeId:N}, Clone: {clonedEnvelope.EnvelopeId:N}");
+
+// Get formatted log string for debugging
+string logEntry = envelope.ToLogString(includeMessageContent: true);
+Console.WriteLine(logEntry);
+
+// Get human-readable age of envelope
+string ageString = envelope.GetAgeString();
+Console.WriteLine($"Envelope age: {ageString}");
+```
+
+### Available Methods
+
+- `bool IsMessageType<T>(this Envelope envelope)`: Determines whether the envelope contains a message of the specified type.
+- `bool TryGetMessage<T>(this Envelope envelope, out T? message)`: Attempts to cast the message to the specified type.
+- `Envelope Clone(this Envelope envelope)`: Creates a shallow copy of the envelope with a new unique identifier.
+- `string ToLogString(this Envelope envelope, bool includeMessageContent = false)`: Formats the envelope for logging purposes with detailed information.
+- `string GetAgeString(this Envelope envelope)`: Gets the age of the envelope in a human-readable format.
+
 ## ActorSystemBuilder
 
 The `ActorSystemBuilder` class provides a fluent interface for constructing and configuring an `ActorSystem` instance. It allows you to chain configuration methods to customize various aspects of the actor system such as logging, error handling, rate limiting, metrics collection, authentication, caching, event bus, background workers, and mailbox capacity. The builder pattern enables clean, readable configuration that can be easily modified and extended.
