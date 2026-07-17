@@ -1021,6 +1021,120 @@ envelopes and invokes `Actor.ReceiveAsync`; failures are routed to
 `SupervisionService` (restart / stop / resume / escalate / backoff). Everything
 below is API-level reference for the individual types.
 
+## ActorSystemDiagnosticsJsonExtensions
+
+The `ActorSystemDiagnosticsJsonExtensions` class provides System.Text.Json serialization and deserialization extension methods for `ActorSystemDiagnostics` and related diagnostic types (`PerformanceSnapshot`, `MemoryStatistics`, `GcStatistics`, `ActorPathAnalysis`, and `ActorLoadInfo`). This enables saving diagnostic data to JSON format for logging, storage, or transmission, and restoring it back to objects for analysis and processing.
+
+### Usage Example
+
+```csharp
+// Create actor system diagnostics with sample data
+var diagnostics = new ActorSystemDiagnostics
+{
+    SystemName = "ProductionSystem",
+    SystemId = Guid.NewGuid(),
+    Timestamp = DateTime.UtcNow,
+    ActorCount = 42,
+    MessageThroughput = 1000,
+    MemoryStatistics = new MemoryStatistics
+    {
+        TotalMemory = 8589934592, // 8GB
+        UsedMemory = 4294967296,   // 4GB
+        FreeMemory = 4294967296,   // 4GB
+        MemoryUsagePercentage = 50.0
+    },
+    PerformanceSnapshot = new PerformanceSnapshot
+    {
+        MessagesProcessed = 10000,
+        AverageProcessingTimeMs = 15.5,
+        MessagesPerSecond = 645.2,
+        ProcessingTimeMs = 155000
+    },
+    GcStatistics = new GcStatistics
+    {
+        CollectionsCount = 250,
+        TotalAllocatedBytes = 1073741824, // 1GB
+        HeapSize = 4294967296,           // 4GB
+        PauseDurationMs = 125.5
+    },
+    ActorPathAnalysis = new ActorPathAnalysis
+    {
+        TotalActors = 42,
+        RootActors = 5,
+        MaxDepth = 4,
+        AverageChildrenPerActor = 2.3
+    },
+    ActorLoadInfo = new ActorLoadInfo
+    {
+        TotalActors = 42,
+        HealthyActors = 40,
+        UnhealthyActors = 2,
+        OverloadedActors = 0,
+        AverageMailboxSize = 12.5
+    }
+};
+
+// Serialize diagnostics to compact JSON
+string jsonCompact = diagnostics.ToJson();
+Console.WriteLine(jsonCompact);
+
+// Serialize diagnostics to pretty-printed JSON for readability
+string jsonPretty = diagnostics.ToJson(indented: true);
+Console.WriteLine(jsonPretty);
+
+// Serialize individual diagnostic components
+string performanceJson = diagnostics.PerformanceSnapshot.ToJson();
+string memoryJson = diagnostics.MemoryStatistics.ToJson();
+string gcJson = diagnostics.GcStatistics.ToJson();
+string pathAnalysisJson = diagnostics.ActorPathAnalysis.ToJson();
+string loadInfoJson = diagnostics.ActorLoadInfo.ToJson();
+
+// Deserialize back to objects
+var deserializedDiagnostics = ActorSystemDiagnosticsJsonExtensions.FromJson(jsonCompact);
+var deserializedPerformance = ActorSystemDiagnosticsJsonExtensions.FromJsonToPerformanceSnapshot(performanceJson);
+var deserializedMemory = ActorSystemDiagnosticsJsonExtensions.FromJsonToMemoryStatistics(memoryJson);
+var deserializedGc = ActorSystemDiagnosticsJsonExtensions.FromJsonToGcStatistics(gcJson);
+var deserializedPathAnalysis = ActorSystemDiagnosticsJsonExtensions.FromJsonToActorPathAnalysis(pathAnalysisJson);
+var deserializedLoadInfo = ActorSystemDiagnosticsJsonExtensions.FromJsonToActorLoadInfo(loadInfoJson);
+
+// Try deserialization with error handling
+if (ActorSystemDiagnosticsJsonExtensions.TryFromJson(jsonCompact, out var safeDiagnostics))
+{
+    Console.WriteLine($"Successfully deserialized diagnostics: {safeDiagnostics?.SystemName}");
+}
+
+// Access deserialized data
+if (deserializedDiagnostics != null)
+{
+    Console.WriteLine($"System: {deserializedDiagnostics.SystemName}");
+    Console.WriteLine($"Actors: {deserializedDiagnostics.ActorCount}");
+    Console.WriteLine($"Throughput: {deserializedDiagnostics.MessageThroughput} msg/s");
+    Console.WriteLine($"Memory: {deserializedDiagnostics.MemoryStatistics?.MemoryUsagePercentage}% used");
+    Console.WriteLine($"Performance: {deserializedDiagnostics.PerformanceSnapshot?.MessagesPerSecond} msg/s");
+}
+```
+
+### Available Methods
+
+- `string ToJson(this ActorSystemDiagnostics value, bool indented = false)`: Serializes an `ActorSystemDiagnostics` to a JSON string with optional pretty printing.
+- `ActorSystemDiagnostics? FromJson(string json)`: Deserializes an `ActorSystemDiagnostics` from JSON, returning null if the JSON is null or whitespace.
+- `bool TryFromJson(string json, out ActorSystemDiagnostics? value)`: Attempts to deserialize JSON with error handling, returning true if successful.
+- `string ToJson(this PerformanceSnapshot value, bool indented = false)`: Serializes a `PerformanceSnapshot` to JSON.
+- `PerformanceSnapshot? FromJsonToPerformanceSnapshot(string json)`: Deserializes a `PerformanceSnapshot` from JSON.
+- `bool TryFromJson(string json, out PerformanceSnapshot? value)`: Attempts to deserialize a `PerformanceSnapshot` with error handling.
+- `string ToJson(this MemoryStatistics value, bool indented = false)`: Serializes a `MemoryStatistics` to JSON.
+- `MemoryStatistics? FromJsonToMemoryStatistics(string json)`: Deserializes a `MemoryStatistics` from JSON.
+- `bool TryFromJson(string json, out MemoryStatistics? value)`: Attempts to deserialize a `MemoryStatistics` with error handling.
+- `string ToJson(this GcStatistics value, bool indented = false)`: Serializes a `GcStatistics` to JSON.
+- `GcStatistics? FromJsonToGcStatistics(string json)`: Deserializes a `GcStatistics` from JSON.
+- `bool TryFromJson(string json, out GcStatistics? value)`: Attempts to deserialize a `GcStatistics` with error handling.
+- `string ToJson(this ActorPathAnalysis value, bool indented = false)`: Serializes an `ActorPathAnalysis` to JSON.
+- `ActorPathAnalysis? FromJsonToActorPathAnalysis(string json)`: Deserializes an `ActorPathAnalysis` from JSON.
+- `bool TryFromJson(string json, out ActorPathAnalysis? value)`: Attempts to deserialize an `ActorPathAnalysis` with error handling.
+- `string ToJson(this ActorLoadInfo value, bool indented = false)`: Serializes an `ActorLoadInfo` to JSON.
+- `ActorLoadInfo? FromJsonToActorLoadInfo(string json)`: Deserializes an `ActorLoadInfo` from JSON.
+- `bool TryFromJson(string json, out ActorLoadInfo? value)`: Attempts to deserialize an `ActorLoadInfo` with error handling.
+
 ## MailboxService
 
 The `MailboxService` class manages message mailboxes for actors in the actor system. Each actor has a bounded FIFO mailbox where messages are queued and processed sequentially by the actor's `ReceiveAsync` method. The service supports both standard FIFO mailboxes and priority-based mailboxes, with configurable capacity and automatic backpressure when mailboxes are full.
