@@ -42,13 +42,11 @@ public static class ErrorHandlingMiddlewareValidation
     /// </summary>
     /// <param name="value">The middleware instance to check.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this ErrorHandlingMiddleware? value)
-    {
-        return Validate(value).Count == 0;
-    }
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    public static bool IsValid(this ErrorHandlingMiddleware? value) => Validate(value).Count == 0;
 
     /// <summary>
-    /// Ensures that the specified <see cref="ErrorHandlingMiddleware"/> is valid.
+    /// Ensures that the specified <see cref="ErrorHandlingMiddleware"/> is valid, throwing an exception if it is not.
     /// </summary>
     /// <param name="value">The middleware instance to validate.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
@@ -61,7 +59,8 @@ public static class ErrorHandlingMiddlewareValidation
         if (errors.Count > 0)
         {
             throw new ArgumentException(
-                $"ErrorHandlingMiddleware is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
+                $"ErrorHandlingMiddleware is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}",
+                nameof(value));
         }
     }
 }
