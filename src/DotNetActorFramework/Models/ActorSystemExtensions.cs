@@ -1,7 +1,7 @@
 namespace DotNetActorFramework.Models;
 
 /// <summary>
-/// Provides extension methods for <see cref="ActorSystem"/>.
+/// Provides extension methods for <see cref="ActorSystem"/> to query system state and lifecycle information.
 /// </summary>
 public static class ActorSystemExtensions
 {
@@ -9,8 +9,8 @@ public static class ActorSystemExtensions
     /// Checks if the actor system has been shut down.
     /// </summary>
     /// <param name="actorSystem">The actor system to check.</param>
-    /// <returns><c>true</c> if the actor system has been shut down; otherwise, <c>false</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorSystem"/> is <c>null</c>.</exception>
+    /// <returns><see langword="true"/> if the actor system has been shut down; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="actorSystem"/> is <see langword="null"/>.</exception>
     public static bool IsShutdown(this ActorSystem actorSystem)
     {
         ArgumentNullException.ThrowIfNull(actorSystem);
@@ -21,8 +21,8 @@ public static class ActorSystemExtensions
     /// Checks if the actor system is active (i.e., not shut down and still running).
     /// </summary>
     /// <param name="actorSystem">The actor system to check.</param>
-    /// <returns><c>true</c> if the actor system is active; otherwise, <c>false</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorSystem"/> is <c>null</c>.</exception>
+    /// <returns><see langword="true"/> if the actor system is active; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="actorSystem"/> is <see langword="null"/>.</exception>
     public static bool IsActive(this ActorSystem actorSystem)
     {
         ArgumentNullException.ThrowIfNull(actorSystem);
@@ -34,7 +34,7 @@ public static class ActorSystemExtensions
     /// </summary>
     /// <param name="actorSystem">The actor system.</param>
     /// <returns>The uptime of the actor system.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorSystem"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="actorSystem"/> is <see langword="null"/>.</exception>
     public static TimeSpan GetUptime(this ActorSystem actorSystem)
     {
         ArgumentNullException.ThrowIfNull(actorSystem);
