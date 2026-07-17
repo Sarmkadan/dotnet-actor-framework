@@ -3,7 +3,7 @@
 // CTO & Software Architect
 // =====================================================================
 
-using System.Globalization;
+using System;
 
 namespace DotNetActorFramework.Utilities;
 
@@ -18,10 +18,13 @@ public static class DateTimeExtensionsValidation
     /// Checks for default DateTime values, dates in the future when past is expected, and other
     /// invalid patterns that would cause incorrect behavior.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
+    /// <exception cref="ArgumentException">Thrown when the DateTime is invalid with detailed validation messages.</exception>
     public static IReadOnlyList<string> Validate(this DateTime dateTime)
     {
+        ArgumentNullException.ThrowIfNull(dateTime);
+
         var problems = new List<string>();
 
         // Check for default DateTime (Unix epoch or MinValue)
@@ -61,19 +64,16 @@ public static class DateTimeExtensionsValidation
     /// <summary>
     /// Determines if a DateTime value is semantically valid for use with DateTimeExtensions methods.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate</param>
-    /// <returns>True if the DateTime is valid; otherwise false</returns>
-    public static bool IsValid(this DateTime dateTime)
-    {
-        return dateTime.Validate().Count == 0;
-    }
+    /// <param name="dateTime">The DateTime value to validate.</param>
+    /// <returns>True if the DateTime is valid; otherwise false.</returns>
+    public static bool IsValid(this DateTime dateTime) => dateTime.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that a DateTime value is semantically valid for use with DateTimeExtensions methods.
     /// Throws an ArgumentException with detailed validation messages if the DateTime is invalid.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate</param>
-    /// <exception cref="ArgumentException">Thrown when the DateTime is invalid with detailed validation messages</exception>
+    /// <param name="dateTime">The DateTime value to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when the DateTime is invalid with detailed validation messages.</exception>
     public static void EnsureValid(this DateTime dateTime)
     {
         var problems = dateTime.Validate();
@@ -92,41 +92,40 @@ public static class DateTimeExtensionsValidation
     /// The GetElapsed method calculates time since the given DateTime, so future dates are semantically
     /// valid but will return negative TimeSpan values.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for GetElapsed usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for GetElapsed usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForGetElapsed(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the GetElapsedMilliseconds method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for GetElapsedMilliseconds usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for GetElapsedMilliseconds usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForGetElapsedMilliseconds(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value and duration are semantically valid for use with the HasElapsed method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate</param>
-    /// <param name="duration">The duration to check against</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate.</param>
+    /// <param name="duration">The duration to check against.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
+    /// <exception cref="ArgumentException">Thrown when the DateTime or duration is invalid with detailed validation messages.</exception>
     public static IReadOnlyList<string> ValidateForHasElapsed(this DateTime dateTime, TimeSpan duration)
     {
+        ArgumentNullException.ThrowIfNull(dateTime);
+
         var problems = new List<string>();
 
         // Validate DateTime
@@ -156,72 +155,67 @@ public static class DateTimeExtensionsValidation
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the IsPast method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for IsPast usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for IsPast usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForIsPast(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the IsFuture method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for IsFuture usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for IsFuture usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForIsFuture(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the GetTimeAgoDescription method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for GetTimeAgoDescription usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for GetTimeAgoDescription usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForGetTimeAgoDescription(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the RoundToSecond method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for RoundToSecond usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for RoundToSecond usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForRoundToSecond(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 
     /// <summary>
     /// Validates that a DateTime value and window boundaries are semantically valid for use with the IsWithinWindow method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate</param>
-    /// <param name="start">The start of the window</param>
-    /// <param name="end">The end of the window</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate.</param>
+    /// <param name="start">The start of the window.</param>
+    /// <param name="end">The end of the window.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
+    /// <exception cref="ArgumentException">Thrown when the DateTime or window parameters are invalid with detailed validation messages.</exception>
     public static IReadOnlyList<string> ValidateForIsWithinWindow(this DateTime dateTime, DateTime start, DateTime end)
     {
+        ArgumentNullException.ThrowIfNull(dateTime);
+
         var problems = new List<string>();
 
         // Validate DateTime
@@ -262,15 +256,13 @@ public static class DateTimeExtensionsValidation
     /// <summary>
     /// Validates that a DateTime value is semantically valid for use with the GetLogTimestamp method.
     /// </summary>
-    /// <param name="dateTime">The DateTime value to validate for GetLogTimestamp usage</param>
-    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems</returns>
+    /// <param name="dateTime">The DateTime value to validate for GetLogTimestamp usage.</param>
+    /// <returns>An empty list if valid, otherwise a list of human-readable validation problems.</returns>
     public static IReadOnlyList<string> ValidateForGetLogTimestamp(this DateTime dateTime)
     {
-        var problems = new List<string>();
+        ArgumentNullException.ThrowIfNull(dateTime);
 
         // Basic DateTime validation
-        problems.AddRange(dateTime.Validate());
-
-        return problems.AsReadOnly();
+        return dateTime.Validate();
     }
 }
