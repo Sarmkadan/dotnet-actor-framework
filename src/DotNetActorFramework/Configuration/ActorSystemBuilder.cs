@@ -133,7 +133,7 @@ public class ActorSystemBuilder
     /// </summary>
     public ActorSystem Build()
     {
-        var actorSystem = new ActorSystem(_systemName);
+        var actorSystem = new ActorSystem(_systemName, null);
 
         // Store references for later use
         if (_eventBus != null)

@@ -4,6 +4,7 @@
 // =============================================================================
 
 using DotNetActorFramework.Enums;
+using DotNetActorFramework.Services;
 
 namespace DotNetActorFramework.Models;
 
@@ -27,13 +28,15 @@ public class ActorSystem
     private readonly Dictionary<Guid, Actor> _actors = [];
     private readonly Dictionary<ActorPath, Guid> _pathIndex = [];
     private readonly object _lockObject = new();
+    private readonly MessageDispatcher _messageDispatcher;
+    private Action<Envelope>? _deadLetterHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActorSystem"/> class.
     /// </summary>
     /// <param name="name">The unique name for this actor system.</param>
     /// <exception cref="ArgumentException">Thrown if the provided name is null or whitespace.</exception>
-    public ActorSystem(string name)
+    public ActorSystem(string name, MessageDispatcher? messageDispatcher = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("System name cannot be null or empty.", nameof(name));
@@ -42,6 +45,52 @@ public class ActorSystem
         Id = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
         IsRunning = true;
+        if (messageDispatcher != null)
+        {
+            _messageDispatcher = messageDispatcher;
+        }
+    }
+
+    /// <summary>
+    /// Registers a callback to be invoked when a message cannot be delivered to its recipient.
+    /// The callback receives the <see cref="Envelope"/> that failed to be delivered.
+    /// </summary>
+    /// <param name="handler">The callback to invoke for dead-letter messages. Pass null to unregister.</param>
+    public void SetDeadLetterHandler(Action<Envelope>? handler)
+    {
+        lock (_lockObject)
+        {
+            _deadLetterHandler = handler;
+        }
+    }
+
+    /// <summary>
+    /// Gets the currently registered dead-letter handler, if any.
+    /// </summary>
+    public Action<Envelope>? GetDeadLetterHandler()
+    {
+        lock (_lockObject)
+        {
+            return _deadLetterHandler;
+        }
+    }
+
+    /// <summary>
+    /// Invokes the dead-letter handler with the given envelope, if one is registered.
+    /// </summary>
+    /// <param name="envelope">The envelope that failed to be delivered.</param>
+    internal void InvokeDeadLetterHandler(Envelope envelope)
+    {
+        if (envelope == null)
+            throw new ArgumentNullException(nameof(envelope));
+
+        Action<Envelope>? handler;
+        lock (_lockObject)
+        {
+            handler = _deadLetterHandler;
+        }
+
+        handler?.Invoke(envelope);
     }
 
     /// <summary>

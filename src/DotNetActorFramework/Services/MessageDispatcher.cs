@@ -17,15 +17,17 @@ public class MessageDispatcher
 {
     private readonly MailboxService _mailboxService;
     private readonly ActorRegistry _registry;
+    private readonly ActorSystem _actorSystem;
     private readonly Queue<Envelope> _deadLetterQueue = [];
     private int _totalDelivered;
     private int _totalFailed;
     private readonly object _lockObject = new();
 
-    public MessageDispatcher(MailboxService mailboxService, ActorRegistry registry)
+    public MessageDispatcher(MailboxService mailboxService, ActorRegistry registry, ActorSystem actorSystem)
     {
         _mailboxService = mailboxService ?? throw new ArgumentNullException(nameof(mailboxService));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
     }
 
     /// <summary>
@@ -79,19 +81,24 @@ public class MessageDispatcher
                 }
             }
 
-            // Failed after all retries
+            // Failed after all retries - invoke dead-letter handler
             IncrementFailed();
+            _actorSystem.InvokeDeadLetterHandler(envelope);
             AddToDeadLetterQueue(envelope);
             return false;
         }
         catch (ActorNotFoundException ex)
         {
+            // Invoke dead-letter handler for undeliverable messages
+            _actorSystem.InvokeDeadLetterHandler(envelope);
             IncrementFailed();
             AddToDeadLetterQueue(envelope);
             throw new MessageDispatchException(envelope.Recipient.Path.ToString(), "Recipient actor not found", ex);
         }
         catch (Exception ex)
         {
+            // Invoke dead-letter handler for undeliverable messages
+            _actorSystem.InvokeDeadLetterHandler(envelope);
             IncrementFailed();
             AddToDeadLetterQueue(envelope);
             throw new MessageDispatchException(envelope.Recipient.Path.ToString(), "Failed to dispatch message", ex);
