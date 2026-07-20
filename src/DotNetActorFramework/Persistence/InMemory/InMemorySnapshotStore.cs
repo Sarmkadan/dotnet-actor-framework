@@ -4,6 +4,7 @@
 // =============================================================================
 
 using System.Collections.Concurrent;
+using System.Linq;
 using DotNetActorFramework.Persistence.Abstractions;
 
 namespace DotNetActorFramework.Persistence.InMemory;
@@ -21,6 +22,14 @@ public class InMemorySnapshotStore : ISnapshotStore
 
         var actorSnapshots = _snapshots.GetOrAdd(GetActorKey(snapshot.ActorId, snapshot.ActorPath), _ => new ConcurrentDictionary<long, ActorSnapshot>());
         actorSnapshots[snapshot.SequenceNr] = snapshot;
+
+        // Prune older snapshots – keep only the most recent one per actor
+        var maxSeq = actorSnapshots.Keys.Max();
+        foreach (var seq in actorSnapshots.Keys.Where(k => k != maxSeq).ToList())
+        {
+            actorSnapshots.TryRemove(seq, out _);
+        }
+
         return Task.CompletedTask;
     }
 

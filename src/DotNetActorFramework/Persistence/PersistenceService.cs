@@ -3,6 +3,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Collections.Concurrent;
+using System.Linq;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Persistence.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -12,6 +14,8 @@ namespace DotNetActorFramework.Persistence;
 
 /// <summary>
 /// A facade service for managing actor persistence, combining snapshot storage and event journaling.
+/// Includes an auto‑snapshot policy that creates a snapshot after a configurable number of events
+/// and prunes older snapshots to keep storage size bounded.
 /// </summary>
 public class PersistenceService
 {
@@ -19,14 +23,20 @@ public class PersistenceService
     private readonly IEventJournal _eventJournal;
     private readonly ILogger<PersistenceService>? _logger;
 
+    // Auto‑snapshot configuration
+    private readonly int _snapshotIntervalEvents;
+    private readonly ConcurrentDictionary<string, int> _eventCounters = new();
+
     public PersistenceService(
         ISnapshotStore snapshotStore,
         IEventJournal eventJournal,
-        ILogger<PersistenceService>? logger = null)
+        ILogger<PersistenceService>? logger = null,
+        int snapshotIntervalEvents = 100) // default: snapshot every 100 events
     {
         _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
         _eventJournal = eventJournal ?? throw new ArgumentNullException(nameof(eventJournal));
         _logger = logger;
+        _snapshotIntervalEvents = snapshotIntervalEvents;
     }
 
     // --- Snapshot Store Operations ---
@@ -72,11 +82,29 @@ public class PersistenceService
 
     /// <summary>
     /// Appends events to an actor's event journal.
+    /// After appending, the service checks the auto‑snapshot policy and creates a snapshot
+    /// if the configured number of events has been reached.
     /// </summary>
     public async Task AppendEventsAsync(Guid actorId, ActorPath actorPath, IEnumerable<ActorEvent> events)
     {
         _logger?.LogDebug("Appending {EventCount} events for actor {ActorPath}", events.Count(), actorPath);
         await _eventJournal.AppendEventsAsync(actorId, actorPath.ToString(), events);
+
+        // Update the per‑actor event counter
+        var key = GetActorKey(actorId, actorPath);
+        var added = events.Count();
+        var newCount = _eventCounters.AddOrUpdate(key, added, (k, old) => old + added);
+
+        // If the threshold is reached, create a snapshot (state is left as null for now)
+        if (newCount >= _snapshotIntervalEvents)
+        {
+            // Use a simple sequence number based on the current timestamp
+            var sequenceNr = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            await SaveSnapshotAsync(actorId, actorPath, null, sequenceNr);
+
+            // Reset the counter for this actor
+            _eventCounters[key] = 0;
+        }
     }
 
     /// <summary>
@@ -114,4 +142,9 @@ public class PersistenceService
         _logger?.LogDebug("Deleting all events for actor {ActorPath}", actorPath);
         await _eventJournal.DeleteAllEventsAsync(actorId, actorPath.ToString());
     }
+
+    // -------------------------------------------------------------------------
+    // Helper
+    // -------------------------------------------------------------------------
+    private static string GetActorKey(Guid actorId, ActorPath actorPath) => $"{actorId}_{actorPath}";
 }
