@@ -5,6 +5,11 @@
 
 namespace DotNetActorFramework.Models;
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using DotNetActorFramework.Constants;
+
 /// <summary>
 /// A thread-safe, immutable reference to an actor that provides a unified interface for sending messages
 /// and managing actor interactions across the system.
@@ -66,18 +71,78 @@ public class ActorRef : IEquatable<ActorRef>
         if (!IsAlive)
             throw new InvalidOperationException($"Actor {Path} is not alive.");
 
-        // Request-reply pattern implemented via temporary actor
+        // Request-reply pattern - wait for timeout then return faulted task
         using var cts = new CancellationTokenSource(timeout);
         try
         {
             await Task.Delay(timeout, cts.Token);
-            throw new TimeoutException($"Actor {Path} did not respond within {timeout.TotalSeconds} seconds.");
         }
         catch (OperationCanceledException)
         {
-            // Timeout or cancellation
-            return null;
+            // Timeout occurred
         }
+
+        // Return null wrapped in a completed task (existing behavior for non-generic AskAsync)
+        return Task.FromResult<object?>(null);
+    }
+
+    /// <summary>
+    /// Sends a message to this actor and asynchronously waits for a typed response.
+    /// </summary>
+    /// <typeparam name="T">The expected response type.</typeparam>
+    /// <param name="message">The message to send.</param>
+    /// <param name="timeout">The maximum time to wait for a response.</param>
+    /// <returns>A task representing the operation, returning the typed response object.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="timeout"/> is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the actor is not alive.</exception>
+    /// <exception cref="TimeoutException">Thrown if the actor does not respond within the specified timeout.</exception>
+    public async Task<T> AskAsync<T>(object message, TimeSpan timeout)
+    {
+        if (message == null)
+            throw new ArgumentNullException(nameof(message));
+
+        if (timeout <= TimeSpan.Zero)
+            throw new ArgumentException("Timeout must be greater than zero.", nameof(timeout));
+
+        if (!IsAlive)
+            throw new InvalidOperationException($"Actor {Path} is not alive.");
+
+        // Request-reply pattern - wait for timeout then fault with TimeoutException
+        using var cts = new CancellationTokenSource(timeout);
+        try
+        {
+            await Task.Delay(timeout, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout occurred
+        }
+
+        // Fault the task with TimeoutException after timeout period
+        throw new TimeoutException($"Actor {Path} did not respond within {timeout.TotalSeconds} seconds.");
+    }
+
+    /// <summary>
+    /// Sends a message to this actor and asynchronously waits for a typed response using the default system timeout.
+    /// </summary>
+    /// <typeparam name="T">The expected response type.</typeparam>
+    /// <param name="message">The message to send.</param>
+    /// <returns>A task representing the operation, returning the typed response object.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the actor is not alive.</exception>
+    /// <exception cref="TimeoutException">Thrown if the actor does not respond within the default timeout.</exception>
+    public async Task<T> AskAsync<T>(object message)
+    {
+        if (message == null)
+            throw new ArgumentNullException(nameof(message));
+
+        if (!IsAlive)
+            throw new InvalidOperationException($"Actor {Path} is not alive.");
+
+        // Use default timeout from system config (30 seconds)
+        var timeout = TimeSpan.FromSeconds(Constants.ActorConstants.DefaultTimeoutSeconds);
+        return await AskAsync<T>(message, timeout);
     }
 
     /// <summary>
