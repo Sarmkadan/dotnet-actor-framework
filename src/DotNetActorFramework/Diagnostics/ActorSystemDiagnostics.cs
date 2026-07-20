@@ -3,7 +3,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Utilities;
 
@@ -172,11 +176,54 @@ public class ActorSystemDiagnostics
         }
     }
 
+    /// <summary>
+    /// Exports the current diagnostics snapshot (including memory, GC, hierarchy and heaviest actors)
+    /// as a JSON string. The JSON uses camelCase property names and is indented for readability.
+    /// </summary>
+    public string ExportSnapshotJson()
+    {
+        // Gather the various pieces of diagnostic data.
+        var snapshot = TakeSnapshot();
+        var memory = GetMemoryStatistics();
+        var gc = GetGcStatistics();
+        var hierarchy = AnalyzeActorHierarchy();
+        var heaviest = FindHeaviestActors();
+
+        var exportDto = new DiagnosticsExportDto
+        {
+            Snapshot = snapshot,
+            Memory = memory,
+            Gc = gc,
+            Hierarchy = hierarchy,
+            HeaviestActors = heaviest
+        };
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+
+        return JsonSerializer.Serialize(exportDto, options);
+    }
+
     private static double GetCpuUsage()
     {
         // PerformanceCounter is Windows-only; return a neutral sentinel value
         return 0;
     }
+}
+
+/// <summary>
+/// DTO used for JSON export of diagnostics data.
+/// </summary>
+public class DiagnosticsExportDto
+{
+    public PerformanceSnapshot Snapshot { get; set; }
+    public MemoryStatistics Memory { get; set; }
+    public GcStatistics Gc { get; set; }
+    public ActorPathAnalysis Hierarchy { get; set; }
+    public List<ActorLoadInfo> HeaviestActors { get; set; }
 }
 
 /// <summary>
