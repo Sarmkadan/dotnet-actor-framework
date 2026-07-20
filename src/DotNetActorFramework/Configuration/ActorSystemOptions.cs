@@ -57,6 +57,8 @@ public class ActorSystemOptions
 
     public bool EnableDetailedLogging { get; set; } = false;
 
+public int HighWatermarkWarningThreshold { get; set; } = 80;
+
     /// <summary>
     /// Validates the configuration options.
     /// </summary>

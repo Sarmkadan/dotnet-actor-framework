@@ -36,4 +36,10 @@ public interface IMailbox : IDisposable
     /// Gets the load factor of the mailbox.
     /// </summary>
     double GetLoadFactor();
+
+/// <summary>
+/// Gets the high watermark warning threshold as a percentage (0-100).
+/// When the load factor exceeds this threshold, a warning is logged once until it drops below.
+/// </summary>
+int HighWatermarkWarningThreshold { get; }
 }

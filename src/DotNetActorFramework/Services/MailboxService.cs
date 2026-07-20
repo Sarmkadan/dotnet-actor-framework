@@ -9,6 +9,7 @@ using DotNetActorFramework.Constants;
 using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetActorFramework.Services;
 
@@ -21,13 +22,18 @@ public class MailboxService
     private readonly ConcurrentDictionary<Guid, IMailbox> _mailboxes = [];
     private readonly ActorSystemOptions _options; // Storing options
     private readonly int _defaultCapacity;
+    private readonly ILogger<MailboxService>? _logger;
 
-    public MailboxService(ActorSystemOptions options) // Injected options
+    public MailboxService(ActorSystemOptions options, ILogger<MailboxService>? logger = null) // Injected options
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _logger = logger;
 
         if (_options.DefaultMailboxCapacity <= 0)
             throw new ArgumentException("Default capacity must be greater than zero.", nameof(_options.DefaultMailboxCapacity));
+
+        if (_options.HighWatermarkWarningThreshold < 0 || _options.HighWatermarkWarningThreshold > 100)
+            throw new ArgumentException("High watermark threshold must be between 0 and 100.", nameof(_options.HighWatermarkWarningThreshold));
 
         _defaultCapacity = _options.DefaultMailboxCapacity;
     }
@@ -51,13 +57,14 @@ public class MailboxService
         var actualMailboxType = mailboxType ?? _options.DefaultMailboxType;
 
         IMailbox mailbox;
+        var highWatermarkThreshold = _options.HighWatermarkWarningThreshold;
         if (actualMailboxType == MailboxType.Priority)
         {
-            mailbox = new PriorityMailbox(actorId, actualCapacity);
+            mailbox = new PriorityMailbox(actorId, actualCapacity, highWatermarkThreshold, _logger as ILogger<PriorityMailbox>);
         }
         else
         {
-            mailbox = new Mailbox(actorId, actualCapacity);
+            mailbox = new Mailbox(actorId, actualCapacity, highWatermarkThreshold, _logger as ILogger<Mailbox>);
         }
 
         if (!_mailboxes.TryAdd(actorId, mailbox))
@@ -221,11 +228,15 @@ public class Mailbox : IMailbox
 {
     private readonly ConcurrentQueue<Envelope> _queue = [];
     private readonly SemaphoreSlim _availableSemaphore;
+    private readonly int _highWatermarkThreshold;
+    private readonly ILogger<Mailbox>? _logger;
+    private bool _highWatermarkWarningIssued = false;
     public Guid ActorId { get; }
     public int Capacity { get; }
+    public int HighWatermarkWarningThreshold { get; }
     private bool _disposed = false;
 
-    public Mailbox(Guid actorId, int capacity)
+    public Mailbox(Guid actorId, int capacity, int highWatermarkThreshold = 80, ILogger<Mailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
@@ -233,8 +244,14 @@ public class Mailbox : IMailbox
         if (capacity <= 0)
             throw new ArgumentException("Capacity must be greater than zero.", nameof(capacity));
 
+        if (highWatermarkThreshold < 0 || highWatermarkThreshold > 100)
+            throw new ArgumentException("High watermark threshold must be between 0 and 100.", nameof(highWatermarkThreshold));
+
         ActorId = actorId;
         Capacity = capacity;
+        _highWatermarkThreshold = highWatermarkThreshold;
+        HighWatermarkWarningThreshold = highWatermarkThreshold;
+        _logger = logger;
         _availableSemaphore = new SemaphoreSlim(capacity, capacity);
     }
 
@@ -255,6 +272,16 @@ public class Mailbox : IMailbox
             return false;
 
         _queue.Enqueue(envelope);
+
+        // Check if we've crossed the high watermark threshold and issue warning if needed
+        var currentLoadFactor = GetLoadFactor();
+        if (currentLoadFactor >= _highWatermarkThreshold / 100.0 && !_highWatermarkWarningIssued)
+        {
+            _highWatermarkWarningIssued = true;
+            _logger?.LogWarning("Mailbox for actor {ActorId} has reached high watermark: {CurrentLoadPercent}% full (threshold: {Threshold}%)",
+                ActorId, (int)(currentLoadFactor * 100), _highWatermarkThreshold);
+        }
+
         return true;
     }
 
@@ -269,6 +296,14 @@ public class Mailbox : IMailbox
         if (_queue.TryDequeue(out var envelope))
         {
             _availableSemaphore.Release();
+
+            // Reset the high watermark warning flag if load has dropped below threshold
+            var currentLoadFactor = GetLoadFactor();
+            if (currentLoadFactor < _highWatermarkThreshold / 100.0)
+            {
+                _highWatermarkWarningIssued = false;
+            }
+
             return envelope;
         }
 
@@ -320,11 +355,15 @@ public class PriorityMailbox : IMailbox
     private readonly PriorityQueue<Envelope, int> _queue = new();
     private readonly object _queueLock = new();
     private readonly SemaphoreSlim _availableSemaphore;
+    private readonly int _highWatermarkThreshold;
+    private readonly ILogger<PriorityMailbox>? _logger;
+    private bool _highWatermarkWarningIssued = false;
     public Guid ActorId { get; }
     public int Capacity { get; }
+    public int HighWatermarkWarningThreshold { get; }
     private bool _disposed = false;
 
-    public PriorityMailbox(Guid actorId, int capacity)
+    public PriorityMailbox(Guid actorId, int capacity, int highWatermarkThreshold = 80, ILogger<PriorityMailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
@@ -332,8 +371,14 @@ public class PriorityMailbox : IMailbox
         if (capacity <= 0)
             throw new ArgumentException("Capacity must be greater than zero.", nameof(capacity));
 
+        if (highWatermarkThreshold < 0 || highWatermarkThreshold > 100)
+            throw new ArgumentException("High watermark threshold must be between 0 and 100.", nameof(highWatermarkThreshold));
+
         ActorId = actorId;
         Capacity = capacity;
+        _highWatermarkThreshold = highWatermarkThreshold;
+        HighWatermarkWarningThreshold = highWatermarkThreshold;
+        _logger = logger;
         _availableSemaphore = new SemaphoreSlim(capacity, capacity);
     }
 
@@ -357,6 +402,16 @@ public class PriorityMailbox : IMailbox
         {
             _queue.Enqueue(envelope, -envelope.Message.Priority);
         }
+
+        // Check if we've crossed the high watermark threshold and issue warning if needed
+        var currentLoadFactor = GetLoadFactor();
+        if (currentLoadFactor >= _highWatermarkThreshold / 100.0 && !_highWatermarkWarningIssued)
+        {
+            _highWatermarkWarningIssued = true;
+            _logger?.LogWarning("Priority mailbox for actor {ActorId} has reached high watermark: {CurrentLoadPercent}% full (threshold: {Threshold}%)",
+                ActorId, (int)(currentLoadFactor * 100), _highWatermarkThreshold);
+        }
+
         return true;
     }
 
@@ -379,6 +434,14 @@ public class PriorityMailbox : IMailbox
         if (dequeued)
         {
             _availableSemaphore.Release();
+
+            // Reset the high watermark warning flag if load has dropped below threshold
+            var currentLoadFactor = GetLoadFactor();
+            if (currentLoadFactor < _highWatermarkThreshold / 100.0)
+            {
+                _highWatermarkWarningIssued = false;
+            }
+
             return envelope;
         }
 
