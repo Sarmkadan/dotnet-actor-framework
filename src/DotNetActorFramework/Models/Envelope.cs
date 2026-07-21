@@ -7,16 +7,24 @@ namespace DotNetActorFramework.Models;
 
 /// <summary>
 /// Wraps a message with metadata about sender and recipient.
+///
+/// <para>This class uses public fields for RetryCount and IsDelivered to avoid the overhead
+/// of property accessors on the hot send path while maintaining heap allocation (safer than struct).
+/// The fields are intentionally public to allow the MessageDispatcher and LoadBasedRouter
+/// to update delivery state after creation without requiring object initializers.</para>
 /// </summary>
 public class Envelope
 {
-    public Message Message { get; }
-    public ActorRef? Sender { get; }
-    public ActorRef Recipient { get; }
-    public DateTime SentAt { get; }
-    public Guid EnvelopeId { get; }
-    public int RetryCount { get; private set; }
-    public bool IsDelivered { get; private set; }
+    public readonly Message Message;
+    public readonly ActorRef? Sender;
+    public readonly ActorRef Recipient;
+    public readonly DateTime SentAt;
+    public readonly Guid EnvelopeId;
+
+    // Mutable state for delivery tracking - intentionally public fields to avoid allocations
+    // and property accessor overhead on the hot path
+    public int RetryCount;
+    public bool IsDelivered;
 
     public Envelope(Message message, ActorRef recipient, ActorRef? sender = null)
     {
