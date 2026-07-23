@@ -29,6 +29,13 @@ public abstract record Message
     /// <summary>Globally unique identifier for correlation and deduplication.</summary>
     public Guid MessageId { get; init; } = Guid.NewGuid();
 
+    /// <summary>
+    /// Correlation identifier used to link a reply (<see cref="ResponseMessage"/> or
+    /// <see cref="FailureMessage"/>) back to the request that caused it. Defaults to
+    /// <see cref="Guid.Empty"/> for messages that do not answer a prior request.
+    /// </summary>
+    public Guid CorrelationId { get; init; } = Guid.Empty;
+
     /// <summary>UTC timestamp of when the message was created.</summary>
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
@@ -105,14 +112,32 @@ public record ControlMessage : Message
 }
 
 /// <summary>
-/// A response message sent back from an actor.
+/// A response message sent back from an actor, answering a prior request.
+/// Kept as an untyped base for wire compatibility; prefer <see cref="ResponseMessage{T}"/>
+/// when the response payload has a known type.
 /// </summary>
+/// <example>
+/// <code>
+/// var reply = new ResponseMessage(result, isSuccess: true) { CorrelationId = request.MessageId };
+/// </code>
+/// </example>
 public record ResponseMessage : Message
 {
+    /// <summary>The untyped response payload, or <c>null</c> when the operation produced no value.</summary>
     public object? Response { get; init; }
+
+    /// <summary>Whether the operation the response answers completed successfully.</summary>
     public bool IsSuccess { get; init; }
+
+    /// <summary>Human-readable error description when <see cref="IsSuccess"/> is <c>false</c>.</summary>
     public string? ErrorMessage { get; init; }
 
+    /// <summary>
+    /// Initializes a new <see cref="ResponseMessage"/>.
+    /// </summary>
+    /// <param name="response">The untyped response payload, or <c>null</c>.</param>
+    /// <param name="isSuccess">Whether the answered operation succeeded. Defaults to <c>true</c>.</param>
+    /// <param name="errorMessage">Optional error description when <paramref name="isSuccess"/> is <c>false</c>.</param>
     public ResponseMessage(object? response, bool isSuccess = true, string? errorMessage = null)
     {
         Response = response;
@@ -122,14 +147,66 @@ public record ResponseMessage : Message
 }
 
 /// <summary>
-/// A failure message indicating an error occurred.
+/// A strongly-typed response message that carries a response payload of type
+/// <typeparamref name="T"/> and correlates back to the request it answers via
+/// <see cref="Message.CorrelationId"/>.
+/// </summary>
+/// <typeparam name="T">The type of the response payload. Must be a reference type.</typeparam>
+/// <example>
+/// <code>
+/// var reply = new ResponseMessage&lt;OrderResult&gt;(result, request.MessageId);
+/// </code>
+/// </example>
+public record ResponseMessage<T> : ResponseMessage where T : class
+{
+    /// <summary>The strongly-typed response payload.</summary>
+    public T Payload { get; init; }
+
+    /// <summary>
+    /// Initializes a new successful <see cref="ResponseMessage{T}"/> that answers the request
+    /// identified by <paramref name="correlationId"/>.
+    /// </summary>
+    /// <param name="response">The typed response payload.</param>
+    /// <param name="correlationId">The <see cref="Message.MessageId"/> of the request being answered.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="response"/> is <c>null</c>.</exception>
+    public ResponseMessage(T response, Guid correlationId)
+        : base(response, isSuccess: true)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        Payload = response;
+        CorrelationId = correlationId;
+    }
+}
+
+/// <summary>
+/// A failure message indicating an error occurred while processing a request. Carries
+/// enough serializable detail about the originating exception (type name, message, stack
+/// trace) to survive persistence via <c>IEventJournal</c> without requiring the raw
+/// <see cref="Exception"/> instance to be preserved.
 /// </summary>
 public record FailureMessage : Message
 {
+    /// <summary>Human-readable description of what went wrong.</summary>
     public string Reason { get; init; }
+
+    /// <summary>The full type name of the originating exception, or <c>null</c> when none was supplied.</summary>
+    public string? ExceptionType { get; init; }
+
+    /// <summary>The <see cref="Exception.Message"/> of the originating exception, or <c>null</c> when none was supplied.</summary>
+    public string? ExceptionMessage { get; init; }
+
+    /// <summary>The <see cref="Exception.StackTrace"/> of the originating exception, or <c>null</c> when none was supplied.</summary>
     public string? StackTrace { get; init; }
+
+    /// <summary>UTC timestamp of when the failure was recorded.</summary>
     public DateTime FailureTime { get; init; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Initializes a new <see cref="FailureMessage"/> without an associated exception.
+    /// </summary>
+    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
     public FailureMessage(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -138,9 +215,37 @@ public record FailureMessage : Message
         Reason = reason;
     }
 
+    /// <summary>
+    /// Initializes a new <see cref="FailureMessage"/> capturing the type name, message and
+    /// stack trace of <paramref name="exception"/> so the failure remains serializable
+    /// for journaling purposes.
+    /// </summary>
+    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="exception">The exception that caused the failure.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <c>null</c>.</exception>
     public FailureMessage(string reason, Exception exception)
         : this(reason)
     {
-        StackTrace = exception?.StackTrace;
+        ArgumentNullException.ThrowIfNull(exception);
+
+        ExceptionType = exception.GetType().FullName;
+        ExceptionMessage = exception.Message;
+        StackTrace = exception.StackTrace;
+    }
+
+    /// <summary>
+    /// Initializes a new <see cref="FailureMessage"/> that answers the request identified by
+    /// <paramref name="correlationId"/>, capturing serializable detail about <paramref name="exception"/>.
+    /// </summary>
+    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="exception">The exception that caused the failure.</param>
+    /// <param name="correlationId">The <see cref="Message.MessageId"/> of the request being answered.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <c>null</c>.</exception>
+    public FailureMessage(string reason, Exception exception, Guid correlationId)
+        : this(reason, exception)
+    {
+        CorrelationId = correlationId;
     }
 }
