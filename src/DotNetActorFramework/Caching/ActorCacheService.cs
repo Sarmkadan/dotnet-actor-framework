@@ -127,6 +127,7 @@ public class ActorCacheService
 
     /// <summary>
     /// Invalidates a cached actor reference, typically called when the actor terminates or restarts.
+    /// Supervisors should invoke this method to purge stale references.
     /// </summary>
     /// <param name="path">The actor path whose cache entry should be removed.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
