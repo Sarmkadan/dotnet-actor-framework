@@ -30,6 +30,14 @@ public sealed class LoadBasedRouter
     private readonly ConcurrentDictionary<string, int> _roundRobinCounters =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // Thread-local RNG avoids lock contention on a single shared Random instance
+    // on the hot routing path (System.Random is not thread-safe pre-.NET 6, and
+    // even Random.Shared serializes callers internally under heavy fan-out).
+    [ThreadStatic]
+    private static Random? _threadLocalRandom;
+
+    private static Random ThreadRandom => _threadLocalRandom ??= new Random(Environment.CurrentManagedThreadId ^ Environment.TickCount);
+
     /// <summary>
     /// Initializes a new instance of <see cref="LoadBasedRouter"/>.
     /// </summary>
@@ -72,7 +80,7 @@ public sealed class LoadBasedRouter
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var target = GetLeastLoaded(capability);
+        var target = SampleLeastLoaded(capability);
         if (target is null)
             return false;
 
@@ -123,8 +131,16 @@ public sealed class LoadBasedRouter
 
     /// <summary>
     /// Selects the live actor with the fewest queued messages within the pool
-    /// registered under <paramref name="capability"/>.
+    /// registered under <paramref name="capability"/> by scanning every routee's
+    /// mailbox depth.
     /// </summary>
+    /// <remarks>
+    /// This performs an O(n) scan across the whole routee pool and is intended for
+    /// diagnostics and small, static pools (see <see cref="GetLoadSnapshot"/> callers).
+    /// The hot routing path (<see cref="RouteAsync"/>) uses <see cref="SampleLeastLoaded"/>
+    /// instead, which samples a constant number of routees per decision so routing cost
+    /// does not grow with pool size.
+    /// </remarks>
     /// <param name="capability">The capability identifier that selects the actor pool.</param>
     /// <returns>
     /// The <see cref="ActorRef"/> with the minimum mailbox depth, or <c>null</c> when
@@ -153,6 +169,55 @@ public sealed class LoadBasedRouter
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// Selects a lightly-loaded live actor within the pool registered under
+    /// <paramref name="capability"/> using the power-of-two-choices heuristic: two
+    /// routees are sampled uniformly at random and the one with the smaller mailbox
+    /// depth is returned.
+    /// </summary>
+    /// <remarks>
+    /// Reading a mailbox depth (<see cref="MailboxService.GetMailboxSize"/>) is a
+    /// lock-free volatile read of the underlying queue's count, and this method only
+    /// ever samples two routees regardless of pool size, so routing cost stays
+    /// constant instead of scanning the entire pool (as <see cref="GetLeastLoaded"/>
+    /// does) on every message. This trades perfect min-load selection for O(1) work
+    /// per routing decision, which is the standard power-of-two-choices trade-off and
+    /// yields load imbalance bounded by O(log log n) rather than the O(n) contention
+    /// risk of a full scan under high fan-in.
+    /// </remarks>
+    /// <param name="capability">The capability identifier that selects the actor pool.</param>
+    /// <returns>
+    /// The less-loaded of two randomly sampled <see cref="ActorRef"/> instances, the
+    /// sole routee when the pool has exactly one, or <c>null</c> when no live actors
+    /// are registered for the capability.
+    /// </returns>
+    public ActorRef? SampleLeastLoaded(string capability)
+    {
+        if (string.IsNullOrWhiteSpace(capability))
+            return null;
+
+        var actors = _discovery.Discover(capability);
+        var count = actors.Count;
+        if (count == 0)
+            return null;
+        if (count == 1)
+            return actors[0];
+
+        var random = ThreadRandom;
+        var firstIndex = random.Next(count);
+        var secondIndex = random.Next(count - 1);
+        if (secondIndex >= firstIndex)
+            secondIndex++;
+
+        var first = actors[firstIndex];
+        var second = actors[secondIndex];
+
+        var firstLoad = _mailbox.GetMailboxSize(first.Id);
+        var secondLoad = _mailbox.GetMailboxSize(second.Id);
+
+        return secondLoad < firstLoad ? second : first;
     }
 
     /// <summary>

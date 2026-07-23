@@ -1,4 +1,8 @@
 using BenchmarkDotNet.Running;
 using DotNetActorFramework.Benchmarks;
 
-BenchmarkRunner.Run<ActorSystemBenchmarks>();
+BenchmarkSwitcher.FromTypes(
+[
+    typeof(ActorSystemBenchmarks),
+    typeof(LoadBasedRouterBenchmarks)
+]).Run(args);
