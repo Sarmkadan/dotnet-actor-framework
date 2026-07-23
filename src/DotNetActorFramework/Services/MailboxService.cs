@@ -45,26 +45,42 @@ public class MailboxService
     /// <param name="actorId">The ID of the actor for which to create the mailbox.</param>
     /// <param name="capacity">Optional: the capacity of the mailbox. If 0, uses default capacity.</param>
     /// <param name="mailboxType">Optional: the type of mailbox to create. If not specified, uses default from options.</param>
+    /// <param name="overflowPolicy">Optional: the overflow policy for the mailbox. If not specified, uses default from options.</param>
     /// <returns>The newly created mailbox.</returns>
     /// <exception cref="ArgumentException">Thrown when actorId is empty or capacity is invalid.</exception>
     /// <exception cref="InvalidOperationException">Thrown when a mailbox already exists for the actor.</exception>
-    public IMailbox CreateMailbox(Guid actorId, int capacity = 0, MailboxType? mailboxType = null)
+    public IMailbox CreateMailbox(
+        Guid actorId,
+        int capacity = 0,
+        MailboxType? mailboxType = null,
+        MailboxOverflowPolicy? overflowPolicy = null)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
         var actualCapacity = capacity > 0 ? capacity : _defaultCapacity;
         var actualMailboxType = mailboxType ?? _options.DefaultMailboxType;
+        var actualOverflowPolicy = overflowPolicy ?? _options.DefaultMailboxOverflowPolicy;
 
         IMailbox mailbox;
         var highWatermarkThreshold = _options.HighWatermarkWarningThreshold;
         if (actualMailboxType == MailboxType.Priority)
         {
-            mailbox = new PriorityMailbox(actorId, actualCapacity, highWatermarkThreshold, _logger as ILogger<PriorityMailbox>);
+            mailbox = new BoundedPriorityMailbox(
+                actorId,
+                actualCapacity,
+                actualOverflowPolicy,
+                highWatermarkThreshold,
+                _logger as ILogger<BoundedPriorityMailbox>);
         }
         else
         {
-            mailbox = new Mailbox(actorId, actualCapacity, highWatermarkThreshold, _logger as ILogger<Mailbox>);
+            mailbox = new BoundedMailbox(
+                actorId,
+                actualCapacity,
+                actualOverflowPolicy,
+                highWatermarkThreshold,
+                _logger as ILogger<BoundedMailbox>);
         }
 
         if (!_mailboxes.TryAdd(actorId, mailbox))

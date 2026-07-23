@@ -19,6 +19,8 @@ public class ActorSystemOptions
 
     public MailboxType DefaultMailboxType { get; set; } = MailboxType.FIFO;
 
+public MailboxOverflowPolicy DefaultMailboxOverflowPolicy { get; set; } = MailboxOverflowPolicy.DropNewest;
+
     public int DefaultTimeoutSeconds { get; set; } = ActorConstants.DefaultTimeoutSeconds;
 
     public int MaxMessageRetries { get; set; } = ActorConstants.MaxMessageRetries;
@@ -100,6 +102,8 @@ public int HighWatermarkWarningThreshold { get; set; } = 80;
         if (BackoffMultiplier <= 1.0)
             throw new InvalidOperationException("Backoff multiplier must be greater than 1.");
     }
+
+    // Overflow policy is always valid, no validation needed
 
     /// <summary>
     /// Creates a default configuration.

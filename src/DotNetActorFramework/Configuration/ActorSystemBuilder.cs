@@ -9,6 +9,7 @@ using DotNetActorFramework.Middleware;
 using DotNetActorFramework.BackgroundWorkers;
 using DotNetActorFramework.Events;
 using DotNetActorFramework.Caching;
+using DotNetActorFramework.Enums;
 
 namespace DotNetActorFramework.Configuration;
 
@@ -122,9 +123,22 @@ public class ActorSystemBuilder
     /// <summary>
     /// Configures mailbox settings.
     /// </summary>
+    /// <param name="capacity">The capacity of the mailbox.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
     public ActorSystemBuilder WithMailboxCapacity(int capacity)
     {
         _options.DefaultMailboxCapacity = capacity;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the mailbox overflow policy.
+    /// </summary>
+    /// <param name="policy">The overflow policy to use when the mailbox is full.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    public ActorSystemBuilder WithMailboxOverflowPolicy(MailboxOverflowPolicy policy)
+    {
+        _options.DefaultMailboxOverflowPolicy = policy;
         return this;
     }
 
@@ -191,8 +205,7 @@ public class ActorSystemBuilder
 /// </summary>
 public class NullLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
 {
-    public void Log<TState>(
-        Microsoft.Extensions.Logging.LogLevel logLevel,
+    public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel,
         Microsoft.Extensions.Logging.EventId eventId,
         TState state,
         Exception? exception,
