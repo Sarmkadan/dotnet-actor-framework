@@ -172,6 +172,62 @@ public class MessageDispatcher
     }
 
     /// <summary>
+    /// Sends a strongly-typed response back to the sender of <paramref name="request"/>,
+    /// automatically correlating it via <see cref="Message.MessageId"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the response payload. Must be a reference type.</typeparam>
+    /// <param name="recipient">The actor the response is sent to (typically the original sender).</param>
+    /// <param name="response">The typed response payload.</param>
+    /// <param name="request">The request message being answered.</param>
+    /// <param name="sender">The actor sending the response, or <c>null</c> when unspecified.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="recipient"/>, <paramref name="response"/> or <paramref name="request"/> is <c>null</c>.</exception>
+    public async Task ReplyAsync<T>(ActorRef recipient, T response, Message request, ActorRef? sender = null) where T : class
+    {
+        if (recipient == null)
+            throw new ArgumentNullException(nameof(recipient));
+
+        ArgumentNullException.ThrowIfNull(response);
+
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        var responseMessage = new ResponseMessage<T>(response, request.MessageId);
+
+        if (sender != null)
+            await SendAsync(sender, recipient, responseMessage);
+        else
+            await SendAsync(recipient, responseMessage);
+    }
+
+    /// <summary>
+    /// Sends a <see cref="FailureMessage"/> back to the sender of <paramref name="request"/>,
+    /// automatically correlating it via <see cref="Message.MessageId"/> and capturing
+    /// serializable detail from <paramref name="exception"/>.
+    /// </summary>
+    /// <param name="recipient">The actor the failure is sent to (typically the original sender).</param>
+    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="exception">The exception that caused the failure.</param>
+    /// <param name="request">The request message that failed to be answered.</param>
+    /// <param name="sender">The actor sending the failure, or <c>null</c> when unspecified.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="recipient"/>, <paramref name="exception"/> or <paramref name="request"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
+    public async Task ReplyWithFailureAsync(ActorRef recipient, string reason, Exception exception, Message request, ActorRef? sender = null)
+    {
+        if (recipient == null)
+            throw new ArgumentNullException(nameof(recipient));
+
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        var failureMessage = new FailureMessage(reason, exception, request.MessageId);
+
+        if (sender != null)
+            await SendAsync(sender, recipient, failureMessage);
+        else
+            await SendAsync(recipient, failureMessage);
+    }
+
+    /// <summary>
     /// Gets the next message for an actor to process.
     /// </summary>
     public async Task<Envelope?> GetNextMessageAsync(Guid actorId)
