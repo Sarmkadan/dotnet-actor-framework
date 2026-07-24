@@ -6,6 +6,7 @@
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Constants;
 using DotNetActorFramework.Exceptions;
+using DotNetActorFramework.Messaging;
 
 namespace DotNetActorFramework.Services;
 
@@ -43,6 +44,15 @@ public class MessageDispatcher
 
         try
         {
+            // Replies to a pending Ask (see AskExtensions.AskAsync) are consumed by the
+            // waiting caller instead of being enqueued to the recipient's mailbox.
+            if (envelope.Message is ResponseMessage or FailureMessage && AskRegistry.TryComplete(envelope.Message))
+            {
+                envelope.MarkAsDelivered();
+                IncrementDelivered();
+                return true;
+            }
+
             // Check if recipient exists
             if (!_registry.Contains(envelope.Recipient.Path))
                 throw new ActorNotFoundException(envelope.Recipient.Path.ToString());
