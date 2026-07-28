@@ -1,2 +1,2 @@
 
-This test class covers the happy path for each major public method, edge cases, and error paths. It also ensures that the `EnsureValid` method throws an `ArgumentException` when the client is invalid.
+This test class covers the happy path for each major public method, edge cases, and error paths. It also ensures that the `GetRoot` method throws an `ArgumentNullException` when the client is invalid.
