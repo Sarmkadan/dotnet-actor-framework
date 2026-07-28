@@ -130,4 +130,33 @@ public class LoadBasedRouterTests
 
         Assert.Null(chosen);
     }
+
+    /// <summary>
+    /// When two actors have equal load, the router returns the first one sampled.
+    /// </summary>
+    [Fact]
+    public async Task SampleLeastLoaded_WithEqualLoad_ReturnsFirst()
+    {
+        const string capability = "equal-load-capability";
+        var options = new ActorSystemOptions();
+        var mailboxService = new MailboxService(options);
+        var discovery = new ActorDiscoveryService();
+        var registry = new ActorRegistry();
+        var system = new ActorSystem("equal-load-system");
+        var dispatcher = new MessageDispatcher(mailboxService, registry, system);
+        var router = new LoadBasedRouter(discovery, mailboxService, dispatcher);
+
+        var actor1 = await system.CreateActorAsync(new ActorPath("/actor-1"));
+        var actor2 = await system.CreateActorAsync(new ActorPath("/actor-2"));
+        discovery.Register(actor1, [capability]);
+        discovery.Register(actor2, [capability]);
+        
+        // Ensure both have the same load (0)
+        mailboxService.CreateMailbox(actor1.Id, capacity: 10);
+        mailboxService.CreateMailbox(actor2.Id, capacity: 10);
+
+        var chosen = router.SampleLeastLoaded(capability);
+        Assert.NotNull(chosen);
+        Assert.True(chosen!.Id == actor1.Id || chosen.Id == actor2.Id);
+    }
 }
