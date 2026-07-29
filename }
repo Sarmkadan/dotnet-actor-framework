@@ -1,2 +1,6 @@
 
-This test class covers the happy path for each major public method, edge cases, and error paths. It also ensures that the `GetRoot` method throws an `ArgumentNullException` when the client is invalid.
+This test file covers the happy path for each major public method, edge cases, and error paths. It also ensures that the `GetRoot` method throws an `ArgumentNullException` when the client is invalid.
+
+Please note that I have assumed that the `AuthenticationMiddleware` class is defined in the same namespace as the test class. If it is defined in a different namespace, you will need to adjust the using directive accordingly.
+
+Also, I have used the xUnit test framework, which is commonly used in .NET projects. If your project uses a different test framework, you will need to adjust the test class accordingly.
