@@ -5,6 +5,8 @@
 
 namespace DotNetActorFramework.Models;
 
+using System.Threading;
+
 /// <summary>
 /// Tracks performance and behavior metrics for an actor.
 /// </summary>
@@ -12,9 +14,16 @@ public class ActorMetrics
 {
     public Guid ActorId { get; }
     public ActorPath ActorPath { get; }
-    public long MessageCount { get; private set; }
-    public long ErrorCount { get; private set; }
-    public long ProcessedCount { get; private set; }
+
+    private long _messageCount;
+    public long MessageCount => Interlocked.Read(ref _messageCount);
+
+    private long _errorCount;
+    public long ErrorCount => Interlocked.Read(ref _errorCount);
+
+    private long _processedCount;
+    public long ProcessedCount => Interlocked.Read(ref _processedCount);
+
     public double AverageProcessingTimeMs { get; private set; }
     public DateTime CreatedAt { get; }
     public DateTime? LastMessageTime { get; private set; }
@@ -23,7 +32,8 @@ public class ActorMetrics
     /// Current number of messages waiting in this actor's mailbox.
     /// Updated by calling <see cref="UpdateMailboxDepth"/>.
     /// </summary>
-    public int MailboxDepth { get; private set; }
+    private int _mailboxDepth;
+    public int MailboxDepth => _mailboxDepth;
 
     private readonly List<long> _processingTimes = [];
     private readonly object _lockObject = new();
@@ -40,9 +50,9 @@ public class ActorMetrics
     /// </summary>
     public void RecordMessageReceived()
     {
+        Interlocked.Increment(ref _messageCount);
         lock (_lockObject)
         {
-            MessageCount++;
             LastMessageTime = DateTime.UtcNow;
         }
     }
@@ -55,7 +65,7 @@ public class ActorMetrics
         lock (_lockObject)
         {
             _processingTimes.Add(elapsedMilliseconds);
-            ProcessedCount++;
+            Interlocked.Increment(ref _processedCount);
             UpdateAverageProcessingTime();
         }
     }
@@ -65,10 +75,7 @@ public class ActorMetrics
     /// </summary>
     public void RecordError()
     {
-        lock (_lockObject)
-        {
-            ErrorCount++;
-        }
+        Interlocked.Increment(ref _errorCount);
     }
 
     /// <summary>
@@ -79,10 +86,7 @@ public class ActorMetrics
     /// <param name="depth">The current number of messages waiting in the mailbox.</param>
     public void UpdateMailboxDepth(int depth)
     {
-        lock (_lockObject)
-        {
-            MailboxDepth = depth;
-        }
+        Interlocked.Exchange(ref _mailboxDepth, depth);
     }
 
     /// <summary>
@@ -90,11 +94,9 @@ public class ActorMetrics
     /// </summary>
     public double GetErrorRate()
     {
-        lock (_lockObject)
-        {
-            if (MessageCount == 0) return 0;
-            return (double)ErrorCount / MessageCount * 100;
-        }
+        var mc = MessageCount;
+        if (mc == 0) return 0;
+        return (double)ErrorCount / mc * 100;
     }
 
     /// <summary>
