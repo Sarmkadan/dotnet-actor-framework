@@ -11,6 +11,10 @@ namespace DotNetActorFramework.Exceptions;
 /// </summary>
 public class DotnetActorFrameworkException : Exception
 {
+    public DotnetActorFrameworkException()
+    {
+    }
+
     public DotnetActorFrameworkException(string? message) : base(message)
     {
     }

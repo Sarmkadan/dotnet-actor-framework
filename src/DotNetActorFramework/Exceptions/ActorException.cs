@@ -13,6 +13,10 @@ namespace DotNetActorFramework.Exceptions;
 /// </summary>
 public class ActorException : DotnetActorFrameworkException
 {
+    public ActorException()
+    {
+    }
+
     public ActorException(string? message) : base(message)
     {
     }

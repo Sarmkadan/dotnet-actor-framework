@@ -10,6 +10,10 @@ namespace DotNetActorFramework.Exceptions;
 /// </summary>
 public class ValidationException : DotnetActorFrameworkException
 {
+    public ValidationException()
+    {
+    }
+
     public ValidationException(string? message) : base(message)
     {
     }

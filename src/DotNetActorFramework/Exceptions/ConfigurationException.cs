@@ -10,6 +10,10 @@ namespace DotNetActorFramework.Exceptions;
 /// </summary>
 public class ConfigurationException : DotnetActorFrameworkException
 {
+    public ConfigurationException()
+    {
+    }
+
     public ConfigurationException(string? message) : base(message)
     {
     }
