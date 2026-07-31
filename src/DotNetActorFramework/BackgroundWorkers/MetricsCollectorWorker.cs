@@ -5,6 +5,7 @@
 
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Middleware;
+using DotNetActorFramework.Options;
 
 namespace DotNetActorFramework.BackgroundWorkers;
 
@@ -15,16 +16,28 @@ namespace DotNetActorFramework.BackgroundWorkers;
 public class MetricsCollectorWorker : IBackgroundWorker
 {
     public string WorkerId => "metrics-collector";
-    public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);
+
+    // The interval is now driven by configuration via MetricsCollectorOptions.
+    public TimeSpan Interval { get; set; }
 
     private readonly ActorSystem _actorSystem;
     private readonly MetricsCollector _metricsCollector;
+    private readonly MetricsCollectorOptions _options;
     private readonly MetricsSnapshot _latestSnapshot = new();
 
-    public MetricsCollectorWorker(ActorSystem actorSystem, MetricsCollector metricsCollector)
+    public MetricsCollectorWorker(
+        ActorSystem actorSystem,
+        MetricsCollector metricsCollector,
+        MetricsCollectorOptions? options = null)
     {
         _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
         _metricsCollector = metricsCollector ?? throw new ArgumentNullException(nameof(metricsCollector));
+
+        // If no options are supplied, fall back to defaults.
+        _options = options ?? new MetricsCollectorOptions();
+
+        // Apply the configured interval.
+        Interval = _options.Interval;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -42,6 +55,9 @@ public class MetricsCollectorWorker : IBackgroundWorker
             _latestSnapshot.TotalErrors = health.TotalErrors;
             _latestSnapshot.AverageLatencyMs = systemMetrics.AverageLatencyMs;
             _latestSnapshot.ErrorRate = systemMetrics.GetErrorRate();
+
+            // Apply the configured error‑rate threshold to the snapshot.
+            _latestSnapshot.ErrorRateThreshold = _options.ErrorRateThreshold;
 
         }, cancellationToken);
     }
@@ -66,7 +82,10 @@ public class MetricsSnapshot
     public double AverageLatencyMs { get; set; }
     public double ErrorRate { get; set; }
 
-    public bool IsHealthy => ErrorActors == 0 && ErrorRate < 5.0;
+    // Configurable threshold – default is 5.0 (percent).
+    public double ErrorRateThreshold { get; set; } = 5.0;
+
+    public bool IsHealthy => ErrorActors == 0 && ErrorRate < ErrorRateThreshold;
 }
 
 /// <summary>
