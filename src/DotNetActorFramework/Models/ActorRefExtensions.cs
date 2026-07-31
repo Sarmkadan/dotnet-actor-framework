@@ -1,68 +1,58 @@
+namespace DotNetActorFramework.Models;
+
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace DotNetActorFramework.Models
+public static class ActorRefExtensions
 {
-    public static class ActorRefExtensions
+    /// <summary>
+    /// Sends a collection of messages to the actor sequentially.
+    /// </summary>
+    public static async Task TellAll(this ActorRef actorRef, IEnumerable<object> messages)
     {
-        /// <summary>
-        /// Sends a message to this actor and waits for a response with a default timeout of 5 seconds.
-        /// </summary>
-        /// <param name="actorRef">The target actor reference</param>
-        /// <param name="message">The message to send</param>
-        /// <returns>The response from the actor, or null if no response</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
-        public static async Task<object?> AskAsync(this ActorRef actorRef, object message)
+        foreach (var message in messages)
         {
-            ArgumentNullException.ThrowIfNull(actorRef);
-            ArgumentNullException.ThrowIfNull(message);
-
-            return await actorRef.AskAsync(message, TimeSpan.FromSeconds(5));
+            await actorRef.SendAsync(message);
         }
+    }
 
-
-        /// <summary>
-        /// Determines whether this actor reference points to the same actor instance as another reference.
-        /// </summary>
-        /// <param name="actorRef">The actor reference</param>
-        /// <param name="other">The other actor reference to compare with</param>
-        /// <returns>True if both references point to the same actor instance</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
-        public static bool IsSameInstance(this ActorRef actorRef, ActorRef? other)
+    /// <summary>
+    /// Sends a message and waits for a response with a specified timeout and cancellation token.
+    /// Returns null if the timeout is reached or an exception occurs during the ask operation.
+    /// </summary>
+    public static async Task<object?> AskWithTimeout(this ActorRef actorRef, object message, TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            ArgumentNullException.ThrowIfNull(actorRef);
-
-            return actorRef.Id == other?.Id;
+            var result = await actorRef.AskAsync(message, timeout);
+            if (result is Task<object?> task)
+            {
+                return await task;
+            }
+            return result;
         }
-
-        /// <summary>
-        /// Gets the actor's age (time since creation).
-        /// </summary>
-        /// <param name="actorRef">The actor reference</param>
-        /// <returns>TimeSpan representing how long the actor has been alive</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
-        public static TimeSpan GetAge(this ActorRef actorRef)
+        catch
         {
-            ArgumentNullException.ThrowIfNull(actorRef);
-
-            // Calculate age from creation timestamp
-            // Using DateTime.UtcNow - CreatedAt is the standard way to calculate age
-            // and avoids potential issues with time zone differences
-            return DateTime.UtcNow - actorRef.CreatedAt;
+            return null;
         }
+    }
 
-        /// <summary>
-        /// Creates a string representation of the actor reference that includes its ID and path.
-        /// </summary>
-        /// <param name="actorRef">The actor reference</param>
-        /// <returns>Formatted string with actor information</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actorRef"/> is null.</exception>
-        public static string ToDetailedString(this ActorRef actorRef)
+    /// <summary>
+    /// Attempts to send a message to the actor. Returns false if the actor is not alive or sending fails.
+    /// </summary>
+    public static async Task<bool> TryTell(this ActorRef actorRef, object message)
+    {
+        try
         {
-            ArgumentNullException.ThrowIfNull(actorRef);
-
-            return $"ActorRef {{ Id = {actorRef.Id}, Path = {actorRef.Path}, IsAlive = {actorRef.IsAlive} }}";
+            if (!actorRef.IsAlive) return false;
+            await actorRef.SendAsync(message);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 }
