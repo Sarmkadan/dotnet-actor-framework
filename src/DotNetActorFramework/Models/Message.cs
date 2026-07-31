@@ -45,6 +45,13 @@ public abstract record Message
     /// </summary>
     public int Priority { get; init; } = 0;
 
+    /// <summary>
+    /// Optional user‑defined headers. Stored as a dictionary of string keys to
+    /// arbitrary values. The dictionary is immutable from the outside – a new
+    /// message instance is created when adding or modifying a header.
+    /// </summary>
+    public IReadOnlyDictionary<string, object> Headers { get; init; } = new Dictionary<string, object>();
+
     protected Message()
     {
     }
@@ -81,7 +88,7 @@ public record Message<T> : Message where T : class
 }
 
 /// <summary>
-/// A command-style message carrying a string command name and optional key/value parameters.
+/// A command‑style message carrying a string command name and optional key/value parameters.
 /// This is the most common message type for general actor communication.
 /// </summary>
 /// <example>
@@ -134,7 +141,7 @@ public record ResponseMessage : Message
     /// <summary>Whether the operation the response answers completed successfully.</summary>
     public bool IsSuccess { get; init; }
 
-    /// <summary>Human-readable error description when <see cref="IsSuccess"/> is <c>false</c>.</summary>
+    /// <summary>Human‑readable error description when <see cref="IsSuccess"/> is <c>false</c>.</summary>
     public string? ErrorMessage { get; init; }
 
     /// <summary>
@@ -154,7 +161,7 @@ public record ResponseMessage : Message
 }
 
 /// <summary>
-/// A strongly-typed response message that carries a response payload of type
+/// A strongly‑typed response message that carries a response payload of type
 /// <typeparamref name="T"/> and correlates back to the request it answers via
 /// <see cref="Message.CorrelationId"/>.
 /// </summary>
@@ -166,7 +173,7 @@ public record ResponseMessage : Message
 /// </example>
 public record ResponseMessage<T> : ResponseMessage where T : class
 {
-    /// <summary>The strongly-typed response payload.</summary>
+    /// <summary>The strongly‑typed response payload.</summary>
     public T Payload { get; init; }
 
     /// <summary>
@@ -193,7 +200,7 @@ public record ResponseMessage<T> : ResponseMessage where T : class
 /// </summary>
 public record FailureMessage : Message
 {
-    /// <summary>Human-readable description of what went wrong.</summary>
+    /// <summary>Human‑readable description of what went wrong.</summary>
     public string Reason { get; init; }
 
     /// <summary>The full type name of the originating exception, or <c>null</c> when none was supplied.</summary>
@@ -211,7 +218,7 @@ public record FailureMessage : Message
     /// <summary>
     /// Initializes a new <see cref="FailureMessage"/> without an associated exception.
     /// </summary>
-    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="reason">Human‑readable description of the failure.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
     public FailureMessage(string reason)
     {
@@ -226,7 +233,7 @@ public record FailureMessage : Message
     /// stack trace of <paramref name="exception"/> so the failure remains serializable
     /// for journaling purposes.
     /// </summary>
-    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="reason">Human‑readable description of the failure.</param>
     /// <param name="exception">The exception that caused the failure.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <c>null</c>.</exception>
@@ -244,7 +251,7 @@ public record FailureMessage : Message
     /// Initializes a new <see cref="FailureMessage"/> that answers the request identified by
     /// <paramref name="correlationId"/>, capturing serializable detail about <paramref name="exception"/>.
     /// </summary>
-    /// <param name="reason">Human-readable description of the failure.</param>
+    /// <param name="reason">Human‑readable description of the failure.</param>
     /// <param name="exception">The exception that caused the failure.</param>
     /// <param name="correlationId">The <see cref="Message.MessageId"/> of the request being answered.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
