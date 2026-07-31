@@ -48,6 +48,11 @@ public abstract record Message
     protected Message()
     {
     }
+
+    protected Message(Guid correlationId)
+    {
+        CorrelationId = correlationId;
+    }
 }
 
 /// <summary>
@@ -138,7 +143,9 @@ public record ResponseMessage : Message
     /// <param name="response">The untyped response payload, or <c>null</c>.</param>
     /// <param name="isSuccess">Whether the answered operation succeeded. Defaults to <c>true</c>.</param>
     /// <param name="errorMessage">Optional error description when <paramref name="isSuccess"/> is <c>false</c>.</param>
-    public ResponseMessage(object? response, bool isSuccess = true, string? errorMessage = null)
+    /// <param name="correlationId">Optional correlation ID of the request being answered.</param>
+    public ResponseMessage(object? response, bool isSuccess = true, string? errorMessage = null, Guid correlationId = default)
+        : base(correlationId)
     {
         Response = response;
         IsSuccess = isSuccess;
@@ -170,12 +177,11 @@ public record ResponseMessage<T> : ResponseMessage where T : class
     /// <param name="correlationId">The <see cref="Message.MessageId"/> of the request being answered.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="response"/> is <c>null</c>.</exception>
     public ResponseMessage(T response, Guid correlationId)
-        : base(response, isSuccess: true)
+        : base(response, isSuccess: true, correlationId: correlationId)
     {
         ArgumentNullException.ThrowIfNull(response);
 
         Payload = response;
-        CorrelationId = correlationId;
     }
 }
 
@@ -244,8 +250,16 @@ public record FailureMessage : Message
     /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <c>null</c>.</exception>
     public FailureMessage(string reason, Exception exception, Guid correlationId)
-        : this(reason, exception)
+        : base(correlationId)
     {
-        CorrelationId = correlationId;
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Reason cannot be null or empty.", nameof(reason));
+
+        ArgumentNullException.ThrowIfNull(exception);
+
+        Reason = reason;
+        ExceptionType = exception.GetType().FullName;
+        ExceptionMessage = exception.Message;
+        StackTrace = exception.StackTrace;
     }
 }
