@@ -4,8 +4,14 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+    /// <summary>
+    /// Tests for the ValidationExceptionExtensions extension methods.
+    /// </summary>
 public class ValidationExceptionExtensionsTests
 {
+    /// <summary>
+    /// Tests that WithContext returns an exception with a formatted message when context is provided.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldReturnExceptionWithFormattedMessage()
     {
@@ -20,6 +26,9 @@ public class ValidationExceptionExtensionsTests
         result.InvalidPath.Should().Be("test/path");
     }
 
+    /// <summary>
+    /// Tests that WithContext does not add context when null is provided.
+    /// </summary>
     [Fact]
     public void WithContext_WhenContextIsNull_ShouldReturnExceptionWithDefaultMessage()
     {
@@ -34,6 +43,9 @@ public class ValidationExceptionExtensionsTests
         result.InvalidPath.Should().Be("test/path");
     }
 
+    /// <summary>
+    /// Tests that WithExpectedFormat appends the expected format to the message.
+    /// </summary>
     [Fact]
     public void WithExpectedFormat_ShouldReturnExceptionWithFormattedMessage()
     {
@@ -47,6 +59,9 @@ public class ValidationExceptionExtensionsTests
         result.Message.Should().Be("Message validation failed: Invalid message. Expected format: Expected format");
     }
 
+    /// <summary>
+    /// Tests that WithExpectedFormat does not append anything when format is null.
+    /// </summary>
     [Fact]
     public void WithExpectedFormat_WhenFormatIsNull_ShouldReturnExceptionWithDefaultMessage()
     {
@@ -60,6 +75,9 @@ public class ValidationExceptionExtensionsTests
         result.Message.Should().Be("Message validation failed: Invalid message");
     }
 
+    /// <summary>
+    /// Tests that WithActorType prepends the actor type to the message.
+    /// </summary>
     [Fact]
     public void WithActorType_ShouldReturnExceptionWithFormattedMessage()
     {
@@ -73,6 +91,9 @@ public class ValidationExceptionExtensionsTests
         result.Message.Should().Be("Actor reference is invalid for MyActorType: Original message");
     }
 
+    /// <summary>
+    /// Tests that WithActorType does not prepend anything when actor type is null.
+    /// </summary>
     [Fact]
     public void WithActorType_WhenActorTypeIsNull_ShouldReturnExceptionWithDefaultMessage()
     {
@@ -86,6 +107,9 @@ public class ValidationExceptionExtensionsTests
         result.Message.Should().Be("Actor reference is invalid: Original message");
     }
 
+    /// <summary>
+    /// Tests that CombineWith combines the original error with additional errors, each on a new line with a dash.
+    /// </summary>
     [Fact]
     public void CombineWith_ShouldReturnCombinedMessage()
     {
@@ -102,6 +126,9 @@ public class ValidationExceptionExtensionsTests
         result.InnerException.Should().Be(exception);
     }
 
+    /// <summary>
+    /// Tests that CombineWith with no additional errors returns the original exception unchanged.
+    /// </summary>
     [Fact]
     public void CombineWith_WhenErrorsAreEmpty_ShouldReturnSameMessage()
     {
@@ -116,6 +143,9 @@ public class ValidationExceptionExtensionsTests
         result.InnerException.Should().Be(exception);
     }
 
+    /// <summary>
+    /// Tests that IsValidationType returns true when the exception type matches the provided type.
+    /// </summary>
     [Fact]
     public void IsValidationType_ShouldReturnTrueIfTypeMatches()
     {
@@ -129,6 +159,9 @@ public class ValidationExceptionExtensionsTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsValidationType returns false when the exception type does not match.
+    /// </summary>
     [Fact]
     public void IsValidationType_ShouldReturnFalseIfTypeDoesNotMatch()
     {

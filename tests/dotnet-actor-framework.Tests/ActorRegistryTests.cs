@@ -17,7 +17,11 @@ public class ActorRegistryTests
 {
     private static ActorRef CreateActorRef(string pathString)
     {
-        // Assuming ActorPath has a public constructor that accepts a string.
+        // Ensure the path is valid for ActorPath: must start with '/' and have at least one segment.
+        if (string.IsNullOrWhiteSpace(pathString))
+            pathString = "default";
+        if (!pathString.StartsWith("/"))
+            pathString = "/" + pathString;
         var path = new ActorPath(pathString);
         return new ActorRef(path, Guid.NewGuid());
     }
