@@ -4,8 +4,15 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Contains unit tests for the DotnetActorFrameworkException class.
+/// Tests cover exception construction, formatting, and inheritance behavior.
+/// </summary>
 public class DotnetActorFrameworkExceptionTests
 {
+    /// <summary>
+    /// Tests that creating an exception with a message sets the message correctly and inner exception is null.
+    /// </summary>
     [Fact]
     public void Constructor_WithMessage_ShouldCreateExceptionWithMessage()
     {
@@ -21,6 +28,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that creating an exception with a null message uses the default message and inner exception is null.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullMessage_ShouldCreateExceptionWithNullMessage()
     {
@@ -33,6 +43,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that creating an exception with an empty message sets the message to empty string and inner exception is null.
+    /// </summary>
     [Fact]
     public void Constructor_WithEmptyMessage_ShouldCreateExceptionWithEmptyMessage()
     {
@@ -45,6 +58,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that creating an exception with a message and inner exception sets both properties correctly.
+    /// </summary>
     [Fact]
     public void Constructor_WithMessageAndInnerException_ShouldCreateExceptionWithBoth()
     {
@@ -61,6 +77,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Tests that creating an exception with a null message and inner exception uses the default message and preserves the inner exception.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullMessageAndInnerException_ShouldCreateExceptionWithNullMessage()
     {
@@ -76,6 +95,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Tests that creating an exception with a message and null inner exception sets the message and leaves inner exception as null.
+    /// </summary>
     [Fact]
     public void Constructor_WithMessageAndNullInnerException_ShouldCreateExceptionWithMessage()
     {
@@ -91,6 +113,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method with format string and arguments creates an exception with the formatted message.
+    /// </summary>
     [Fact]
     public void Create_WithFormatAndArgs_ShouldCreateExceptionWithFormattedMessage()
     {
@@ -108,6 +133,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method with a plain message (no format arguments) creates an exception with that message.
+    /// </summary>
     [Fact]
     public void Create_WithFormatAndNoArgs_ShouldCreateExceptionWithPlainMessage()
     {
@@ -123,6 +151,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method throws ArgumentNullException when the format string is null.
+    /// </summary>
     [Fact]
     public void Create_WithNullFormat_ShouldThrowArgumentNullException()
     {
@@ -133,6 +164,9 @@ public class DotnetActorFrameworkExceptionTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that the Create method with an empty format string creates an exception with an empty message.
+    /// </summary>
     [Fact]
     public void Create_WithEmptyFormat_ShouldCreateExceptionWithEmptyMessage()
     {
@@ -145,6 +179,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method handles complex formatting with multiple arguments correctly.
+    /// </summary>
     [Fact]
     public void Create_WithFormatAndArgs_ShouldHandleComplexFormatting()
     {
@@ -163,6 +200,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method throws ArgumentNullException when one of the format arguments is null.
+    /// </summary>
     [Fact]
     public void Create_WithFormatAndNullArgs_ShouldThrowArgumentNullException()
     {
@@ -176,6 +216,9 @@ public class DotnetActorFrameworkExceptionTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that the Create method handles mixed argument types (string, int, bool) in formatting correctly.
+    /// </summary>
     [Fact]
     public void Create_WithFormatAndMixedArgs_ShouldHandleMixedArguments()
     {
@@ -194,6 +237,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the Create method with inner exception, format string, and arguments creates an exception with the formatted message and preserves the inner exception.
+    /// </summary>
     [Fact]
     public void Create_WithInnerExceptionAndFormat_ShouldCreateExceptionWithInnerException()
     {
@@ -211,6 +257,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Tests that the Create method throws ArgumentNullException when the inner exception is provided but the format string is null.
+    /// </summary>
     [Fact]
     public void Create_WithInnerExceptionAndNullFormat_ShouldThrowArgumentNullException()
     {
@@ -224,6 +273,9 @@ public class DotnetActorFrameworkExceptionTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that the Create method with inner exception and empty format string creates an exception with empty message and preserves the inner exception.
+    /// </summary>
     [Fact]
     public void Create_WithInnerExceptionAndEmptyFormat_ShouldCreateExceptionWithEmptyMessage()
     {
@@ -239,6 +291,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Tests that the Create method with inner exception handles complex formatting with multiple arguments correctly.
+    /// </summary>
     [Fact]
     public void Create_WithInnerExceptionAndComplexFormat_ShouldHandleComplexFormatting()
     {
@@ -257,6 +312,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Tests that the DotnetActorFrameworkException inherits from the System.Exception base class.
+    /// </summary>
     [Fact]
     public void Inheritance_ShouldBeException()
     {
@@ -267,6 +325,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.Should().BeAssignableTo<Exception>();
     }
 
+    /// <summary>
+    /// Tests that the Message property of the exception returns the value provided during construction.
+    /// </summary>
     [Fact]
     public void Message_ShouldBeAccessible()
     {
@@ -278,6 +339,9 @@ public class DotnetActorFrameworkExceptionTests
         exception.Message.Should().Be(message);
     }
 
+    /// <summary>
+    /// Tests that the InnerException property of the exception returns the inner exception provided during construction.
+    /// </summary>
     [Fact]
     public void InnerException_ShouldBeAccessible()
     {
