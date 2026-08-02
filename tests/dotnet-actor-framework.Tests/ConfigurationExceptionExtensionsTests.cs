@@ -4,8 +4,14 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Contains tests for the <see cref="ConfigurationExceptionExtensions"/> class.
+/// </summary>
 public class ConfigurationExceptionExtensionsTests
 {
+    /// <summary>
+    /// Verifies that <see cref="ConfigurationExceptionExtensions.IsActorSystemConfigurationException"/> returns true when the exception is an <see cref="ActorSystemConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void IsActorSystemConfigurationException_ShouldReturnTrue_WhenExceptionIsActorSystemConfigurationException()
     {
