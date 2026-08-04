@@ -110,7 +110,7 @@ public class WebhookDispatcher : IDisposable
         var maxRetries = config.MaxRetries ?? 1;
         var retryDelay = config.RetryDelay ?? TimeSpan.FromSeconds(1);
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        for (int attempt = 1; attempt <= maxRetries; attempt++) // Only retry on 5xx/network errors
         {
             try
             {
