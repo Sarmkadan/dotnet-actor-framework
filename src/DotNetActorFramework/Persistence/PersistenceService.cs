@@ -46,9 +46,19 @@ public class PersistenceService
     /// </summary>
     public async Task SaveSnapshotAsync(Guid actorId, ActorPath actorPath, object state, long sequenceNr)
     {
-        _logger?.LogDebug("Saving snapshot for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
-        var snapshot = new ActorSnapshot(actorId, actorPath.ToString(), state, sequenceNr, DateTime.UtcNow);
-        await _snapshotStore.SaveSnapshotAsync(snapshot);
+        try
+        {
+            _logger?.LogInformation("Entering SaveSnapshotAsync for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
+            _logger?.LogDebug("Saving snapshot for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
+            var snapshot = new ActorSnapshot(actorId, actorPath.ToString(), state, sequenceNr, DateTime.UtcNow);
+            await _snapshotStore.SaveSnapshotAsync(snapshot);
+            _logger?.LogInformation("Exiting SaveSnapshotAsync for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to save snapshot for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
+            throw;
+        }
     }
 
     /// <summary>
