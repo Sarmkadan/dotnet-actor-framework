@@ -15,19 +15,44 @@ public class InMemoryEventJournal : IEventJournal
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<long, ActorEvent>> _events = new();
 
+    // Per-actor gate to make a whole AppendEventsAsync batch atomic under concurrent callers.
+    // Without this, two threads appending to the same actor could interleave TryAdd calls
+    // (e.g. both partially succeed before one hits a duplicate sequence number), leaving the
+    // journal with a partially-applied, non-monotonic batch instead of an all-or-nothing append.
+    private readonly ConcurrentDictionary<string, object> _actorLocks = new();
+
     public Task AppendEventsAsync(Guid actorId, string actorPath, IEnumerable<ActorEvent> events)
     {
         if (events == null) throw new ArgumentNullException(nameof(events));
 
-        var actorEvents = _events.GetOrAdd(GetActorKey(actorId, actorPath), _ => new ConcurrentDictionary<long, ActorEvent>());
-        foreach (var ev in events)
+        var actorKey = GetActorKey(actorId, actorPath);
+        var eventList = events.ToList();
+        var actorEvents = _events.GetOrAdd(actorKey, _ => new ConcurrentDictionary<long, ActorEvent>());
+        var actorLock = _actorLocks.GetOrAdd(actorKey, _ => new object());
+
+        lock (actorLock)
         {
-            if (!actorEvents.TryAdd(ev.SequenceNr, ev))
+            // Validate the whole batch first so a duplicate later in the batch doesn't leave
+            // earlier events in this same call already committed to the journal.
+            foreach (var ev in eventList)
             {
-                // Event with this sequence number already exists, which should not happen in a valid journal
-                throw new InvalidOperationException($"Event with sequence number {ev.SequenceNr} already exists for actor {actorId} at path {actorPath}");
+                if (actorEvents.ContainsKey(ev.SequenceNr))
+                {
+                    throw new InvalidOperationException($"Event with sequence number {ev.SequenceNr} already exists for actor {actorId} at path {actorPath}");
+                }
+            }
+
+            foreach (var ev in eventList)
+            {
+                if (!actorEvents.TryAdd(ev.SequenceNr, ev))
+                {
+                    // Should be unreachable: the lock plus the pre-check above guarantee
+                    // exclusive, monotonic access to this actor's sequence space.
+                    throw new InvalidOperationException($"Event with sequence number {ev.SequenceNr} already exists for actor {actorId} at path {actorPath}");
+                }
             }
         }
+
         return Task.CompletedTask;
     }
 

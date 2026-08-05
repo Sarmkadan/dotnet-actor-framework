@@ -409,6 +409,62 @@ public class InMemoryEventJournalTests
     }
 
     [Fact]
+    public async Task AppendEventsAsync_ShouldBeThreadSafe_WhenAppendingConcurrentlyWithDistinctSequenceNumbers()
+    {
+        // Arrange - many concurrent callers each append a single event with a unique,
+        // pre-assigned sequence number for the same actor.
+        const int concurrentAppends = 200;
+        var tasks = new List<Task>(concurrentAppends);
+
+        for (var i = 1; i <= concurrentAppends; i++)
+        {
+            var sequenceNr = (long)i;
+            var ev = new ActorEvent(_testActorId, _testActorPath, sequenceNr, DateTime.UtcNow, new { Type = "ConcurrentEvent", SequenceNr = sequenceNr });
+            tasks.Add(Task.Run(() => _journal.AppendEventsAsync(_testActorId, _testActorPath, new[] { ev })));
+        }
+
+        // Act
+        await Task.WhenAll(tasks);
+
+        // Assert - no events lost, no duplicates, strictly increasing sequence numbers.
+        var loadedEvents = (await _journal.ReadEventsAsync(_testActorId, _testActorPath, 1L, concurrentAppends)).ToList();
+        loadedEvents.Should().HaveCount(concurrentAppends);
+        for (var i = 0; i < concurrentAppends; i++)
+        {
+            loadedEvents[i].SequenceNr.Should().Be(i + 1);
+        }
+    }
+
+    [Fact]
+    public async Task AppendEventsAsync_ShouldRejectExactlyOneWinner_WhenConcurrentCallersRaceForSameSequenceNumber()
+    {
+        // Arrange - two concurrent callers race to append an event with the same sequence
+        // number for the same actor; exactly one must win and the other must be rejected,
+        // never both silently succeeding or both being lost.
+        var ev1 = new ActorEvent(_testActorId, _testActorPath, 1L, DateTime.UtcNow, new { Type = "Racer1" });
+        var ev2 = new ActorEvent(_testActorId, _testActorPath, 1L, DateTime.UtcNow, new { Type = "Racer2" });
+
+        var task1 = Task.Run(async () =>
+        {
+            try { await _journal.AppendEventsAsync(_testActorId, _testActorPath, new[] { ev1 }); return true; }
+            catch (InvalidOperationException) { return false; }
+        });
+        var task2 = Task.Run(async () =>
+        {
+            try { await _journal.AppendEventsAsync(_testActorId, _testActorPath, new[] { ev2 }); return true; }
+            catch (InvalidOperationException) { return false; }
+        });
+
+        // Act
+        var results = await Task.WhenAll(task1, task2);
+
+        // Assert - exactly one of the two racing appends succeeded.
+        results.Count(r => r).Should().Be(1);
+        var loadedEvents = await _journal.ReadEventsAsync(_testActorId, _testActorPath, 1L, 1L);
+        loadedEvents.Should().HaveCount(1);
+    }
+
+    [Fact]
     public async Task DifferentActorPaths_ShouldIsolateEvents()
     {
         // Arrange - Use different actor paths
