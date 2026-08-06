@@ -50,8 +50,8 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
     /// </summary>
     public void RegisterRemoteActor(string actorPath, string httpUrl)
     {
-        if (string.IsNullOrWhiteSpace(actorPath) || string.IsNullOrWhiteSpace(httpUrl))
-            throw new ArgumentException("Actor path and URL must not be empty.");
+        ArgumentException.ThrowIfNullOrEmpty(actorPath);
+        ArgumentException.ThrowIfNullOrEmpty(httpUrl);
 
         lock (_lockObject)
         {
@@ -61,8 +61,8 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
 
     public async Task<T?> InvokeAsync<T>(string remoteActorPath, Message message, TimeSpan? timeout = null)
     {
-        if (string.IsNullOrWhiteSpace(remoteActorPath) || message == null)
-            return default;
+        ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
+        ArgumentNullException.ThrowIfNull(message);
 
         try
         {
@@ -82,8 +82,8 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
 
     public async Task SendAsync(string remoteActorPath, Message message)
     {
-        if (string.IsNullOrWhiteSpace(remoteActorPath) || message == null)
-            return;
+        ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
+        ArgumentNullException.ThrowIfNull(message);
 
         try
         {
@@ -97,8 +97,7 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
 
     public async Task<bool> PingAsync(string remoteActorPath)
     {
-        if (string.IsNullOrWhiteSpace(remoteActorPath))
-            return false;
+        ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
 
         try
         {
