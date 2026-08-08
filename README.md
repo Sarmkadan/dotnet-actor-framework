@@ -3571,3 +3571,23 @@ Console.WriteLine($"First message data: {received[0].Data["data"]}");
 - `void Clear()`: Clears all recorded messages.
 - `bool DidReceiveMessageType(string messageType)`: Checks if a specific message type was received.
 - `bool DidReceiveMessageCount(int count)`: Checks if the received message count matches.
+
+
+## ValidationExceptionExtensionsTests
+
+ValidationExceptionExtensionsTests contains tests for the ValidationExceptionExtensions class.
+
+### Usage Example
+
+```csharp
+public void WithContext_ShouldReturnExceptionWithFormattedMessage
+public void WithContext_WhenContextIsNull_ShouldReturnExceptionWithDefaultMessage
+public void WithExpectedFormat_ShouldReturnExceptionWithFormattedMessage
+public void WithExpectedFormat_WhenFormatIsNull_ShouldReturnExceptionWithDefaultMessage
+public void WithActorType_ShouldReturnExceptionWithFormattedMessage
+public void WithActorType_WhenActorTypeIsNull_ShouldReturnExceptionWithDefaultMessage
+public void CombineWith_ShouldReturnCombinedMessage
+public void CombineWith_WhenErrorsAreEmpty_ShouldReturnSameMessage
+public void IsValidationType_ShouldReturnTrueIfTypeMatches
+public void IsValidationType_ShouldReturnFalseIfTypeDoesNotMatch
+```
