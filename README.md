@@ -1919,6 +1919,64 @@ await workerService.StopAsync();
 - `BackgroundWorkerService`: Manages and executes background workers with lifecycle control.
 - `WorkerStatus`: Provides status information for a background worker including execution counts, error tracking, and runtime state.
 
+## EnvelopeTests
+
+The `EnvelopeTests` class provides unit tests for the `Envelope` class, verifying that envelope construction, property initialization, retry logic, delivery status, and string formatting work correctly. These tests ensure the reliability of message envelopes as they are passed through the actor system.
+
+### Usage Example
+
+```csharp
+// Setup mock message and actor references
+var message = new Message("test-command", new Dictionary<string, object>());
+var recipient = new ActorRef(new ActorPath("/user/worker"), Guid.NewGuid());
+var sender = new ActorRef(new ActorPath("/user/parent"), Guid.NewGuid());
+
+// Test envelope construction
+var envelope = new Envelope(message, recipient, sender);
+Console.WriteLine($"Envelope created with ID: {envelope.EnvelopeId}");
+Console.WriteLine($"Sent at: {envelope.SentAt}");
+
+// Test delivery status
+envelope.MarkAsDelivered();
+Console.WriteLine($"Is delivered: {envelope.IsDelivered}");
+
+// Test retry logic
+envelope.IncrementRetryCount();
+Console.WriteLine($"Retry count: {envelope.RetryCount}");
+bool exceeded = envelope.HasExceededRetryLimit();
+Console.WriteLine($"Exceeded retry limit: {exceeded}");
+
+// Test elapsed time tracking
+var elapsed = envelope.GetElapsedTime();
+Console.WriteLine($"Elapsed time: {elapsed.TotalMilliseconds}ms");
+
+// Test string representation
+Console.WriteLine(envelope.ToString());
+```
+
+### Test Methods
+
+- `Envelope_Constructor_WithNullMessage_ThrowsArgumentNullException`: Verifies that constructing an `Envelope` with a null message throws an `ArgumentNullException`.
+- `Envelope_Constructor_WithNullRecipient_ThrowsArgumentNullException`: Verifies that constructing an `Envelope` with a null recipient throws an `ArgumentNullException`.
+- `Envelope_Constructor_WithValidParameters_InitializesAllProperties`: Ensures that all properties are correctly initialized when valid parameters are provided.
+- `Envelope_Constructor_WithNullSender_InitializesSenderAsNull`: Validates that a null sender is handled correctly by initializing it as null.
+- `Envelope_Constructor_WithRequiredParameters_WorksCorrectly`: Tests that construction with mandatory parameters works as expected.
+- `Envelope_Constructor_EnvelopeIdShouldBeUnique`: Ensures that each new `Envelope` receives a unique identifier.
+- `Envelope_Constructor_SentAtShouldBeUtcNow`: Verifies that the `SentAt` property is initialized to the current UTC time.
+- `MarkAsDelivered_SetsIsDeliveredToTrue`: Tests that calling `MarkAsDelivered` correctly updates the `IsDelivered` property.
+- `MarkAsDelivered_CanBeCalledMultipleTimes`: Ensures that calling `MarkAsDelivered` multiple times does not cause issues.
+- `IncrementRetryCount_IncrementsRetryCount`: Verifies that the retry count is incremented correctly.
+- `IncrementRetryCount_CanBeCalledMultipleTimes`: Ensures that multiple calls to `IncrementRetryCount` work as expected.
+- `GetElapsedTime_ReturnsPositiveTimeSpan`: Validates that `GetElapsedTime` returns a positive time span.
+- `GetElapsedTime_ReturnsIncreasingValues`: Ensures that `GetElapsedTime` returns increasing values over time.
+- `HasExceededRetryLimit_ReturnsFalse_WhenRetryCountBelowLimit`: Verifies that `HasExceededRetryLimit` returns false when retries are within limits.
+- `HasExceededRetryLimit_ReturnsTrue_WhenRetryCountExceedsLimit`: Tests that `HasExceededRetryLimit` returns true when retries exceed the limit.
+- `HasExceededRetryLimit_UsesDefaultValueOf3`: Validates that the default retry limit is 3.
+- `GetDeliveryPriority_ReturnsPositiveValue`: Verifies that `GetDeliveryPriority` returns a positive value.
+- `GetDeliveryPriority_IncorporatesMessagePriority`: Ensures that message priority is correctly incorporated into the delivery priority.
+- `ToString_ReturnsFormattedString`: Tests that `ToString` returns a correctly formatted string.
+- `ToString_HandlesNullSender`: Validates that `ToString` handles cases where the sender is null.
+
 ## MessagePersistenceRepository
 
 The `MessagePersistenceRepository` class provides append-only log semantics for persisting and retrieving messages in the actor system. It enables durable message storage with sequence tracking, delivery status monitoring, and statistics collection, making it ideal for message replay, recovery scenarios, and system monitoring.
