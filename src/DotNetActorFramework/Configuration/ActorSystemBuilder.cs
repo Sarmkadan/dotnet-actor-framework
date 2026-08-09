@@ -88,6 +88,7 @@ public class ActorSystemBuilder
     /// </summary>
     public ActorSystemBuilder WithAuthentication(IAuthenticationProvider authProvider)
     {
+        ArgumentNullException.ThrowIfNull(authProvider);
         _middleware.Add(new AuthenticationMiddleware(authProvider));
         return this;
     }
