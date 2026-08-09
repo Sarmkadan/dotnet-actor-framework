@@ -44,8 +44,8 @@ public class MessageBatcher : IDisposable
     /// </summary>
     public IEnumerable<Message>? AddMessage(string batchKey, Message message)
     {
-        if (string.IsNullOrWhiteSpace(batchKey) || message == null)
-            return null;
+        ArgumentException.ThrowIfNullOrEmpty(batchKey);
+        ArgumentNullException.ThrowIfNull(message);
 
         while (true)
         {
@@ -75,6 +75,8 @@ public class MessageBatcher : IDisposable
     /// </summary>
     public IEnumerable<Message>? FlushBatch(string batchKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(batchKey);
+
         if (!_batches.TryRemove(batchKey, out var batch))
             return null;
 
