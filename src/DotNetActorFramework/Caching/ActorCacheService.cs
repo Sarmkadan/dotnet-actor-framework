@@ -133,6 +133,7 @@ public class ActorCacheService
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
     public void Invalidate(ActorPath path)
     {
+        ArgumentNullException.ThrowIfNull(path);
         // Alias for Remove – kept for semantic clarity.
         Remove(path);
     }
