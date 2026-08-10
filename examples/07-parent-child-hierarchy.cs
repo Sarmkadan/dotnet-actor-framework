@@ -27,7 +27,10 @@ public class WorkerActor : Actor
 /// Initializes a new instance of the <see cref="WorkerActor"/> class.
 /// </summary>
 /// <param name="path">The unique path for this actor within the actor system.</param>
-public WorkerActor(ActorPath path) : base(path) { }
+public WorkerActor(ActorPath path) : base(path)
+{
+    ArgumentNullException.ThrowIfNull(path);
+}
 
     	/// <summary>
 	/// Processes incoming messages and handles work distribution from the supervisor.
@@ -41,6 +44,7 @@ public WorkerActor(ActorPath path) : base(path) { }
 	/// </remarks>
 	public override async Task ReceiveAsync(Message message)
     {
+        ArgumentNullException.ThrowIfNull(message);
         if (message is ControlMessage cm && cm.Command == "work")
         {
             _workItems++;
@@ -77,6 +81,8 @@ public class SupervisorActor : Actor
 
     public SupervisorActor(ActorPath path, MessageDispatcher dispatcher) : base(path)
     {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(dispatcher);
         _dispatcher = dispatcher;
     }
 
@@ -153,6 +159,8 @@ public class RootActor : Actor
 
     public RootActor(ActorPath path, MessageDispatcher dispatcher) : base(path)
     {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(dispatcher);
         _dispatcher = dispatcher;
     }
 
