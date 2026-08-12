@@ -145,4 +145,9 @@ public int HighWatermarkWarningThreshold { get; set; } = 80;
         EnableMetricsCollection = true,
         DefaultSupervisionStrategy = SupervisionStrategy.Escalate
     };
+
+    public override string ToString()
+    {
+        return $"ActorSystemOptions {{ SystemName = {SystemName}, DefaultMailboxCapacity = {DefaultMailboxCapacity}, DefaultMailboxType = {DefaultMailboxType}, DefaultTimeoutSeconds = {DefaultTimeoutSeconds}, MaxMessageRetries = {MaxMessageRetries}, MaxActorDepth = {MaxActorDepth} }}";
+    }
 }
