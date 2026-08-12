@@ -42,6 +42,7 @@ public class ClusterActorRegistry
 
             var actorsOnNode = _nodeActors.GetOrAdd(nodeAddress, _ => new ConcurrentBag<ActorRef>());
             actorsOnNode.Add(actorRef);
+            _logger.LogInformation("RegisterActor called with {NodeAddress} and {ActorId}", nodeAddress, actorRef.Id);
             _logger?.LogDebug("Registered actor {ActorPath} on node {NodeAddress}", actorRef.Path, nodeAddress);
         }
         catch (ArgumentNullException)
@@ -50,6 +51,7 @@ public class ClusterActorRegistry
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to register actor {ActorId} on node {NodeAddress}", actorRef.Id, nodeAddress);
             throw new ClusterException(nodeAddress, $"Failed to register actor on node {nodeAddress}", ex);
         }
     }
@@ -64,21 +66,30 @@ public class ClusterActorRegistry
     /// <returns>True if the actor was found and removed, false otherwise.</returns>
     public bool UnregisterActor(string nodeAddress, ActorRef actorRef)
     {
-        if (string.IsNullOrWhiteSpace(nodeAddress))
-            throw new ArgumentNullException(nameof(nodeAddress));
-        if (actorRef == null)
-            throw new ArgumentNullException(nameof(actorRef));
-
-        if (_nodeActors.TryGetValue(nodeAddress, out var actorsOnNode))
+        _logger?.LogInformation("UnregisterActor called with node {NodeAddress} and actor {ActorId}", nodeAddress, actorRef?.Id);
+        try
         {
-            var newBag = new ConcurrentBag<ActorRef>(actorsOnNode.Where(ar => ar.Id != actorRef.Id));
-            if (_nodeActors.TryUpdate(nodeAddress, newBag, actorsOnNode))
+            if (string.IsNullOrWhiteSpace(nodeAddress))
+                throw new ArgumentNullException(nameof(nodeAddress));
+            if (actorRef == null)
+                throw new ArgumentNullException(nameof(actorRef));
+
+            if (_nodeActors.TryGetValue(nodeAddress, out var actorsOnNode))
             {
-                _logger?.LogDebug("Unregistered actor {ActorPath} from node {NodeAddress}", actorRef.Path, nodeAddress);
-                return true;
+                var newBag = new ConcurrentBag<ActorRef>(actorsOnNode.Where(ar => ar.Id != actorRef.Id));
+                if (_nodeActors.TryUpdate(nodeAddress, newBag, actorsOnNode))
+                {
+                    _logger?.LogDebug("Unregistered actor {ActorPath} from node {NodeAddress}", actorRef.Path, nodeAddress);
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to unregister actor {ActorId} from node {NodeAddress}", actorRef?.Id, nodeAddress);
+            throw;
+        }
     }
 
     /// <summary>
@@ -91,6 +102,7 @@ public class ClusterActorRegistry
     /// <exception cref="ClusterException">Thrown when cluster operations fail.</exception>
     public bool RemoveNode(string nodeAddress)
     {
+        _logger?.LogInformation("RemoveNode called with {NodeAddress}", nodeAddress);
         try
         {
             if (string.IsNullOrWhiteSpace(nodeAddress))
@@ -110,6 +122,7 @@ public class ClusterActorRegistry
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to remove node {NodeAddress}", nodeAddress);
             throw new ClusterException(nodeAddress, $"Failed to remove node {nodeAddress}", ex);
         }
     }
@@ -121,6 +134,7 @@ public class ClusterActorRegistry
     /// <returns>An enumerable of ActorRef for the specified node, or an empty enumerable if the node is not found.</returns>
     public IEnumerable<ActorRef> GetActorsByNode(string nodeAddress)
     {
+        _logger?.LogInformation("GetActorsByNode called with {NodeAddress}", nodeAddress);
         if (string.IsNullOrWhiteSpace(nodeAddress))
             return Enumerable.Empty<ActorRef>();
 
@@ -136,6 +150,7 @@ public class ClusterActorRegistry
     /// </summary>
     public IEnumerable<string> GetAllNodeAddresses()
     {
+        _logger?.LogInformation("GetAllNodeAddresses called");
         return _nodeActors.Keys;
     }
 
@@ -144,6 +159,7 @@ public class ClusterActorRegistry
     /// </summary>
     public int GetNodeCount()
     {
+        _logger?.LogInformation("GetNodeCount called");
         return _nodeActors.Count;
     }
 }
