@@ -55,6 +55,8 @@ public class ActorSystemConfiguration
         _options.Validate();
     }
 
+    public override string ToString() => $"ActorSystemConfiguration {{ Options = {_options}, Health = {_actorSystem?.GetHealthSummary()}, MailboxStats = {_mailboxService.GetStatistics()}, DispatcherStats = {_dispatcher.GetStatistics()}, SupervisionStats = {_supervisionService.GetStatistics()}, PersistenceStats = {_messageRepository.GetStatistics()} }}";
+
     /// <summary>
     /// Initializes and creates the actor system.
     /// </summary>
