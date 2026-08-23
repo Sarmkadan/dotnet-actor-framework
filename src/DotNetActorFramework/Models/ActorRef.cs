@@ -12,12 +12,30 @@ using DotNetActorFramework.Constants;
 
 /// <summary>
 /// A thread-safe, immutable reference to an actor that provides a unified interface for sending messages
-/// and managing actor interactions across the system.
+/// and managing actor interactions across the system. This class is immutable and thread-safe for
+/// safe publication and concurrent access.
 /// </summary>
+/// <remarks>
+/// <para>
+/// ActorRefs are used to communicate with actors without exposing their internal state. They
+/// provide methods for sending messages (<see cref="SendAsync"/>), requesting responses
+/// (<see cref="AskAsync"/>), and checking liveness (<see cref="IsAlive"/>).
+/// </para>
+/// <para>
+/// Important: This class implements <see cref="IEquatable{ActorRef}"/> for value equality
+/// based on <see cref="Path"/> and <see cref="Id"/>. Override <see cref="object.GetHashCode()"/>
+/// and <see cref="object.Equals(object)"/> accordingly.
+/// </para>
+/// </remarks>
 public class ActorRef : IEquatable<ActorRef>
 {
     /// <summary>Gets the <see cref="ActorPath"/> of the referenced actor.</summary>
-    public ActorPath Path { get; }
+    /// <summary>
+/// Gets the <see cref="ActorPath"/> of the referenced actor. This path uniquely identifies the actor
+/// within the actor system hierarchy.
+/// </summary>
+/// <seealso cref="ActorPath"/>
+public ActorPath Path { get; }
     /// <summary>Gets the unique identifier of the referenced actor.</summary>
     public Guid Id { get; }
     /// <summary>Gets a value indicating whether the referenced actor is currently alive and able to process messages.</summary>
@@ -161,6 +179,10 @@ public class ActorRef : IEquatable<ActorRef>
         return new ActorRef(Path.Parent, Guid.NewGuid());
     }
 
+    /// <summary>
+    /// Returns a string representation of the actor reference in the format "{Path} ({Id})".
+    /// </summary>
+    /// <returns>A string representation of the actor reference.</returns>
     public override string ToString() => $"{Path} ({Id:N})";
 
     public override bool Equals(object? obj) => Equals(obj as ActorRef);
