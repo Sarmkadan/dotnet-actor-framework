@@ -10,6 +10,13 @@ namespace DotNetActorFramework.Persistence.Abstractions;
 /// <summary>
 /// Represents a snapshot of an actor's state at a specific point in time.
 /// </summary>
+/// <summary>
+/// Represents a snapshot of an actor's state at a specific point in time.
+/// </summary>
+/// <remarks>
+/// This record contains the actor's state along with metadata such as
+/// sequence number and timestamp for state consistency tracking.
+/// </remarks>
 public record ActorSnapshot(
     Guid ActorId,
     string ActorPath,
@@ -20,6 +27,11 @@ public record ActorSnapshot(
 
 /// <summary>
 /// Defines the contract for storing and loading actor state snapshots.
+/// </summary>
+/// <summary>
+/// Defines the contract for storing and loading actor state snapshots.
+/// Implementations should ensure atomic operations and idempotent behavior
+/// for concurrent access scenarios.
 /// </summary>
 public interface ISnapshotStore
 {
@@ -60,6 +72,13 @@ public interface ISnapshotStore
 /// <summary>
 /// Represents an event that occurred for an actor.
 /// </summary>
+/// <summary>
+/// Represents an event that occurred for an actor.
+/// </summary>
+/// <remarks>
+/// This record captures the actor's event data along with metadata such as
+/// sequence number and timestamp for event sourcing and replay purposes.
+/// </remarks>
 public record ActorEvent(
     Guid ActorId,
     string ActorPath,
@@ -70,6 +89,11 @@ public record ActorEvent(
 
 /// <summary>
 /// Defines the contract for persisting and replaying actor events.
+/// </summary>
+/// <summary>
+/// Defines the contract for persisting and replaying actor events.
+/// Implementations should ensure thread safety and idempotent behavior
+/// for concurrent access scenarios.
 /// </summary>
 public interface IEventJournal
 {
