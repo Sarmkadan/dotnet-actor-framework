@@ -82,5 +82,44 @@ namespace DotNetActorFramework.Models
             ArgumentNullException.ThrowIfNull(metrics);
             return metrics.GetErrorRate() <= errorRateThreshold;
         }
+
+        /// <summary>
+        /// Calculates the number of messages processed per second since the actor was created.
+        /// </summary>
+        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+        /// <returns>The messages per second as a <see cref="double"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+        public static double MessagesPerSecond(this ActorMetrics metrics)
+        {
+            ArgumentNullException.ThrowIfNull(metrics);
+            var uptimeSeconds = metrics.GetUptime().TotalSeconds;
+            return uptimeSeconds > 0 ? metrics.MessageCount / uptimeSeconds : 0d;
+        }
+
+        /// <summary>
+        /// Gets the error rate as the ratio of errors to total messages processed.
+        /// </summary>
+        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+        /// <returns>The error rate as a value between 0 and 1.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+        public static double ErrorRate(this ActorMetrics metrics)
+        {
+            ArgumentNullException.ThrowIfNull(metrics);
+            return metrics.GetErrorRate();
+        }
+
+        /// <summary>
+        /// Determines whether the actor is saturated based on a threshold for error rate or mailbox depth.
+        /// </summary>
+        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+        /// <param name="threshold">The saturation threshold (default 0.8 for error rate, or mailbox depth > 100).</param>
+        /// <returns><c>true</c> if the actor is considered saturated; otherwise <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+        public static bool IsSaturated(this ActorMetrics metrics, double threshold = 0.8)
+        {
+            ArgumentNullException.ThrowIfNull(metrics);
+            // Consider saturated if error rate exceeds threshold OR mailbox depth is high
+            return metrics.GetErrorRate() > threshold || metrics.MailboxDepth > 100;
+        }
     }
 }
