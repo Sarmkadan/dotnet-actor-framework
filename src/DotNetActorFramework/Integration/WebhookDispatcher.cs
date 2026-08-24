@@ -22,6 +22,11 @@ public class WebhookConfig
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? MaxRetries { get; set; } = 3;
     public TimeSpan? RetryDelay { get; set; } = TimeSpan.FromSeconds(5);
+
+    public override string ToString()
+    {
+        return $"WebhookConfig {{ Id = {Id}, Url = {Url}, EventType = {EventType}, IsActive = {IsActive}, CreatedAt = {CreatedAt}, MaxRetries = {MaxRetries} }}";
+    }
 }
 
 /// <summary>
