@@ -235,6 +235,15 @@ public class MailboxService
         }
         _mailboxes.Clear();
     }
+
+    /// <summary>
+    /// Returns a concise, informative representation of the current mailbox statistics.
+    /// </summary>
+    public override string ToString()
+    {
+        var stats = GetStatistics();
+        return $"MailboxService {{ TotalMailboxes = {stats.TotalMailboxes}, TotalMessages = {stats.TotalMessages}, TotalCapacity = {stats.TotalCapacity}, FullMailboxes = {stats.FullMailboxes}, AverageLoadFactor = {stats.AverageLoadFactor} }}";
+    }
 }
 
 /// <summary>
