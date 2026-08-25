@@ -66,6 +66,9 @@ public class MetricsCollectorWorker : IBackgroundWorker
     /// Gets the latest collected metrics snapshot.
     /// </summary>
     public MetricsSnapshot GetLatestSnapshot() => _latestSnapshot;
+
+    public override string ToString() =>
+        $"MetricsCollectorWorker {{ Interval = {Interval}, Timestamp = {_latestSnapshot.Timestamp}, TotalActors = {_latestSnapshot.TotalActors}, HealthyActors = {_latestSnapshot.HealthyActors}, ErrorActors = {_latestSnapshot.ErrorActors}, TotalMessages = {_latestSnapshot.TotalMessages} }}";
 }
 
 /// <summary>
