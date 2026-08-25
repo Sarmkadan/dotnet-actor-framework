@@ -201,6 +201,19 @@ public class MessagePersistenceRepository
             _sequenceNumber = 0;
         }
     }
+
+    /// <summary>
+    /// Returns a concise, informative representation of the repository,
+    /// describing its most recently persisted message.
+    /// </summary>
+    public override string ToString()
+    {
+        lock (_lockObject)
+        {
+            var last = _messageLog.LastOrDefault();
+            return $"MessagePersistenceRepository {{ EnvelopeId = {last?.EnvelopeId}, MessageType = {last?.MessageType ?? "Unknown"}, SenderId = {last?.SenderId}, RecipientId = {last?.RecipientId}, PersistedAt = {last?.PersistedAt}, IsDelivered = {last?.IsDelivered} }}";
+        }
+    }
 }
 
 /// <summary>
