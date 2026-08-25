@@ -22,6 +22,8 @@ public class ActorMetricsRepository
         _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
     }
 
+    public override string ToString() => $"ActorMetricsRepository {{ ActorId = Guid.Empty, ActorPath = string.Empty, MessageCount = 0L, ProcessedCount = 0L, ErrorCount = 0L, ErrorRate = 0.0 }}";
+
     /// <summary>
     /// Records metrics for an actor.
     /// </summary>
