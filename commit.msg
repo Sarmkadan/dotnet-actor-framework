@@ -1,1 +1,1 @@
-Add structured logging to MailboxService
+Add ToString override to HttpActorClient

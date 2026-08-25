@@ -22,6 +22,13 @@ public class HttpActorClient : IDisposable
     private readonly string _baseUrl;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    public string ActorPath { get; set; }
+    public Guid ActorId { get; set; }
+    public string State { get; set; }
+    public long MessageCount { get; set; }
+    public long ErrorCount { get; set; }
+    public double ErrorRate { get; set; }
+
     public HttpActorClient(string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
