@@ -147,6 +147,8 @@ public class ActorMetrics
 
         AverageProcessingTimeMs = _processingTimes.Average();
     }
+
+    public override string ToString() => $"ActorMetrics {{ ActorPath = {ActorPath}, MessageCount = {MessageCount}, ProcessedCount = {ProcessedCount}, ErrorCount = {ErrorCount}, ErrorRate = {GetErrorRate()}, SuccessRate = {GetSuccessRate()} }}";
 }
 
 /// <summary>
