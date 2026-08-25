@@ -180,6 +180,15 @@ public class ConnectionManager : IDisposable
         _disposed = true;
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Returns a concise, informative representation of the connection manager.
+    /// </summary>
+    public override string ToString()
+    {
+        var stats = GetStatistics();
+        return $"ConnectionManager {{ IsConnected = {stats.IsConnected}, PoolSize = {stats.PoolSize}, ActiveConnections = {stats.ActiveConnections}, ConnectionString = {stats.ConnectionString}, CreatedAt = {stats.CreatedAt} }}";
+    }
 }
 
 /// <summary>
