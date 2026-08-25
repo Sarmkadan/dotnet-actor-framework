@@ -164,6 +164,15 @@ public class SystemMetricsApi
     {
         _metricsCollector.Reset();
     }
+
+    /// <summary>
+    /// Returns a concise, informative representation of the current system state.
+    /// </summary>
+    public override string ToString()
+    {
+        var health = GetSystemHealth();
+        return $"SystemMetricsApi {{ SystemName = {health.SystemName}, SystemId = {health.SystemId}, IsHealthy = {health.IsHealthy}, TotalActors = {health.TotalActors}, HealthyActors = {health.HealthyActors}, UnhealthyActors = {health.UnhealthyActors} }}";
+    }
 }
 
 /// <summary>
