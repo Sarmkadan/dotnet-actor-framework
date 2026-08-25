@@ -1,0 +1,1 @@
+Added ToString override to MetricsCollectorWorker
