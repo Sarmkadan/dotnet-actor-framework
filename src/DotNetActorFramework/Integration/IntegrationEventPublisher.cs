@@ -100,6 +100,8 @@ public class IntegrationEventPublisher : IDisposable
         public DateTime EnqueuedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public int Attempts { get; set; }
+
+        public override string ToString() => $"IntegrationEventEnvelope {{ Id = {Id}, Event = {Event}, EnqueuedAt = {EnqueuedAt}, ProcessedAt = {ProcessedAt}, Attempts = {Attempts} }}";
     }
 }
 
