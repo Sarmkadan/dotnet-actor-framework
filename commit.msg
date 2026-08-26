@@ -1,1 +1,1 @@
-Add ToString override to HttpActorClient
+Add ToString override to SupervisionService
