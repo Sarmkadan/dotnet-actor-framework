@@ -4,8 +4,14 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="DotnetActorFrameworkException"/> extension methods.
+/// </summary>
 public class DotnetActorFrameworkExceptionExtensionsTests
 {
+    /// <summary>
+    /// Verifies that WithContext adds the provided context to the exception message and returns a new exception instance without modifying the inner exception.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldAddContextToExceptionMessage()
     {
@@ -24,6 +30,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that WithContext handles an empty context string by appending " - Context: " to the original message.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldHandleEmptyContext()
     {
@@ -39,6 +48,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that WithContext preserves whitespace in the context string.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldHandleWhitespaceContext()
     {
@@ -54,6 +66,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that WithContext does not modify the inner exception chain and instead includes the original inner exception as a format argument in the message.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldPreserveOriginalInnerException()
     {
@@ -71,6 +86,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that WithContext works correctly when the exception has a null inner exception.
+    /// </summary>
     [Fact]
     public void WithContext_ShouldHandleExceptionWithNullInnerException()
     {
@@ -86,6 +104,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that GetInnerExceptions returns a list containing only the exception itself when there are no inner exceptions.
+    /// </summary>
     [Fact]
     public void GetInnerExceptions_ShouldReturnListWithSingleExceptionWhenNoInnerException()
     {
@@ -100,6 +121,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result[0].Should().BeSameAs(exception);
     }
 
+    /// <summary>
+    /// Verifies that GetInnerExceptions returns all exceptions in the chain, starting from the root and following each inner exception.
+    /// </summary>
     [Fact]
     public void GetInnerExceptions_ShouldReturnListWithAllInnerExceptions()
     {
@@ -120,6 +144,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result[3].Should().BeSameAs(inner3);
     }
 
+    /// <summary>
+    /// Verifies that GetInnerExceptions returns exceptions in the order from outermost to innermost.
+    /// </summary>
     [Fact]
     public void GetInnerExceptions_ShouldReturnListInCorrectOrder()
     {
@@ -134,6 +161,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().ContainInOrder(new Exception[] { exception, inner });
     }
 
+    /// <summary>
+    /// Verifies that GetInnerExceptions correctly handles a deep exception chain of 12 exceptions.
+    /// </summary>
     [Fact]
     public void GetInnerExceptions_ShouldHandleDeepExceptionChain()
     {
@@ -154,6 +184,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result[11].Should().BeOfType<Exception>().And.Subject.As<Exception>().Message.Should().Be("Deepest exception");
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns true for an exception that is directly a DotnetActorFrameworkException.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldReturnTrueForDotnetActorFrameworkException()
     {
@@ -167,6 +200,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns true when the inner exception chain contains a DotnetActorFrameworkException.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldReturnTrueWhenInnerExceptionIsFrameworkException()
     {
@@ -181,6 +217,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns false when there are no DotnetActorFrameworkException instances in the exception chain.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldReturnFalseWhenNoFrameworkExceptionInChain()
     {
@@ -194,6 +233,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns false when the exception has a null inner exception and is not a framework exception.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldReturnFalseForNullInnerException()
     {
@@ -207,6 +249,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns false for a deep chain of non-framework exceptions.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldHandleDeepNonFrameworkChain()
     {
@@ -224,6 +269,9 @@ public class DotnetActorFrameworkExceptionExtensionsTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that IsFrameworkException returns true when a DotnetActorFrameworkException is present in the middle of the exception chain.
+    /// </summary>
     [Fact]
     public void IsFrameworkException_ShouldHandleDeepMixedChain()
     {
