@@ -16,6 +16,10 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests;
 
+/// <summary>
+/// Test class for PersistenceService that verifies snapshot and event persistence functionality
+/// using in-memory implementations for testing.
+/// </summary>
 public class PersistenceServiceTests : IDisposable
 {
     private readonly Guid _testActorId = Guid.NewGuid();
@@ -25,6 +29,11 @@ public class PersistenceServiceTests : IDisposable
     private readonly PersistenceService _persistenceService;
     private readonly string _tempDirectory;
 
+    /// <summary>
+    /// Initializes a new instance of the PersistenceServiceTests class with test dependencies.
+    /// Sets up in-memory snapshot store, event journal, and persistence service.
+    /// Creates a temporary directory for file-based persistence tests.
+    /// </summary>
     public PersistenceServiceTests()
     {
         _snapshotStore = new InMemorySnapshotStore();
@@ -36,6 +45,9 @@ public class PersistenceServiceTests : IDisposable
         Directory.CreateDirectory(_tempDirectory);
     }
 
+    /// <summary>
+    /// Cleans up test resources by deleting the temporary directory used for file-based tests.
+    /// </summary>
     public void Dispose()
     {
         try
@@ -48,6 +60,10 @@ public class PersistenceServiceTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Tests that saving a snapshot and then loading it returns the exact same state.
+    /// Verifies that all snapshot properties (ActorId, ActorPath, SequenceNr, State, Timestamp) are correctly persisted.
+    /// </summary>
     [Fact]
     public async Task SaveSnapshotAsync_ShouldSaveAndLoadRoundTrip()
     {
@@ -68,6 +84,10 @@ public class PersistenceServiceTests : IDisposable
         loadedSnapshot.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
+    /// <summary>
+    /// Tests that loading a snapshot for an actor that has no snapshots returns null.
+    /// Verifies the persistence service correctly handles the case where no snapshot exists.
+    /// </summary>
     [Fact]
     public async Task LoadLatestSnapshotAsync_ShouldReturnNull_WhenNoSnapshotExists()
     {
@@ -78,6 +98,10 @@ public class PersistenceServiceTests : IDisposable
         loadedSnapshot.Should().BeNull();
     }
 
+    /// <summary>
+/// Tests that deleting snapshots up to a specific sequence number removes only snapshots
+/// with sequence numbers less than or equal to the specified value, leaving newer snapshots intact.
+/// </summary>
     [Fact]
     public async Task DeleteSnapshotsAsync_ShouldRemoveSnapshotsUpToSequenceNumber()
     {
@@ -104,6 +128,10 @@ public class PersistenceServiceTests : IDisposable
         remainingSnapshot!.SequenceNr.Should().Be(150L);
     }
 
+    /// <summary>
+/// Tests that deleting all snapshots for an actor removes every snapshot associated with that actor,
+/// regardless of their sequence numbers.
+/// </summary>
     [Fact]
     public async Task DeleteAllSnapshotsAsync_ShouldRemoveAllSnapshotsForActor()
     {
@@ -123,6 +151,10 @@ public class PersistenceServiceTests : IDisposable
         deletedSnapshot.Should().BeNull();
     }
 
+    /// <summary>
+/// Tests that appending events stores them correctly in the event journal and does not trigger a snapshot
+/// when the number of events is below the snapshot threshold (default 100 events).
+/// </summary>
     [Fact]
     public async Task AppendEventsAsync_ShouldStoreEventsAndTriggerAutoSnapshot()
     {
@@ -146,6 +178,10 @@ public class PersistenceServiceTests : IDisposable
         snapshot.Should().BeNull();
     }
 
+    /// <summary>
+/// Tests that appending events triggers automatic snapshot creation when the number of events
+/// reaches or exceeds the snapshot interval threshold. Uses a low threshold (3 events) for test verification.
+/// </summary>
     [Fact]
     public async Task AppendEventsAsync_ShouldCreateSnapshot_WhenThresholdReached()
     {
@@ -174,6 +210,10 @@ public class PersistenceServiceTests : IDisposable
         loadedEvents.Should().HaveCount(3);
     }
 
+    /// <summary>
+/// Tests that reading events within a specific sequence range returns events in ascending order
+/// and only includes events whose sequence numbers fall within the specified range (inclusive).
+/// </summary>
     [Fact]
     public async Task ReadEventsAsync_ShouldReturnEventsInOrder()
     {
@@ -198,6 +238,10 @@ public class PersistenceServiceTests : IDisposable
         eventList[1].SequenceNr.Should().Be(30L);
     }
 
+    /// <summary>
+/// Tests that reading events backward returns events in descending order (highest sequence number first)
+/// within the specified range, inclusive of both start and end sequence numbers.
+/// </summary>
     [Fact]
     public async Task ReadEventsBackwardAsync_ShouldReturnEventsInReverseOrder()
     {
@@ -222,6 +266,11 @@ public class PersistenceServiceTests : IDisposable
         eventList[2].SequenceNr.Should().Be(10L);
     }
 
+    /// <summary>
+/// Tests that deleting events up to a specific sequence number removes all events
+/// with sequence numbers less than or equal to the specified value, leaving events
+/// with higher sequence numbers intact.
+/// </summary>
     [Fact]
     public async Task DeleteEventsAsync_ShouldRemoveEventsUpToSequenceNumber()
     {
@@ -249,6 +298,10 @@ public class PersistenceServiceTests : IDisposable
         remainingEvents.First().SequenceNr.Should().Be(20L);
     }
 
+    /// <summary>
+/// Tests that deleting all events for an actor removes every event associated with that actor,
+/// regardless of their sequence numbers.
+/// </summary>
     [Fact]
     public async Task DeleteAllEventsAsync_ShouldRemoveAllEventsForActor()
     {
@@ -273,6 +326,10 @@ public class PersistenceServiceTests : IDisposable
         remainingEvents.Should().BeEmpty();
     }
 
+    /// <summary>
+/// Tests that saving a snapshot with an existing sequence number overwrites the previous snapshot
+/// rather than creating a duplicate, ensuring snapshot uniqueness per sequence number.
+/// </summary>
     [Fact]
     public async Task SaveSnapshotAsync_ShouldOverwriteExistingSnapshot()
     {
@@ -298,6 +355,12 @@ public class PersistenceServiceTests : IDisposable
         snapshot2!.State.Should().BeEquivalentTo(updatedState);
     }
 
+    /// <summary>
+/// Tests that the file-based actor state persistence correctly saves and loads state.
+/// Verifies that state can be saved to disk and successfully retrieved afterward.
+/// Note: Since FileActorStatePersistence returns byte[] for state, direct object comparison
+/// is not possible, but the test confirms the persistence mechanism works without errors.
+/// </summary>
     [Fact]
     public async Task FileActorStatePersistence_ShouldSaveAndLoadState()
     {
@@ -321,6 +384,10 @@ public class PersistenceServiceTests : IDisposable
         // This test verifies the file-based persistence works without errors
     }
 
+    /// <summary>
+/// Tests that the file-based actor state persistence returns null when attempting to load
+/// state for an actor that has no persisted state.
+/// </summary>
     [Fact]
     public async Task FileActorStatePersistence_ShouldReturnNull_WhenStateDoesNotExist()
     {
@@ -334,6 +401,10 @@ public class PersistenceServiceTests : IDisposable
         loadedState.Should().BeNull();
     }
 
+    /// <summary>
+/// Tests that the file-based actor state persistence correctly deletes state.
+/// Verifies that state exists before deletion and is removed after deletion.
+/// </summary>
     [Fact]
     public async Task FileActorStatePersistence_ShouldDeleteState()
     {
@@ -353,6 +424,10 @@ public class PersistenceServiceTests : IDisposable
         existsAfter.Should().BeFalse();
     }
 
+    /// <summary>
+/// Tests that the in-memory actor state persistence correctly saves and loads state.
+/// Verifies that state can be saved in memory and successfully retrieved afterward.
+/// </summary>
     [Fact]
     public async Task InMemoryActorStatePersistence_ShouldSaveAndLoadState()
     {
@@ -375,6 +450,10 @@ public class PersistenceServiceTests : IDisposable
         loadedState.Should().BeEquivalentTo(testState);
     }
 
+    /// <summary>
+/// Tests that the in-memory actor state persistence returns null when attempting to load
+/// state for an actor that has no persisted state.
+/// </summary>
     [Fact]
     public async Task InMemoryActorStatePersistence_ShouldReturnNull_WhenStateDoesNotExist()
     {
@@ -388,6 +467,10 @@ public class PersistenceServiceTests : IDisposable
         loadedState.Should().BeNull();
     }
 
+    /// <summary>
+/// Tests that the in-memory actor state persistence correctly deletes state.
+/// Verifies that state exists before deletion and is removed after deletion.
+/// </summary>
     [Fact]
     public async Task InMemoryActorStatePersistence_ShouldDeleteState()
     {
