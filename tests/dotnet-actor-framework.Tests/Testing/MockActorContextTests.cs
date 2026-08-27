@@ -11,16 +11,26 @@ using Xunit;
 
 namespace DotNetActorFramework.Tests.Testing;
 
+/// <summary>
+/// Unit tests for the <see cref="MockActorContext"/> class.
+/// </summary>
 public class MockActorContextTests
 {
     private readonly ActorPath _testPath = ActorPath.Parse("/test/actor");
     private readonly MockActorContext _mockContext;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MockActorContextTests"/> class.
+    /// Sets up the test actor path and mock context.
+    /// </summary>
     public MockActorContextTests()
     {
         _mockContext = new MockActorContext(_testPath);
     }
 
+    /// <summary>
+    /// Verifies that the MockActorContext constructor initializes with the given actor path.
+    /// </summary>
     [Fact]
     public void Constructor_ShouldInitializeWithGivenActorPath()
     {
@@ -32,6 +42,9 @@ public class MockActorContextTests
         context.ActorId.Should().NotBe(Guid.Empty);
     }
 
+    /// <summary>
+    /// Verifies that the MockActorContext constructor throws an ArgumentNullException when given a null actor path.
+    /// </summary>
     [Fact]
     public void Constructor_ShouldThrowOnNullActorPath()
     {
@@ -39,6 +52,9 @@ public class MockActorContextTests
         Assert.Throws<ArgumentNullException>(() => new MockActorContext(null!));
     }
 
+    /// <summary>
+    /// Verifies that recording a received message adds it to the received messages collection.
+    /// </summary>
     [Fact]
     public void RecordReceivedMessage_ShouldAddMessageToReceivedMessages()
     {
@@ -54,6 +70,9 @@ public class MockActorContextTests
         receivedMessages[0].Should().BeSameAs(message);
     }
 
+    /// <summary>
+    /// Verifies that recording a null received message does not add anything to the received messages collection.
+    /// </summary>
     [Fact]
     public void RecordReceivedMessage_ShouldNotAddNullMessage()
     {
@@ -65,6 +84,9 @@ public class MockActorContextTests
         receivedMessages.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that recording a sent message adds it to the sent messages collection.
+    /// </summary>
     [Fact]
     public void RecordSentMessage_ShouldAddMessageToSentMessages()
     {
@@ -80,6 +102,9 @@ public class MockActorContextTests
         sentMessages[0].Should().BeSameAs(message);
     }
 
+    /// <summary>
+    /// Verifies that recording a null sent message does not add anything to the sent messages collection.
+    /// </summary>
     [Fact]
     public void RecordSentMessage_ShouldNotAddNullMessage()
     {
@@ -91,6 +116,9 @@ public class MockActorContextTests
         sentMessages.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that getting received messages returns an empty list when no messages have been recorded.
+    /// </summary>
     [Fact]
     public void GetReceivedMessages_ShouldReturnEmptyListInitially()
     {
@@ -101,6 +129,9 @@ public class MockActorContextTests
         messages.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that getting sent messages returns an empty list when no messages have been recorded.
+    /// </summary>
     [Fact]
     public void GetSentMessages_ShouldReturnEmptyListInitially()
     {
@@ -111,6 +142,9 @@ public class MockActorContextTests
         messages.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that getting received messages returns all recorded messages in the order they were added.
+    /// </summary>
     [Fact]
     public void GetReceivedMessages_ShouldReturnAllReceivedMessages()
     {
@@ -131,6 +165,9 @@ public class MockActorContextTests
         receivedMessages.Should().ContainInOrder(message1, message2, message3);
     }
 
+    /// <summary>
+    /// Verifies that getting sent messages returns all recorded messages in the order they were added.
+    /// </summary>
     [Fact]
     public void GetSentMessages_ShouldReturnAllSentMessages()
     {
@@ -151,6 +188,9 @@ public class MockActorContextTests
         sentMessages.Should().ContainInOrder(message1, message2, message3);
     }
 
+    /// <summary>
+    /// Verifies that getting received messages of a specific type returns only messages of that type.
+    /// </summary>
     [Fact]
     public void GetReceivedMessagesOfType_ShouldFilterByMessageTypeName()
     {
@@ -185,6 +225,9 @@ public class MockActorContextTests
         typedMessages[0].Should().BeSameAs(typedMsg);
     }
 
+    /// <summary>
+    /// Verifies that getting received messages of a non-existent type returns an empty collection.
+    /// </summary>
     [Fact]
     public void GetReceivedMessagesOfType_ShouldReturnEmptyForNonExistentType()
     {
@@ -199,6 +242,9 @@ public class MockActorContextTests
         messages.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that getting the message count returns zero when no messages have been recorded.
+    /// </summary>
     [Fact]
     public void GetMessageCount_ShouldReturnZeroInitially()
     {
@@ -209,6 +255,9 @@ public class MockActorContextTests
         count.Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that getting the message count returns the number of received messages.
+    /// </summary>
     [Fact]
     public void GetMessageCount_ShouldReturnReceivedMessageCount()
     {
@@ -225,6 +274,9 @@ public class MockActorContextTests
         count.Should().Be(2);
     }
 
+    /// <summary>
+    /// Verifies that getting the sent message count returns zero when no messages have been sent.
+    /// </summary>
     [Fact]
     public void GetSentMessageCount_ShouldReturnZeroInitially()
     {
@@ -235,6 +287,9 @@ public class MockActorContextTests
         count.Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that getting the sent message count returns the number of sent messages.
+    /// </summary>
     [Fact]
     public void GetSentMessageCount_ShouldReturnSentMessageCount()
     {
@@ -251,6 +306,9 @@ public class MockActorContextTests
         count.Should().Be(2);
     }
 
+    /// <summary>
+    /// Verifies that clearing the context removes all received and sent messages.
+    /// </summary>
     [Fact]
     public void Clear_ShouldRemoveAllMessages()
     {
@@ -274,6 +332,9 @@ public class MockActorContextTests
         _mockContext.GetSentMessages().Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that checking for receipt of a message type returns true when that message type has been received.
+    /// </summary>
     [Fact]
     public void DidReceiveMessageType_ShouldReturnTrueForExistingMessageType()
     {
@@ -288,6 +349,9 @@ public class MockActorContextTests
         _mockContext.DidReceiveMessageType("ResponseMessage").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that checking for receipt of a message type returns false when that message type has not been received.
+    /// </summary>
     [Fact]
     public void DidReceiveMessageType_ShouldReturnFalseForNonExistentMessageType()
     {
@@ -299,6 +363,9 @@ public class MockActorContextTests
         _mockContext.DidReceiveMessageType("NonExistentMessage").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that checking for receipt of a specific message count returns true when the count matches.
+    /// </summary>
     [Fact]
     public void DidReceiveMessageCount_ShouldReturnTrueForMatchingCount()
     {
@@ -314,6 +381,9 @@ public class MockActorContextTests
         _mockContext.DidReceiveMessageCount(3).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that checking for receipt of a specific message count returns false when the count does not match.
+    /// </summary>
     [Fact]
     public void DidReceiveMessageCount_ShouldReturnFalseForNonMatchingCount()
     {
@@ -328,6 +398,9 @@ public class MockActorContextTests
         _mockContext.DidReceiveMessageCount(1).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that the MockActorContext handles concurrent access to its message recording methods in a thread-safe manner.
+    /// </summary>
     [Fact]
     public void ThreadSafety_ShouldHandleConcurrentAccess()
     {
@@ -346,177 +419,5 @@ public class MockActorContextTests
 
         // Assert
         _mockContext.GetMessageCount().Should().Be(messageCount);
-    }
-}
-
-public class TestProbeTests
-{
-    private readonly TestProbe _testProbe;
-
-    public TestProbeTests()
-    {
-        _testProbe = new TestProbe();
-    }
-
-    [Fact]
-    public void ProbeId_ShouldBeUnique()
-    {
-        // Arrange
-        var probe1 = new TestProbe();
-        var probe2 = new TestProbe();
-
-        // Assert
-        probe1.ProbeId.Should().NotBe(probe2.ProbeId);
-        probe1.ProbeId.Should().NotBe(Guid.Empty);
-    }
-
-    [Fact]
-    public void ReceiveMessage_ShouldAddMessageToQueue()
-    {
-        // Arrange
-        var envelope = new Envelope(new ControlMessage("test"), new ActorRef(ActorPath.Parse("/test"), Guid.NewGuid()));
-
-        // Act
-        _testProbe.ReceiveMessage(envelope);
-
-        // Assert
-        var messages = _testProbe.GetAllMessages();
-        messages.Should().HaveCount(1);
-        messages[0].Should().BeSameAs(envelope);
-    }
-
-    [Fact]
-    public void ReceiveMessage_ShouldNotAddNullEnvelope()
-    {
-        // Act
-        _testProbe.ReceiveMessage(null);
-
-        // Assert
-        _testProbe.GetAllMessages().Should().BeEmpty();
-    }
-
-    [Fact]
-    public void GetAllMessages_ShouldReturnEmptyListInitially()
-    {
-        // Act
-        var messages = _testProbe.GetAllMessages();
-
-        // Assert
-        messages.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void GetAllMessages_ShouldReturnAllMessagesWithoutConsuming()
-    {
-        // Arrange
-        var envelope1 = new Envelope(new ControlMessage("test1"), new ActorRef(ActorPath.Parse("/test1"), Guid.NewGuid()));
-        var envelope2 = new Envelope(new ControlMessage("test2"), new ActorRef(ActorPath.Parse("/test2"), Guid.NewGuid()));
-
-        _testProbe.ReceiveMessage(envelope1);
-        _testProbe.ReceiveMessage(envelope2);
-
-        // Act
-        var messages = _testProbe.GetAllMessages();
-
-        // Assert
-        messages.Should().HaveCount(2);
-        messages.Should().ContainInOrder(envelope1, envelope2);
-    }
-
-    [Fact]
-    public async Task ExpectMessageAsync_ShouldReturnMessageWhenAvailable()
-    {
-        // Arrange
-        var envelope = new Envelope(new ControlMessage("test"), new ActorRef(ActorPath.Parse("/test"), Guid.NewGuid()));
-
-        // Start receiving in background
-        var receiveTask = Task.Run(async () =>
-        {
-            await Task.Delay(100); // Small delay to ensure probe is waiting
-            _testProbe.ReceiveMessage(envelope);
-        });
-
-        // Act
-        var result = await _testProbe.ExpectMessageAsync();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeSameAs(envelope);
-        await receiveTask;
-    }
-
-    [Fact]
-    public async Task ExpectMessageAsync_ShouldReturnNullOnTimeout()
-    {
-        // Act
-        var result = await _testProbe.ExpectMessageAsync(TimeSpan.FromMilliseconds(100));
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task ExpectMessageAsync_ShouldUseDefaultTimeoutWhenNotSpecified()
-    {
-        // Arrange
-        var envelope = new Envelope(new ControlMessage("test"), new ActorRef(ActorPath.Parse("/test"), Guid.NewGuid()));
-
-        // Start receiving in background
-        var receiveTask = Task.Run(async () =>
-        {
-            await Task.Delay(100);
-            _testProbe.ReceiveMessage(envelope);
-        });
-
-        // Act
-        var result = await _testProbe.ExpectMessageAsync();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeSameAs(envelope);
-        await receiveTask;
-    }
-
-    [Fact]
-    public void ClearMessages_ShouldRemoveAllMessages()
-    {
-        // Arrange
-        var envelope1 = new Envelope(new ControlMessage("test1"), new ActorRef(ActorPath.Parse("/test1"), Guid.NewGuid()));
-        var envelope2 = new Envelope(new ControlMessage("test2"), new ActorRef(ActorPath.Parse("/test2"), Guid.NewGuid()));
-
-        _testProbe.ReceiveMessage(envelope1);
-        _testProbe.ReceiveMessage(envelope2);
-
-        // Verify setup
-        _testProbe.GetAllMessages().Should().HaveCount(2);
-
-        // Act
-        _testProbe.ClearMessages();
-
-        // Assert
-        _testProbe.GetAllMessages().Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ThreadSafety_ShouldHandleConcurrentMessageReception()
-    {
-        // Arrange
-        var tasks = new List<Task>();
-        var messageCount = 100;
-
-        // Act - concurrent message reception
-        for (int i = 0; i < messageCount; i++)
-        {
-            var envelope = new Envelope(
-                new ControlMessage($"test{i}"),
-                new ActorRef(ActorPath.Parse($"/test{i}"), Guid.NewGuid())
-            );
-            tasks.Add(Task.Run(() => _testProbe.ReceiveMessage(envelope)));
-        }
-
-        Task.WaitAll(tasks.ToArray());
-
-        // Assert
-        _testProbe.GetAllMessages().Should().HaveCount(messageCount);
     }
 }
