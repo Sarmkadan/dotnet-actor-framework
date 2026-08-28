@@ -3766,3 +3766,29 @@ healthSnapshot.ErrorActors = 0;
 healthSnapshot.ErrorRate = 5.1;
 healthSnapshot.IsHealthy.Should().BeFalse();
 ```
+
+## ValidationExceptionValidationTests
+
+The `ValidationExceptionValidationTests` class provides unit tests for the `ValidationExceptionValidation` extension methods, verifying that validation logic works correctly for various validation exception types including `InvalidActorPathException`, `InvalidMessageException`, and `InvalidActorReferenceException`. These tests ensure that the validation methods properly identify valid and invalid exception states and return appropriate validation error messages.
+
+### Usage Example
+
+```csharp
+// Test validation of an InvalidActorPathException with valid data
+var validException = new InvalidActorPathException("/valid/path", "Valid message");
+var validationErrors = validException.Validate();
+// validationErrors should be empty
+
+// Test validation of an InvalidActorPathException with invalid path
+var invalidException = new InvalidActorPathException(null!, "Valid message");
+var validationErrors = invalidException.Validate();
+// validationErrors should contain one error message
+
+// Test the IsValid method
+bool isValid = validException.IsValid(); // Should return true
+bool isInvalid = invalidException.IsValid(); // Should return false
+
+// Test the EnsureValid method
+validException.EnsureValid(); // Should not throw
+invalidException.EnsureValid(); // Should throw ArgumentException
+```
