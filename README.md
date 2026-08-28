@@ -87,3 +87,41 @@ loadedEvents.Should().HaveCount(2);
 - `ReadEventsAsync_ShouldHandleEmptyRange`: Tests that ReadEventsAsync handles empty range.
 - `MultipleAppends_ShouldMaintainCorrectOrder`: Tests that multiple appends maintain correct order.
 - `DifferentActorPaths_ShouldIsolateEvents`: Tests that different actor paths isolate events.
+
+## InMemorySnapshotStoreTests
+
+The `InMemorySnapshotStoreTests` class provides unit tests for the InMemorySnapshotStore implementation, verifying that it correctly saves, loads, overwrites, and deletes snapshots for actors. It covers latest-snapshot retrieval, pruning of older snapshots, deletion up to a max sequence number, and isolation between different actors.
+
+### Usage Example
+
+```csharp
+// Arrange
+var store = new InMemorySnapshotStore();
+var actorId = Guid.NewGuid();
+var actorPath = "/test/actor";
+var snapshot = new ActorSnapshot(actorId, actorPath, new { Counter = 42 }, 100L, DateTime.UtcNow);
+
+// Act
+await store.SaveSnapshotAsync(snapshot);
+
+// Assert
+var loaded = await store.LoadLatestSnapshotAsync(actorId, actorPath);
+loaded.Should().NotBeNull();
+loaded!.SequenceNr.Should().Be(100L);
+loaded.State.Should().BeEquivalentTo(new { Counter = 42 });
+```
+
+### Test Methods
+
+- `SaveSnapshotAsync_ShouldSaveSnapshotWithCorrectProperties`: Tests that saving a snapshot stores it with all properties correctly preserved.
+- `LoadLatestSnapshotAsync_ShouldReturnNull_WhenNoSnapshotExists`: Tests that loading a snapshot returns null when no snapshot exists for the specified actor.
+- `SaveSnapshotAsync_ShouldOverwriteOlderSnapshot_WhenSavingNewerSnapshotWithSameActor`: Tests that saving a new snapshot overwrites an existing snapshot when they have the same sequence number.
+- `SaveSnapshotAsync_ShouldKeepOnlyLatestSnapshot_WhenSavingMultipleSnapshots`: Tests that only the latest snapshot is retained when multiple snapshots are saved for the same actor.
+- `SaveSnapshotAsync_ShouldPruneOlderSnapshots_WhenSavingNewSnapshot`: Tests that older snapshots are automatically pruned when a new snapshot is saved.
+- `DeleteSnapshotsAsync_ShouldRemoveAllSnapshotsForActor`: Tests that deleting all snapshots removes all stored snapshots for a specific actor.
+- `DeleteSnapshotsAsync_ShouldRemoveSnapshotsUpToMaxSequenceNumber`: Tests that deleting snapshots up to a sequence number removes only snapshots with sequence numbers less than or equal to the specified value.
+- `DeleteAllSnapshotsAsync_ShouldNotAffectOtherActors`: Tests that deleting snapshots for one actor does not affect snapshots of other actors.
+- `LoadLatestSnapshotAsync_ShouldReturnNull_WhenActorHasNoSnapshots`: Tests that loading a snapshot returns null when the actor has no snapshots.
+- `SaveSnapshotAsync_ShouldHandleNullSnapshot`: Tests that saving a null snapshot is handled gracefully.
+- `SaveSnapshotAsync_ShouldHandleDifferentActorPaths`: Tests that saving snapshots for different actor paths keeps them isolated.
+- `SaveSnapshotAsync_ShouldHandleSameSequenceNumberDifferentActors`: Tests that snapshots with the same sequence number for different actors are stored independently.
