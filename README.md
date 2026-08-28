@@ -3717,3 +3717,52 @@ var genericDefaultTask = actorRef.AskAsync<int>(message);
 genericDefaultTask.Should().NotBeNull();
 genericDefaultTask.Should().BeAssignableTo<Task<int>>();
 ```
+
+## MetricsCollectorWorkerTests
+
+The `MetricsCollectorWorkerTests` class provides unit tests for the `MetricsCollectorWorker` background worker, verifying its constructor validation, metrics collection functionality, snapshot management, and health evaluation logic.
+
+### Usage Example
+
+```csharp
+// Test constructor with valid dependencies
+var actorSystem = new ActorSystem("test-system");
+var metricsCollector = new MetricsCollector();
+var worker = new MetricsCollectorWorker(actorSystem, metricsCollector);
+worker.Should().NotBeNull();
+worker.WorkerId.Should().Be("metrics-collector");
+
+// Test constructor throws when actorSystem is null
+this.Invoking(_ => new MetricsCollectorWorker(null!, metricsCollector))
+    .Should().Throw<ArgumentNullException>();
+
+// Test constructor throws when metricsCollector is null
+this.Invoking(_ => new MetricsCollectorWorker(actorSystem, null!))
+    .Should().Throw<ArgumentNullException>();
+
+// Test ExecuteAsync collects and aggregates metrics correctly
+metricsCollector.RecordMessageProcessed("/user/test-actor-1", "TestMessage", 100, true);
+metricsCollector.RecordMessageProcessed("/user/test-actor-2", "AnotherMessage", 200, false);
+metricsCollector.RecordMessageProcessed("/user/test-actor-1", "TestMessage", 150, true);
+await worker.ExecuteAsync(CancellationToken.None);
+var snapshot = worker.GetLatestSnapshot();
+snapshot.Should().NotBeNull();
+snapshot.AverageLatencyMs.Should().Be(150.0);
+snapshot.ErrorRate.Should().BeApproximately(33.33, 0.01);
+
+// Test GetLatestSnapshot returns same instance
+var snapshot1 = worker.GetLatestSnapshot();
+var snapshot2 = worker.GetLatestSnapshot();
+snapshot1.Should().BeSameAs(snapshot2);
+
+// Test MetricsSnapshot.IsHealthy evaluates correctly
+var healthSnapshot = new MetricsSnapshot();
+healthSnapshot.ErrorActors = 0;
+healthSnapshot.ErrorRate = 4.0;
+healthSnapshot.IsHealthy.Should().BeTrue();
+healthSnapshot.ErrorActors = 1;
+healthSnapshot.IsHealthy.Should().BeFalse();
+healthSnapshot.ErrorActors = 0;
+healthSnapshot.ErrorRate = 5.1;
+healthSnapshot.IsHealthy.Should().BeFalse();
+```
