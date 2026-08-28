@@ -3968,3 +3968,27 @@ catch (Exception ex)
     Assert.Equal(ex.StackTrace, failure.StackTrace);
 }
 ```
+
+## DotnetActorFrameworkExceptionExtensionsTests
+
+The `DotnetActorFrameworkExceptionExtensionsTests` class provides unit tests for the `DotnetActorFrameworkException` extension methods, verifying the behavior of methods like `WithContext`, `GetInnerExceptions`, and `IsFrameworkException` under various conditions.
+
+### Usage Example
+
+```csharp
+public void WithContext_ShouldAddContextToExceptionMessage
+public void WithContext_ShouldHandleEmptyContext
+public void WithContext_ShouldHandleWhitespaceContext
+public void WithContext_ShouldPreserveOriginalInnerException
+public void WithContext_ShouldHandleExceptionWithNullInnerException
+public void GetInnerExceptions_ShouldReturnListWithSingleExceptionWhenNoInnerException
+public void GetInnerExceptions_ShouldReturnListWithAllInnerExceptions
+public void GetInnerExceptions_ShouldReturnListInCorrectOrder
+public void GetInnerExceptions_ShouldHandleDeepExceptionChain
+public void IsFrameworkException_ShouldReturnTrueForDotnetActorFrameworkException
+public void IsFrameworkException_ShouldReturnTrueWhenInnerExceptionIsFrameworkException
+public void IsFrameworkException_ShouldReturnFalseWhenNoFrameworkExceptionInChain
+public void IsFrameworkException_ShouldReturnFalseForNullInnerException
+public void IsFrameworkException_ShouldHandleDeepNonFrameworkChain
+public void IsFrameworkException_ShouldHandleDeepMixedChain
+```
