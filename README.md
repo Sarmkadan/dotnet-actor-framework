@@ -3866,3 +3866,55 @@ status.IsLimited.Should().BeFalse();
 - `InvokeAsync_OneOverBurstSize_LastMessageDropped`: Confirms that sending one message over the burst size results in the last message being dropped.
 - `RateLimiter_Dispose_DisposesTimer`: Tests that disposing the rate limiter properly disposes of its internal timer.
 - `RateLimiter_TryConsumeToken_ThreadSafety_NoRaceConditions`: Validates that token consumption is thread-safe and doesn't have race conditions.
+## MessageTests
+
+The  class contains unit tests for the core message types in the DotNetActorFramework, including the base  class and derived types like , , and . These tests verify default values, uniqueness, constructor behavior, and immutability properties.
+
+### Usage Example
+
+
+
+
+## MessageTests
+
+The `MessageTests` class contains unit tests for the core message types in the DotNetActorFramework, including the base `Message` class and derived types like `ControlMessage`, `ResponseMessage`, and `FailureMessage`. These tests verify default values, uniqueness, constructor behavior, and immutability properties.
+
+### Usage Example
+
+```csharp
+// Test base message default values and uniqueness
+var message1 = new Message<string>("Hello");
+var message2 = new Message<string>("World");
+Assert.NotEqual(message1.MessageId, message2.MessageId);
+Assert.Equal(0, message1.Priority);
+
+// Test ControlMessage with command and parameters
+var control = new ControlMessage("process-order", new Dictionary<string, object>
+{
+    { "orderId", "123" },
+    { "amount", 99.99 }
+});
+Assert.Equal("process-order", control.Command);
+Assert.Equal(2, control.Parameters.Count);
+
+// Test ResponseMessage with success and failure cases
+var successResponse = new ResponseMessage("OK");
+Assert.True(successResponse.IsSuccess);
+Assert.Null(successResponse.ErrorMessage);
+
+var failureResponse = new ResponseMessage(null, false, "Error occurred");
+Assert.False(failureResponse.IsSuccess);
+Assert.Equal("Error occurred", failureResponse.ErrorMessage);
+
+// Test FailureMessage with reason and exception
+try
+{
+    throw new InvalidOperationException("Test");
+}
+catch (Exception ex)
+{
+    var failure = new FailureMessage("Operation failed", ex);
+    Assert.Equal("Operation failed", failure.Reason);
+    Assert.Equal(ex.StackTrace, failure.StackTrace);
+}
+```
