@@ -3792,3 +3792,77 @@ bool isInvalid = invalidException.IsValid(); // Should return false
 validException.EnsureValid(); // Should not throw
 invalidException.EnsureValid(); // Should throw ArgumentException
 ```
+
+## RateLimitingMiddlewareTests
+
+The `RateLimitingMiddlewareTests` class provides unit tests for verifying the behavior and correctness of the `RateLimitingMiddleware` and `RateLimiter` classes. These tests cover constructor validation, message processing under various rate limit conditions, token consumption, status reporting, and thread safety.
+
+### Usage Example
+
+```csharp
+// Test constructor validation
+var act = () => new RateLimitingMiddleware(null!);
+act.Should().Throw<ArgumentNullException>()
+    .WithParameterName("rateLimiter");
+
+// Test valid constructor
+var rateLimiter = new RateLimiter(tokensPerSecond: 1000, bucketCapacity: 10000);
+var middleware = new RateLimitingMiddleware(rateLimiter);
+middleware.Should().NotBeNull();
+middleware.Name.Should().Be("RateLimitingMiddleware");
+middleware.Order.Should().Be(50);
+
+// Test message processing under limit
+var envelope = new Envelope(new ControlMessage("test"), new ActorRef(new ActorPath("/system/actor"), Guid.NewGuid()));
+var nextCalled = false;
+var result = await middleware.InvokeAsync(envelope, e => { nextCalled = true; return Task.CompletedTask; });
+result.Should().BeTrue();
+nextCalled.Should().BeTrue();
+
+// Test message processing over limit
+var restrictiveRateLimiter = new RateLimiter(tokensPerSecond: 1, bucketCapacity: 1);
+var restrictiveMiddleware = new RateLimitingMiddleware(restrictiveRateLimiter);
+var firstResult = await restrictiveMiddleware.InvokeAsync(envelope, _ => Task.CompletedTask);
+var secondResult = await restrictiveMiddleware.InvokeAsync(envelope, _ => Task.CompletedTask);
+firstResult.Should().BeTrue();
+secondResult.Should().BeFalse();
+
+// Test token consumption
+var path = new ActorPath("/system/test-actor");
+var consumeResult = rateLimiter.TryConsumeToken(path);
+consumeResult.Should().BeTrue();
+
+// Test status reporting
+var status = rateLimiter.GetStatus(path);
+status.Should().NotBeNull();
+status.Capacity.Should().Be(10000);
+status.CurrentTokens.Should().Be(9999); // 10000 - 1 consumed
+status.IsLimited.Should().BeFalse();
+```
+
+### Test Methods
+
+- `Constructor_WithNullRateLimiter_ThrowsArgumentNullException`: Verifies that constructing a `RateLimitingMiddleware` with a null rate limiter throws an `ArgumentNullException`.
+- `Constructor_WithValidRateLimiter_CreatesInstance`: Ensures that constructing a `RateLimitingMiddleware` with a valid rate limiter creates a properly initialized instance.
+- `InvokeAsync_WithNullEnvelope_ThrowsArgumentNullException`: Tests that invoking the middleware with a null envelope throws an `ArgumentNullException`.
+- `InvokeAsync_UnderLimit_PassesMessageThroughAndReturnsTrue`: Verifies that messages under the rate limit are passed through and the method returns true.
+- `InvokeAsync_OverLimit_DropsMessageAndReturnsFalse`: Confirms that messages over the rate limit are dropped and the method returns false.
+- `InvokeAsync_MultipleActors_EachActorHasSeparateRateLimit`: Validates that each actor maintains its own separate rate limit when using the same rate limiter instance.
+- `RateLimiter_TryConsumeToken_WithValidPath_ReturnsTrueWhenTokensAvailable`: Tests that token consumption returns true when tokens are available for a valid path.
+- `RateLimiter_TryConsumeToken_WithNullPath_ReturnsFalse`: Ensures that token consumption with a null path returns false.
+- `RateLimiter_TryConsumeToken_ExhaustsBucket_ReturnsFalse`: Verifies that token consumption returns false when the bucket is exhausted.
+- `RateLimiter_GetStatus_ReturnsCorrectInformation`: Checks that the status method returns correct information about token capacity and availability.
+- `RateLimiter_GetStatus_ForNonExistentActor_ReturnsDefaultStatus`: Validates that getting status for a non-existent actor returns a default status with zero tokens.
+- `RateLimiter_GetStatus_WithNullPath_ReturnsEmptyStatus`: Ensures that getting status with a null path returns an empty status.
+- `RateLimiter_RefillTimer_RefillsTokensOverTime`: Tests that tokens are refilled over time according to the refill timer.
+- `RateLimiter_Constructor_WithZeroTokensPerSecond_ThrowsArgumentException`: Verifies that constructing a rate limiter with zero tokens per second throws an `ArgumentException`.
+- `RateLimiter_Constructor_WithNegativeTokensPerSecond_ThrowsArgumentException`: Ensures that constructing a rate limiter with negative tokens per second throws an `ArgumentException`.
+- `TokenBucket_Constructor_WithZeroCapacity_ThrowsArgumentException`: Tests that constructing a token bucket with zero capacity throws an `ArgumentException`.
+- `TokenBucket_Constructor_WithNegativeCapacity_ThrowsArgumentException`: Confirms that constructing a token bucket with negative capacity throws an `ArgumentException`.
+- `RateLimiter_DefaultTokensPerSecond_Is1000`: Validates that the default tokens per second value is 1000.
+- `RateLimiter_CustomBucketCapacity_IsUsed`: Ensures that a custom bucket capacity is properly used when specified.
+- `InvokeAsync_MultipleMessagesWithinLimit_AllPassThrough`: Tests that multiple messages within the rate limit all pass through successfully.
+- `InvokeAsync_ExactBurstSize_AllPassThrough`: Verifies that sending exactly the burst size number of messages all pass through.
+- `InvokeAsync_OneOverBurstSize_LastMessageDropped`: Confirms that sending one message over the burst size results in the last message being dropped.
+- `RateLimiter_Dispose_DisposesTimer`: Tests that disposing the rate limiter properly disposes of its internal timer.
+- `RateLimiter_TryConsumeToken_ThreadSafety_NoRaceConditions`: Validates that token consumption is thread-safe and doesn't have race conditions.
