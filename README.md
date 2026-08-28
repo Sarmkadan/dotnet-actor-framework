@@ -4021,3 +4021,37 @@ public void IsMailboxConfigurationException_ThrowsArgumentNullException_WhenExce
 public void IsPersistenceConfigurationException_ThrowsArgumentNullException_WhenExceptionIsNull
 public void GetConfigurationType_ThrowsArgumentNullException_WhenExceptionIsNull
 ```
+
+## PersistenceServiceTests
+
+The `PersistenceServiceTests` class provides unit tests for the `PersistenceService` class, verifying snapshot and event persistence functionality using in-memory implementations for testing. It covers save/load round-trip operations, loading nonexistent states, snapshot deletion, event appending and reading, and various persistence mechanisms including file-based and in-memory actor state persistence.
+
+### Usage Example
+
+```csharp
+// Initialize test dependencies
+var testActorId = Guid.NewGuid();
+var testActorPath = ActorPath.Parse("/test/actor");
+var snapshotStore = new InMemorySnapshotStore();
+var eventJournal = new InMemoryEventJournal();
+var persistenceService = new PersistenceService(snapshotStore, eventJournal);
+
+// Test saving and loading a snapshot
+var testState = new { Counter = 42, Message = "Hello World" };
+var sequenceNr = 100L;
+await persistenceService.SaveSnapshotAsync(testActorId, testActorPath, testState, sequenceNr);
+var loadedSnapshot = await persistenceService.LoadLatestSnapshotAsync(testActorId, testActorPath);
+Assert.NotNull(loadedSnapshot);
+Assert.Equal(testActorId, loadedSnapshot.ActorId);
+Assert.Equal(testActorPath.ToString(), loadedSnapshot.ActorPath);
+Assert.Equal(sequenceNr, loadedSnapshot.SequenceNr);
+
+// Test loading nonexistent snapshot
+var emptySnapshot = await persistenceService.LoadLatestSnapshotAsync(Guid.NewGuid(), ActorPath.Parse("/nonexistent"));
+Assert.Null(emptySnapshot);
+
+// Test deleting snapshots up to sequence number
+await persistenceService.DeleteSnapshotsAsync(testActorId, testActorPath, 50L);
+var remainingSnapshot = await persistenceService.LoadLatestSnapshotAsync(testActorId, testActorPath);
+Assert.NotNull(remainingSnapshot); // Should still have snapshots with sequence > 50
+```
