@@ -3718,6 +3718,56 @@ genericDefaultTask.Should().NotBeNull();
 genericDefaultTask.Should().BeAssignableTo<Task<int>>();
 ```
 
+## MockActorContextTests
+
+The `MockActorContextTests` class provides unit tests for the `MockActorContext` class, verifying that the mock context correctly records and retrieves sent and received messages, handles null messages, filters messages by type, and provides thread-safe access to message collections.
+
+### Usage Example
+
+```csharp
+// Setup the mock context for an actor path
+var path = new ActorPath("/test/actor");
+var mockContext = new MockActorContext(path);
+
+// Simulate message processing
+var message = new Message("process", new Dictionary<string, object> { { "data", 42 } });
+mockContext.RecordReceivedMessage(message);
+
+// Verify interactions
+Console.WriteLine($"ActorId: {mockContext.ActorId}");
+Console.WriteLine($"Messages Received: {mockContext.GetMessageCount()}");
+Console.WriteLine($"Did receive 'Message' type: {mockContext.DidReceiveMessageType("Message")}");
+
+// Inspect captured messages
+var received = mockContext.GetReceivedMessages();
+Console.WriteLine($"First message data: {received[0].Data["data"]}");
+```
+
+### Test Methods
+
+- `Constructor_ShouldInitializeWithGivenActorPath`: Verifies that the MockActorContext constructor initializes with the given actor path.
+- `Constructor_ShouldThrowOnNullActorPath`: Verifies that the MockActorContext constructor throws an ArgumentNullException when given a null actor path.
+- `RecordReceivedMessage_ShouldAddMessageToReceivedMessages`: Verifies that recording a received message adds it to the received messages collection.
+- `RecordReceivedMessage_ShouldNotAddNullMessage`: Verifies that recording a null received message does not add anything to the received messages collection.
+- `RecordSentMessage_ShouldAddMessageToSentMessages`: Verifies that recording a sent message adds it to the sent messages collection.
+- `RecordSentMessage_ShouldNotAddNullMessage`: Verifies that recording a null sent message does not add anything to the sent messages collection.
+- `GetReceivedMessages_ShouldReturnEmptyListInitially`: Verifies that getting received messages returns an empty list when no messages have been recorded.
+- `GetSentMessages_ShouldReturnEmptyListInitially`: Verifies that getting sent messages returns an empty list when no messages have been recorded.
+- `GetReceivedMessages_ShouldReturnAllReceivedMessages`: Verifies that getting received messages returns all recorded messages in the order they were added.
+- `GetSentMessages_ShouldReturnAllSentMessages`: Verifies that getting sent messages returns all recorded messages in the order they were added.
+- `GetReceivedMessagesOfType_ShouldFilterByMessageTypeName`: Verifies that getting received messages of a specific type returns only messages of that type.
+- `GetReceivedMessagesOfType_ShouldReturnEmptyForNonExistentType`: Verifies that getting received messages of a non-existent type returns an empty collection.
+- `GetMessageCount_ShouldReturnZeroInitially`: Verifies that getting the message count returns zero when no messages have been recorded.
+- `GetMessageCount_ShouldReturnReceivedMessageCount`: Verifies that getting the message count returns the number of received messages.
+- `GetSentMessageCount_ShouldReturnZeroInitially`: Verifies that getting the sent message count returns zero when no messages have been sent.
+- `GetSentMessageCount_ShouldReturnSentMessageCount`: Verifies that getting the sent message count returns the number of sent messages.
+- `Clear_ShouldRemoveAllMessages`: Verifies that clearing the context removes all received and sent messages.
+- `DidReceiveMessageType_ShouldReturnTrueForExistingMessageType`: Verifies that checking for receipt of a message type returns true when that message type has been received.
+- `DidReceiveMessageType_ShouldReturnFalseForNonExistentMessageType`: Verifies that checking for receipt of a message type returns false when that message type has not been received.
+- `DidReceiveMessageCount_ShouldReturnTrueForMatchingCount`: Verifies that checking for receipt of a specific message count returns true when the count matches.
+- `DidReceiveMessageCount_ShouldReturnFalseForNonMatchingCount`: Verifies that checking for receipt of a specific message count returns false when the count does not match.
+- `ThreadSafety_ShouldHandleConcurrentAccess`: Verifies that the MockActorContext handles concurrent access to its message recording methods in a thread-safe manner.
+
 ## MetricsCollectorWorkerTests
 
 The `MetricsCollectorWorkerTests` class provides unit tests for the `MetricsCollectorWorker` background worker, verifying its constructor validation, metrics collection functionality, snapshot management, and health evaluation logic.
