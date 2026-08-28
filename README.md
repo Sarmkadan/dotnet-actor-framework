@@ -3649,3 +3649,71 @@ public void CombineWith_WhenErrorsAreEmpty_ShouldReturnSameMessage
 public void IsValidationType_ShouldReturnTrueIfTypeMatches
 public void IsValidationType_ShouldReturnFalseIfTypeDoesNotMatch
 ```
+
+## ActorRefTests
+
+The `ActorRefTests` class provides unit tests for the `ActorRef` class, specifically testing the `AskAsync` and `AskAsync<T>` methods. These tests verify that the methods correctly handle various scenarios including timeouts, null messages, and dead actors, ensuring proper exception throwing and behavior.
+
+### Usage Example
+
+```csharp
+// Create an actor reference for testing
+var actorRef = new ActorRef(new ActorPath("/user/test-actor"), Guid.NewGuid());
+var message = new ControlMessage("test");
+
+// Test timeout exception
+await actorRef.Invoking(r => r.AskAsync<object>(message, TimeSpan.FromMilliseconds(100)))
+    .Should().ThrowAsync<TimeoutException>();
+
+// Test zero timeout exception
+await actorRef.Invoking(r => r.AskAsync<object>(message, TimeSpan.Zero))
+    .Should().ThrowAsync<ArgumentException>();
+
+// Test null message exception
+await actorRef.Invoking(r => r.AskAsync<object>(null!, TimeSpan.FromSeconds(1)))
+    .Should().ThrowAsync<ArgumentNullException>();
+
+// Test dead actor exception
+actorRef.MarkAsDead();
+await actorRef.Invoking(r => r.AskAsync<object>(message, TimeSpan.FromSeconds(1)))
+    .Should().ThrowAsync<InvalidOperationException>();
+
+// Test generic version with timeout
+await actorRef.Invoking(r => r.AskAsync<string>(message, TimeSpan.FromMilliseconds(100)))
+    .Should().ThrowAsync<TimeoutException>();
+
+// Test generic version with default timeout (uses system default)
+await actorRef.Invoking(r => r.AskAsync<string>(message))
+    .Should().ThrowAsync<TimeoutException>(
+        $"Actor {actorRef.Path} did not respond within {ActorConstants.DefaultTimeoutSeconds} seconds.");
+
+// Test generic version with null message
+await actorRef.Invoking(r => r.AskAsync<string>(null!))
+    .Should().ThrowAsync<ArgumentNullException>();
+
+// Test generic version with dead actor
+actorRef.MarkAsDead();
+await actorRef.Invoking(r => r.AskAsync<string>(message))
+    .Should().ThrowAsync<InvalidOperationException>();
+
+// Test that generic version can be called with different types
+await actorRef.Invoking(r => r.AskAsync<string>(message, TimeSpan.FromMilliseconds(50)))
+    .Should().ThrowAsync<TimeoutException>();
+await actorRef.Invoking(r => r.AskAsync<int>(message, TimeSpan.FromMilliseconds(50)))
+    .Should().ThrowAsync<TimeoutException>();
+await actorRef.Invoking(r => r.AskAsync<object>(message, TimeSpan.FromMilliseconds(50)))
+    .Should().ThrowAsync<TimeoutException>();
+
+// Test that both overloads exist
+var nonGenericTask = actorRef.AskAsync(message, TimeSpan.FromSeconds(1));
+nonGenericTask.Should().NotBeNull();
+nonGenericTask.Should().BeAssignableTo<Task<object?>>();
+
+var genericTask = actorRef.AskAsync<string>(message, TimeSpan.FromSeconds(1));
+genericTask.Should().NotBeNull();
+genericTask.Should().BeAssignableTo<Task<string>>();
+
+var genericDefaultTask = actorRef.AskAsync<int>(message);
+genericDefaultTask.Should().NotBeNull();
+genericDefaultTask.Should().BeAssignableTo<Task<int>>();
+```
