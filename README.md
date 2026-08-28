@@ -42,3 +42,48 @@ eventBus.GetSubscriberCount<TestEvent>().Should().Be(1);
 - `PublishAsync_ActorSystemEvent_ShouldWorkCorrectly`: Tests that EventBus properly handles actor system events.
 - `PublishAsync_HandlerException_ShouldIsolateExceptions`: Tests that handler exceptions are properly isolated and other handlers still execute.
 - `Subscribe_DifferentEventTypes_ShouldNotInterfere`: Tests that handlers for different event types don't interfere with each other.
+
+## InMemoryEventJournalTests
+
+The `InMemoryEventJournalTests` class provides unit tests for the InMemoryEventJournal implementation, verifying that it correctly handles event appending, reading, and deletion operations with proper sequence number management and actor isolation.
+
+### Usage Example
+
+```csharp
+// Arrange
+var journal = new InMemoryEventJournal();
+var actorId = Guid.NewGuid();
+var actorPath = "/test/actor";
+var events = new List<ActorEvent>
+{
+    new(actorId, actorPath, 1L, DateTime.UtcNow, new { Type = "Event1" }),
+    new(actorId, actorPath, 2L, DateTime.UtcNow, new { Type = "Event2" })
+};
+
+// Act
+await journal.AppendEventsAsync(actorId, actorPath, events);
+
+// Assert
+var loadedEvents = await journal.ReadEventsAsync(actorId, actorPath, 1L, 2L);
+loadedEvents.Should().HaveCount(2);
+```
+
+### Test Methods
+
+- `AppendEventsAsync_ShouldAddEventsWithCorrectSequenceNumbers`: Tests that AppendEventsAsync adds events with correct sequence numbers.
+- `AppendEventsAsync_ShouldStoreEventsInCorrectOrder`: Tests that AppendEventsAsync stores events in correct order.
+- `ReadEventsAsync_ShouldReturnEmptyCollection_WhenNoEventsExist`: Tests that ReadEventsAsync returns empty collection when no events exist.
+- `ReadEventsAsync_ShouldReturnEventsFromSpecifiedOffset`: Tests that ReadEventsAsync returns events from specified offset.
+- `ReadEventsAsync_ShouldRespectToSequenceNrLimit`: Tests that ReadEventsAsync respects the to sequence number limit.
+- `ReadEventsAsync_ShouldReturnEventsInAscendingOrder`: Tests that ReadEventsAsync returns events in ascending order.
+- `ReadEventsBackwardAsync_ShouldReturnEventsInDescendingOrder`: Tests that ReadEventsBackwardAsync returns events in descending order.
+- `ReadEventsBackwardAsync_ShouldRespectRangeLimits`: Tests that ReadEventsBackwardAsync respects range limits.
+- `DeleteEventsAsync_ShouldRemoveEventsUpToMaxSequenceNr`: Tests that DeleteEventsAsync removes events up to max sequence number.
+- `DeleteEventsAsync_ShouldDeleteEventsUpToMaxSequenceNr`: Tests that DeleteEventsAsync deletes events up to max sequence number.
+- `DeleteAllEventsAsync_ShouldRemoveAllEventsForActor`: Tests that DeleteAllEventsAsync removes all events for actor.
+- `DeleteAllEventsAsync_ShouldNotAffectOtherActors`: Tests that DeleteAllEventsAsync does not affect other actors.
+- `AppendEventsAsync_ShouldThrow_WhenSequenceNumberAlreadyExists`: Tests that AppendEventsAsync throws when sequence number already exists.
+- `ReadEventsAsync_ShouldHandleLargeSequenceNumberGaps`: Tests that ReadEventsAsync handles large sequence number gaps.
+- `ReadEventsAsync_ShouldHandleEmptyRange`: Tests that ReadEventsAsync handles empty range.
+- `MultipleAppends_ShouldMaintainCorrectOrder`: Tests that multiple appends maintain correct order.
+- `DifferentActorPaths_ShouldIsolateEvents`: Tests that different actor paths isolate events.
