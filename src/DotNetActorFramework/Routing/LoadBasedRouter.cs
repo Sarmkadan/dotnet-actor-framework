@@ -80,7 +80,11 @@ public sealed class LoadBasedRouter
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var target = SampleLeastLoaded(capability);
+        var actors = GetActors(capability);
+        if (actors.Count == 0)
+            return false;
+
+        var target = SelectLeastLoadedFromPool(actors);
         if (target is null)
             return false;
 
@@ -113,18 +117,11 @@ public sealed class LoadBasedRouter
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var actors = _discovery.Discover(capability);
+        var actors = GetActors(capability);
         if (actors.Count == 0)
             return false;
 
-        // Atomically advance the counter; cap at int.MaxValue - 1 to avoid negative overflow.
-        var index = _roundRobinCounters.AddOrUpdate(
-            capability,
-            _ => 0,
-            (_, prev) => prev >= int.MaxValue - 1 ? 0 : prev + 1);
-
-        var target = actors[index % actors.Count];
-
+        var target = SelectRoundRobinFromPool(capability, actors);
         var routed = new Envelope(envelope.Message, target, envelope.Sender);
         return await _dispatcher.DispatchAsync(routed);
     }
@@ -241,5 +238,60 @@ public sealed class LoadBasedRouter
             snapshot[actor.Path.Name] = _mailbox.GetMailboxSize(actor.Id);
 
         return snapshot;
+    }
+
+    /// <summary>
+    /// Gets the actor pool for the specified capability.
+    /// </summary>
+    /// <param name="capability">The capability identifier.</param>
+    /// <returns>The actor pool for the capability.</returns>
+    private IReadOnlyList<ActorRef> GetActors(string capability)
+    {
+        return _discovery.Discover(capability);
+    }
+
+    /// <summary>
+    /// Selects the least-loaded actor from the specified pool using the power-of-two-choices heuristic.
+    /// </summary>
+    /// <param name="pool">The actor pool to select from.</param>
+    /// <returns>The selected actor, or null if the pool is empty.</returns>
+    private ActorRef? SelectLeastLoadedFromPool(IReadOnlyList<ActorRef> pool)
+    {
+        var count = pool.Count;
+        if (count == 0)
+            return null;
+        if (count == 1)
+            return pool[0];
+
+        var random = ThreadRandom;
+        var firstIndex = random.Next(count);
+        var secondIndex = random.Next(count - 1);
+        if (secondIndex >= firstIndex)
+            secondIndex++;
+
+        var first = pool[firstIndex];
+        var second = pool[secondIndex];
+
+        var firstLoad = _mailbox.GetMailboxSize(first.Id);
+        var secondLoad = _mailbox.GetMailboxSize(second.Id);
+
+        return secondLoad < firstLoad ? second : first;
+    }
+
+    /// <summary>
+    /// Selects the next actor in a round-robin sequence from the specified pool.
+    /// </summary>
+    /// <param name="capability">The capability identifier used for the round-robin counter.</param>
+    /// <param name="pool">The actor pool to select from.</param>
+    /// <returns>The selected actor.</returns>
+    private ActorRef SelectRoundRobinFromPool(string capability, IReadOnlyList<ActorRef> pool)
+    {
+        // Atomically advance the counter; cap at int.MaxValue - 1 to avoid negative overflow.
+        var index = _roundRobinCounters.AddOrUpdate(
+            capability,
+            _ => 0,
+            (_, prev) => prev >= int.MaxValue - 1 ? 0 : prev + 1);
+
+        return pool[index % pool.Count];
     }
 }
