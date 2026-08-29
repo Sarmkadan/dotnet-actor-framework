@@ -125,3 +125,18 @@ loaded.State.Should().BeEquivalentTo(new { Counter = 42 });
 - `SaveSnapshotAsync_ShouldHandleNullSnapshot`: Tests that saving a null snapshot is handled gracefully.
 - `SaveSnapshotAsync_ShouldHandleDifferentActorPaths`: Tests that saving snapshots for different actor paths keeps them isolated.
 - `SaveSnapshotAsync_ShouldHandleSameSequenceNumberDifferentActors`: Tests that snapshots with the same sequence number for different actors are stored independently.
+
+## DotnetActorFrameworkExceptionTests
+
+The `DotnetActorFrameworkExceptionTests` class verifies the framework exception's constructors, formatted factory methods, inheritance, message, and inner-exception behavior. Its public test methods can be run by xUnit or invoked directly when isolating a specific exception scenario; each method completes normally when its assertions pass.
+
+### Usage Example
+
+```csharp
+using DotNetActorFramework.Tests;
+
+var tests = new DotnetActorFrameworkExceptionTests();
+
+tests.Constructor_WithMessage_ShouldCreateExceptionWithMessage();
+tests.Create_WithInnerExceptionAndFormat_ShouldCreateExceptionWithInnerException();
+```
