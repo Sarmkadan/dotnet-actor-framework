@@ -18,6 +18,7 @@ public class MessageBatcher : IDisposable
     private readonly TimeSpan _batchTimeout;
     private readonly ConcurrentDictionary<string, MessageBatch> _batches = [];
     private readonly Timer _flushTimer;
+    private volatile bool _disposed;
 
     /// <summary>
     /// Raised by the background timer when a batch exceeds the batch timeout.
@@ -29,7 +30,10 @@ public class MessageBatcher : IDisposable
     public MessageBatcher(int batchSize = 100, TimeSpan? batchTimeout = null)
     {
         if (batchSize <= 0)
-            throw new ArgumentException("Batch size must be positive.", nameof(batchSize));
+            throw new ArgumentOutOfRangeException(nameof(batchSize), batchSize, "Batch size must be positive.");
+
+        if (batchTimeout.HasValue && batchTimeout.Value <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(batchTimeout), batchTimeout, "Batch timeout must be positive.");
 
         _batchSize = batchSize;
         _batchTimeout = batchTimeout ?? TimeSpan.FromSeconds(5);
@@ -44,7 +48,12 @@ public class MessageBatcher : IDisposable
     /// </summary>
     public IEnumerable<Message>? AddMessage(string batchKey, Message message)
     {
-        ArgumentException.ThrowIfNullOrEmpty(batchKey);
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(MessageBatcher));
+
+        if (string.IsNullOrWhiteSpace(batchKey))
+            throw new ArgumentException("Batch key cannot be null or whitespace.", nameof(batchKey));
+
         ArgumentNullException.ThrowIfNull(message);
 
         while (true)
@@ -75,7 +84,11 @@ public class MessageBatcher : IDisposable
     /// </summary>
     public IEnumerable<Message>? FlushBatch(string batchKey)
     {
-        ArgumentException.ThrowIfNullOrEmpty(batchKey);
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(MessageBatcher));
+
+        if (string.IsNullOrWhiteSpace(batchKey))
+            throw new ArgumentException("Batch key cannot be null or whitespace.", nameof(batchKey));
 
         if (!_batches.TryRemove(batchKey, out var batch))
             return null;
@@ -138,7 +151,8 @@ public class MessageBatcher : IDisposable
 
     public void Dispose()
     {
-        _flushTimer?.Dispose();
+        _disposed = true;
+        _flushTimer.Dispose();
     }
 
     private sealed class MessageBatch
@@ -205,7 +219,7 @@ public class MessageThrottler
     public MessageThrottler(int messagesPerSecond)
     {
         if (messagesPerSecond <= 0)
-            throw new ArgumentException("Messages per second must be positive.", nameof(messagesPerSecond));
+            throw new ArgumentOutOfRangeException(nameof(messagesPerSecond), messagesPerSecond, "Messages per second must be positive.");
 
         _messagesPerSecond = messagesPerSecond;
     }
@@ -269,7 +283,10 @@ public class MessageDeduplicator
     public MessageDeduplicator(int maxCapacity = 10000, TimeSpan? deduplicationWindow = null)
     {
         if (maxCapacity <= 0)
-            throw new ArgumentException("Max capacity must be positive.", nameof(maxCapacity));
+            throw new ArgumentOutOfRangeException(nameof(maxCapacity), maxCapacity, "Max capacity must be positive.");
+
+        if (deduplicationWindow.HasValue && deduplicationWindow.Value <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(deduplicationWindow), deduplicationWindow, "Deduplication window must be positive.");
 
         _maxCapacity = maxCapacity;
         _deduplicationWindow = deduplicationWindow ?? TimeSpan.FromMinutes(5);
