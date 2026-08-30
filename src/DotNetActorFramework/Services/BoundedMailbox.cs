@@ -19,6 +19,24 @@ namespace DotNetActorFramework.Services;
 /// </summary>
 public class BoundedMailbox : IMailbox
 {
+    /// <summary>The default percentage at which high-watermark warnings begin.</summary>
+    private const int DefaultHighWatermarkThreshold = 80;
+
+    /// <summary>The minimum valid high-watermark percentage.</summary>
+    private const int MinThresholdPercent = 0;
+
+    /// <summary>The maximum valid high-watermark percentage.</summary>
+    private const int MaxThresholdPercent = 100;
+
+    /// <summary>The divisor used to convert between percentages and load factors.</summary>
+    private const double PercentageDivisor = 100.0;
+
+    /// <summary>The minimum number of messages a bounded mailbox can hold.</summary>
+    private const int MinimumCapacity = 1;
+
+    /// <summary>The message count of an empty mailbox.</summary>
+    private const int EmptyMailboxSize = 0;
+
     private readonly Channel<Envelope> _channel;
     private readonly MailboxOverflowPolicy _overflowPolicy;
     private readonly int _capacity;
@@ -71,16 +89,16 @@ public class BoundedMailbox : IMailbox
         Guid actorId,
         int capacity,
         MailboxOverflowPolicy overflowPolicy = MailboxOverflowPolicy.DropNewest,
-        int highWatermarkThreshold = 80,
+        int highWatermarkThreshold = DefaultHighWatermarkThreshold,
         ILogger<BoundedMailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        if (capacity <= 0)
+        if (capacity < MinimumCapacity)
             throw new MailboxConfigurationException("Mailbox capacity must be greater than zero.");
 
-        if (highWatermarkThreshold < 0 || highWatermarkThreshold > 100)
+        if (highWatermarkThreshold < MinThresholdPercent || highWatermarkThreshold > MaxThresholdPercent)
             throw new MailboxConfigurationException("High watermark threshold must be between 0 and 100.");
 
         ActorId = actorId;
@@ -141,12 +159,12 @@ public class BoundedMailbox : IMailbox
 
             // Check if we've crossed the high watermark threshold and issue warning if needed
             var currentLoadFactor = GetLoadFactor();
-            if (currentLoadFactor >= _highWatermarkThreshold / 100.0 && GetSize() > 0)
+            if (currentLoadFactor >= _highWatermarkThreshold / PercentageDivisor && GetSize() > EmptyMailboxSize)
             {
                 _logger?.LogWarning(
                     "Mailbox for actor {ActorId} has reached high watermark: {CurrentLoadPercent}% full (threshold: {Threshold}%)",
                     ActorId,
-                    (int)(currentLoadFactor * 100),
+                    (int)(currentLoadFactor * PercentageDivisor),
                     _highWatermarkThreshold);
             }
 
@@ -186,7 +204,7 @@ public class BoundedMailbox : IMailbox
             {
                 // Reset high watermark warning if load has dropped below threshold
                 var currentLoadFactor = GetLoadFactor();
-                if (currentLoadFactor < _highWatermarkThreshold / 100.0)
+                if (currentLoadFactor < _highWatermarkThreshold / PercentageDivisor)
                 {
                     // Note: We can't easily track state here, so warnings may re-occur
                     // This is acceptable as it's just a diagnostic
@@ -257,6 +275,24 @@ public class BoundedMailbox : IMailbox
 /// </summary>
 public class BoundedPriorityMailbox : IMailbox
 {
+    /// <summary>The default percentage at which high-watermark warnings begin.</summary>
+    private const int DefaultHighWatermarkThreshold = 80;
+
+    /// <summary>The minimum valid high-watermark percentage.</summary>
+    private const int MinThresholdPercent = 0;
+
+    /// <summary>The maximum valid high-watermark percentage.</summary>
+    private const int MaxThresholdPercent = 100;
+
+    /// <summary>The divisor used to convert between percentages and load factors.</summary>
+    private const double PercentageDivisor = 100.0;
+
+    /// <summary>The minimum number of messages a bounded mailbox can hold.</summary>
+    private const int MinimumCapacity = 1;
+
+    /// <summary>The message count of an empty mailbox.</summary>
+    private const int EmptyMailboxSize = 0;
+
     private readonly Channel<PrioritizedEnvelope> _channel;
     private readonly MailboxOverflowPolicy _overflowPolicy;
     private readonly int _capacity;
@@ -308,16 +344,16 @@ public class BoundedPriorityMailbox : IMailbox
         Guid actorId,
         int capacity,
         MailboxOverflowPolicy overflowPolicy = MailboxOverflowPolicy.DropNewest,
-        int highWatermarkThreshold = 80,
+        int highWatermarkThreshold = DefaultHighWatermarkThreshold,
         ILogger<BoundedPriorityMailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        if (capacity <= 0)
+        if (capacity < MinimumCapacity)
             throw new MailboxConfigurationException("Mailbox capacity must be greater than zero.");
 
-        if (highWatermarkThreshold < 0 || highWatermarkThreshold > 100)
+        if (highWatermarkThreshold < MinThresholdPercent || highWatermarkThreshold > MaxThresholdPercent)
             throw new MailboxConfigurationException("High watermark threshold must be between 0 and 100.");
 
         ActorId = actorId;
@@ -380,12 +416,12 @@ public class BoundedPriorityMailbox : IMailbox
 
             // Check if we've crossed the high watermark threshold and issue warning if needed
             var currentLoadFactor = GetLoadFactor();
-            if (currentLoadFactor >= _highWatermarkThreshold / 100.0 && GetSize() > 0)
+            if (currentLoadFactor >= _highWatermarkThreshold / PercentageDivisor && GetSize() > EmptyMailboxSize)
             {
                 _logger?.LogWarning(
                     "Priority mailbox for actor {ActorId} has reached high watermark: {CurrentLoadPercent}% full (threshold: {Threshold}%)",
                     ActorId,
-                    (int)(currentLoadFactor * 100),
+                    (int)(currentLoadFactor * PercentageDivisor),
                     _highWatermarkThreshold);
             }
 
@@ -425,7 +461,7 @@ public class BoundedPriorityMailbox : IMailbox
             {
                 // Reset high watermark warning if load has dropped below threshold
                 var currentLoadFactor = GetLoadFactor();
-                if (currentLoadFactor < _highWatermarkThreshold / 100.0)
+                if (currentLoadFactor < _highWatermarkThreshold / PercentageDivisor)
                 {
                     // Note: We can't easily track state here, so warnings may re-occur
                     // This is acceptable as it's just a diagnostic
