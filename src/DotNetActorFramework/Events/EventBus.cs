@@ -45,7 +45,7 @@ public delegate Task EventHandler<in TEvent>(TEvent @event) where TEvent : IDoma
 /// </summary>
 public class EventBus
 {
-    private readonly ConcurrentDictionary<string, List<Delegate>> _subscribers = [];
+    private readonly ConcurrentDictionary<Type, List<Delegate>> _subscribers = [];
     private readonly object _lockObject = new();
 
     /// <summary>
@@ -56,7 +56,7 @@ public class EventBus
         if (handler == null)
             throw new ArgumentNullException(nameof(handler));
 
-        var eventType = typeof(TEvent).Name;
+        var eventType = typeof(TEvent);
 
         lock (_lockObject)
         {
@@ -78,7 +78,7 @@ public class EventBus
         if (handler == null)
             return;
 
-        var eventType = typeof(TEvent).Name;
+        var eventType = typeof(TEvent);
 
         lock (_lockObject)
         {
@@ -102,7 +102,7 @@ public class EventBus
 
         // Look up by the static type parameter so it matches the key used by Subscribe;
         // handlers are stored as EventHandler<TEvent> and would otherwise be silently skipped.
-        var eventType = typeof(TEvent).Name;
+        var eventType = typeof(TEvent);
         List<Delegate>? handlers = null;
 
         lock (_lockObject)
@@ -129,7 +129,7 @@ public class EventBus
     /// </summary>
     public int GetSubscriberCount<TEvent>() where TEvent : IDomainEvent
     {
-        var eventType = typeof(TEvent).Name;
+        var eventType = typeof(TEvent);
         lock (_lockObject)
         {
             return _subscribers.TryGetValue(eventType, out var handlers) ? handlers.Count : 0;
