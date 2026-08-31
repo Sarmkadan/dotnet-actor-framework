@@ -6,6 +6,7 @@
 using System.Collections.Concurrent;
 using DotNetActorFramework.Models;
 using DotNetActorFramework.Services;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetActorFramework.Routing;
 
@@ -25,6 +26,7 @@ public sealed class LoadBasedRouter
     private readonly ActorDiscoveryService _discovery;
     private readonly MailboxService _mailbox;
     private readonly MessageDispatcher _dispatcher;
+    private readonly ILogger<LoadBasedRouter>? _logger;
 
     // Per-capability monotonic counters; overflow wraps safely via modulo.
     private readonly ConcurrentDictionary<string, int> _roundRobinCounters =
@@ -44,15 +46,18 @@ public sealed class LoadBasedRouter
     /// <param name="discovery">Discovery service used to resolve the actor pool.</param>
     /// <param name="mailbox">Mailbox service used to query per-actor queue depths.</param>
     /// <param name="dispatcher">Dispatcher used to deliver routed envelopes.</param>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is <c>null</c>.</exception>
+    /// <param name="logger">Optional logger for routing diagnostics.</param>
+    /// <exception cref="ArgumentNullException">Thrown when a required parameter is <c>null</c>.</exception>
     public LoadBasedRouter(
         ActorDiscoveryService discovery,
         MailboxService mailbox,
-        MessageDispatcher dispatcher)
+        MessageDispatcher dispatcher,
+        ILogger<LoadBasedRouter>? logger = null)
     {
         _discovery = discovery ?? throw new ArgumentNullException(nameof(discovery));
         _mailbox = mailbox ?? throw new ArgumentNullException(nameof(mailbox));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        _logger = logger;
     }
 
     /// <summary>
@@ -82,14 +87,41 @@ public sealed class LoadBasedRouter
 
         var actors = GetActors(capability);
         if (actors.Count == 0)
+        {
+            _logger?.LogWarning(
+                "No live actors are registered for capability {Capability}",
+                capability);
             return false;
+        }
 
         var target = SelectLeastLoadedFromPool(actors);
         if (target is null)
             return false;
 
+        var queueDepth = _mailbox.GetMailboxSize(target.Id);
         var routed = new Envelope(envelope.Message, target, envelope.Sender);
-        return await _dispatcher.DispatchAsync(routed);
+        var dispatched = await _dispatcher.DispatchAsync(routed);
+
+        if (dispatched)
+        {
+            _logger?.LogDebug(
+                "Routed envelope for capability {Capability} to actor {ActorId} using strategy {Strategy} with current queue depth {QueueDepth}",
+                capability,
+                target.Id,
+                "LeastLoaded",
+                queueDepth);
+        }
+        else
+        {
+            _logger?.LogWarning(
+                "Routing failed because the target mailbox is full for capability {Capability}, actor {ActorId}, strategy {Strategy}, current queue depth {QueueDepth}",
+                capability,
+                target.Id,
+                "LeastLoaded",
+                queueDepth);
+        }
+
+        return dispatched;
     }
 
     /// <summary>
@@ -119,11 +151,38 @@ public sealed class LoadBasedRouter
 
         var actors = GetActors(capability);
         if (actors.Count == 0)
+        {
+            _logger?.LogWarning(
+                "No live actors are registered for capability {Capability}",
+                capability);
             return false;
+        }
 
         var target = SelectRoundRobinFromPool(capability, actors);
+        var queueDepth = _mailbox.GetMailboxSize(target.Id);
         var routed = new Envelope(envelope.Message, target, envelope.Sender);
-        return await _dispatcher.DispatchAsync(routed);
+        var dispatched = await _dispatcher.DispatchAsync(routed);
+
+        if (dispatched)
+        {
+            _logger?.LogDebug(
+                "Routed envelope for capability {Capability} to actor {ActorId} using strategy {Strategy} with current queue depth {QueueDepth}",
+                capability,
+                target.Id,
+                "RoundRobin",
+                queueDepth);
+        }
+        else
+        {
+            _logger?.LogWarning(
+                "Routing failed because the target mailbox is full for capability {Capability}, actor {ActorId}, strategy {Strategy}, current queue depth {QueueDepth}",
+                capability,
+                target.Id,
+                "RoundRobin",
+                queueDepth);
+        }
+
+        return dispatched;
     }
 
     /// <summary>
