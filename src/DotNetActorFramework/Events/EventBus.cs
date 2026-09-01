@@ -71,6 +71,35 @@ public class EventBus
     }
 
     /// <summary>
+    /// Subscribes to the first event of a specific type and automatically unsubscribes
+    /// the handler before it is invoked.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of domain event to subscribe to.</typeparam>
+    /// <param name="handler">The handler to invoke at most once.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="handler"/> is <see langword="null"/>.
+    /// </exception>
+    public void SubscribeOnce<TEvent>(EventHandler<TEvent> handler) where TEvent : IDomainEvent
+    {
+        if (handler == null)
+            throw new ArgumentNullException(nameof(handler));
+
+        EventHandler<TEvent>? oneTimeHandler = null;
+        var invoked = 0;
+
+        oneTimeHandler = async @event =>
+        {
+            if (Interlocked.Exchange(ref invoked, 1) != 0)
+                return;
+
+            Unsubscribe(oneTimeHandler!);
+            await handler(@event);
+        };
+
+        Subscribe(oneTimeHandler);
+    }
+
+    /// <summary>
     /// Unsubscribes from events of a specific type.
     /// </summary>
     public void Unsubscribe<TEvent>(EventHandler<TEvent> handler) where TEvent : IDomainEvent
@@ -121,6 +150,62 @@ public class EventBus
                 .ToList();
 
             await Task.WhenAll(tasks);
+        }
+    }
+
+    /// <summary>
+    /// Publishes an event to all subscribed handlers and captures failures from each
+    /// handler without preventing the remaining handlers from running.
+    /// Executes handlers asynchronously in parallel.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of domain event to publish.</typeparam>
+    /// <param name="event">The event to publish.</param>
+    /// <returns>
+    /// A task whose result contains the exceptions thrown by handlers. The collection
+    /// is empty when every handler completes successfully.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="event"/> is <see langword="null"/>.
+    /// </exception>
+    public async Task<IReadOnlyList<Exception>> TryPublishAsync<TEvent>(TEvent @event)
+        where TEvent : IDomainEvent
+    {
+        if (@event == null)
+            throw new ArgumentNullException(nameof(@event));
+
+        var eventType = typeof(TEvent);
+        List<Delegate>? handlers = null;
+
+        lock (_lockObject)
+        {
+            if (_subscribers.TryGetValue(eventType, out var subs))
+            {
+                handlers = new List<Delegate>(subs);
+            }
+        }
+
+        if (handlers == null)
+            return Array.Empty<Exception>();
+
+        var tasks = handlers
+            .OfType<EventHandler<TEvent>>()
+            .Select(InvokeHandlerAsync)
+            .ToList();
+
+        var exceptions = await Task.WhenAll(tasks);
+        return exceptions.OfType<Exception>().ToList();
+
+        async Task<Exception?> InvokeHandlerAsync(EventHandler<TEvent> handler)
+        {
+            try
+            {
+                await handler(@event);
+                return null;
+            }
+            catch (Exception exception)
+            {
+                return exception;
+            }
         }
     }
 
