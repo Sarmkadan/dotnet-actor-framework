@@ -40,8 +40,9 @@ public class ActorMetrics
 
     public ActorMetrics(Guid actorId, ActorPath actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorId = actorId;
-        ActorPath = actorPath ?? throw new ArgumentNullException(nameof(actorPath));
+        ActorPath = actorPath;
         CreatedAt = DateTime.UtcNow;
     }
 
