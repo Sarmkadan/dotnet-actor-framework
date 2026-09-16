@@ -53,12 +53,14 @@ public class ActorNotFoundException : ActorException
     public ActorNotFoundException(string actorPath)
         : base($"Actor not found: {actorPath}")
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 
     public ActorNotFoundException(string actorPath, Exception? innerException)
         : base($"Actor not found: {actorPath}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 }
@@ -141,6 +143,7 @@ public class HttpActorCommunicationException : ActorException
     public HttpActorCommunicationException(string requestUrl, HttpStatusCode statusCode, string? responseContent)
         : base($"HTTP communication failed for {requestUrl}. Status: {statusCode}, Response: {responseContent?.Truncate(200)}")
     {
+        ArgumentNullException.ThrowIfNull(requestUrl);
         RequestUrl = requestUrl;
         StatusCode = statusCode;
     }
@@ -148,6 +151,7 @@ public class HttpActorCommunicationException : ActorException
     public HttpActorCommunicationException(string requestUrl, HttpStatusCode statusCode, string? responseContent, Exception? innerException)
         : base($"HTTP communication failed for {requestUrl}. Status: {statusCode}, Response: {responseContent?.Truncate(200)}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(requestUrl);
         RequestUrl = requestUrl;
         StatusCode = statusCode;
     }
@@ -164,6 +168,8 @@ public class ExternalServiceException : ActorException
     public ExternalServiceException(string serviceName, string endpoint, string? message)
         : base(message ?? $"External service '{serviceName}' failed at endpoint '{endpoint}'")
     {
+        ArgumentNullException.ThrowIfNull(serviceName);
+        ArgumentNullException.ThrowIfNull(endpoint);
         ServiceName = serviceName;
         Endpoint = endpoint;
     }
@@ -171,6 +177,8 @@ public class ExternalServiceException : ActorException
     public ExternalServiceException(string serviceName, string endpoint, string? message, Exception? innerException)
         : base(message ?? $"External service '{serviceName}' failed at endpoint '{endpoint}'", innerException)
     {
+        ArgumentNullException.ThrowIfNull(serviceName);
+        ArgumentNullException.ThrowIfNull(endpoint);
         ServiceName = serviceName;
         Endpoint = endpoint;
     }
@@ -185,12 +193,14 @@ public class SerializationException : ActorException
 
     public SerializationException(string contentType, string? message) : base(message ?? $"Serialization failed for content type: {contentType}")
     {
+        ArgumentNullException.ThrowIfNull(contentType);
         ContentType = contentType;
     }
 
     public SerializationException(string contentType, string? message, Exception? innerException)
         : base(message ?? $"Serialization failed for content type: {contentType}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(contentType);
         ContentType = contentType;
     }
 }
@@ -204,12 +214,14 @@ public class PersistenceException : ActorException
 
     public PersistenceException(string actorPath, string? message) : base(message ?? $"Persistence operation failed for actor: {actorPath}")
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 
     public PersistenceException(string actorPath, string? message, Exception? innerException)
         : base(message ?? $"Persistence operation failed for actor: {actorPath}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 }
@@ -223,12 +235,14 @@ public class ClusterException : ActorException
 
     public ClusterException(string nodeAddress, string? message) : base(message ?? $"Cluster operation failed for node: {nodeAddress}")
     {
+        ArgumentNullException.ThrowIfNull(nodeAddress);
         NodeAddress = nodeAddress;
     }
 
     public ClusterException(string nodeAddress, string? message, Exception? innerException)
         : base(message ?? $"Cluster operation failed for node: {nodeAddress}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(nodeAddress);
         NodeAddress = nodeAddress;
     }
 }
@@ -242,12 +256,14 @@ public class MessageDispatchException : ActorException
 
     public MessageDispatchException(string actorPath, string? message) : base(message ?? $"Failed to dispatch message to actor: {actorPath}")
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 
     public MessageDispatchException(string actorPath, string? message, Exception? innerException)
         : base(message ?? $"Failed to dispatch message to actor: {actorPath}", innerException)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 }
