@@ -45,7 +45,8 @@ public ActorPath Path { get; }
 
     internal ActorRef(ActorPath path, Guid id)
     {
-        Path = path ?? throw new ArgumentNullException(nameof(path));
+        ArgumentNullException.ThrowIfNull(path);
+        Path = path;
         Id = id;
         IsAlive = true;
         CreatedAt = DateTime.UtcNow;
@@ -60,8 +61,7 @@ public ActorPath Path { get; }
     /// <exception cref="InvalidOperationException">Thrown if the actor is not alive.</exception>
     public async Task SendAsync(object message)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (!IsAlive)
             throw new InvalidOperationException($"Actor {Path} is not alive.");
@@ -80,8 +80,7 @@ public ActorPath Path { get; }
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="message"/> is null.</exception>
     public async Task<object?> AskAsync(object message, TimeSpan timeout)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentException("Timeout must be greater than zero.", nameof(timeout));
@@ -117,8 +116,7 @@ public ActorPath Path { get; }
     /// <exception cref="TimeoutException">Thrown if the actor does not respond within the specified timeout.</exception>
     public async Task<T> AskAsync<T>(object message, TimeSpan timeout)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentException("Timeout must be greater than zero.", nameof(timeout));
@@ -152,8 +150,7 @@ public ActorPath Path { get; }
     /// <exception cref="TimeoutException">Thrown if the actor does not respond within the default timeout.</exception>
     public async Task<T> AskAsync<T>(object message)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (!IsAlive)
             throw new InvalidOperationException($"Actor {Path} is not alive.");
