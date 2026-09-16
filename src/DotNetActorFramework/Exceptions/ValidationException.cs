@@ -40,11 +40,13 @@ public class InvalidActorPathException : ValidationException
 
     public InvalidActorPathException(string path) : base($"Invalid actor path: {path}")
     {
+        ArgumentNullException.ThrowIfNull(path);
         InvalidPath = path;
     }
 
     public InvalidActorPathException(string path, string? message) : base(message ?? $"Invalid actor path: {path}")
     {
+        ArgumentNullException.ThrowIfNull(path);
         InvalidPath = path;
     }
 }
