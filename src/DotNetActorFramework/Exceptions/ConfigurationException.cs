@@ -16,10 +16,13 @@ public class ConfigurationException : DotnetActorFrameworkException
 
     public ConfigurationException(string? message) : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     public ConfigurationException(string? message, Exception? innerException) : base(message, innerException)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(innerException);
     }
 }
 
@@ -30,10 +33,13 @@ public class ActorSystemConfigurationException : ConfigurationException
 {
     public ActorSystemConfigurationException(string? message) : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     public ActorSystemConfigurationException(string? message, Exception? innerException) : base(message, innerException)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(innerException);
     }
 }
 
@@ -44,10 +50,13 @@ public class MailboxConfigurationException : ConfigurationException
 {
     public MailboxConfigurationException(string? message) : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     public MailboxConfigurationException(string? message, Exception? innerException) : base(message, innerException)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(innerException);
     }
 }
 
@@ -58,9 +67,12 @@ public class PersistenceConfigurationException : ConfigurationException
 {
     public PersistenceConfigurationException(string? message) : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     public PersistenceConfigurationException(string? message, Exception? innerException) : base(message, innerException)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(innerException);
     }
 }
