@@ -28,8 +28,10 @@ public class Envelope
 
     public Envelope(Message message, ActorRef recipient, ActorRef? sender = null)
     {
-        Message = message ?? throw new ArgumentNullException(nameof(message));
-        Recipient = recipient ?? throw new ArgumentNullException(nameof(recipient));
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(recipient);
+        Message = message;
+        Recipient = recipient;
         Sender = sender;
         SentAt = DateTime.UtcNow;
         EnvelopeId = Guid.NewGuid();
