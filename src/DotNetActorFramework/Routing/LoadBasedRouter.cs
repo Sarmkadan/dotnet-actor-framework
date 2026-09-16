@@ -38,7 +38,8 @@ public sealed class LoadBasedRouter
     [ThreadStatic]
     private static Random? _threadLocalRandom;
 
-    private static Random ThreadRandom => _threadLocalRandom ??= new Random(Environment.CurrentManagedThreadId ^ Environment.TickCount);
+    private static Random ThreadRandom =>
+        _threadLocalRandom ??= new Random(Environment.CurrentManagedThreadId ^ Environment.TickCount);
 
     /// <summary>
     /// Initializes a new instance of <see cref="LoadBasedRouter"/>.
@@ -73,7 +74,8 @@ public sealed class LoadBasedRouter
     /// </returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="capability"/> is blank.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is <c>null</c>.</exception>
-    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/>
+    /// is cancelled.</exception>
     public async Task<bool> RouteAsync(
         string capability,
         Envelope envelope,
@@ -137,7 +139,8 @@ public sealed class LoadBasedRouter
     /// </returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="capability"/> is blank.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is <c>null</c>.</exception>
-    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/>
+    /// is cancelled.</exception>
     public async Task<bool> RouteRoundRobinAsync(
         string capability,
         Envelope envelope,
