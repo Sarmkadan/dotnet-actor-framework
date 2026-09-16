@@ -46,7 +46,8 @@ public class MessageDispatcher
         {
             // Replies to a pending Ask (see AskExtensions.AskAsync) are consumed by the
             // waiting caller instead of being enqueued to the recipient's mailbox.
-            if (envelope.Message is ResponseMessage or FailureMessage && AskRegistry.TryComplete(envelope.Message))
+            if (envelope.Message is ResponseMessage or FailureMessage
+                && AskRegistry.TryComplete(envelope.Message))
             {
                 envelope.MarkAsDelivered();
                 IncrementDelivered();
@@ -301,7 +302,8 @@ public class MessageDispatcher
             _deadLetterQueue.Enqueue(envelope);
             if (_deadLetterQueue.Count > 10000)
             {
-                _deadLetterQueue.Dequeue(); // Remove oldest
+                // Remove oldest
+                _deadLetterQueue.Dequeue();
             }
         }
     }
