@@ -41,15 +41,15 @@ public class ActorCacheService
     /// <summary>
     /// Adds or updates an actor reference in the cache.
     /// </summary>
-    /// <param name="path">The actor path to cache.</param>
-    /// <param name="actorRef">The actor reference to associate with the path.</param>
+    /// <param name="path">The actor path to cache. Must not be null, empty, or exceed 260 characters.</param>
+    /// <param name="actorRef">The actor reference to associate with the path. Must not be null.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> or <paramref name="actorRef"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public void Set(ActorPath path, ActorRef actorRef)
     {
-        ArgumentNullException.ThrowIfNull(path);
+        string key = NormalizeAndValidatePath(path);
         ArgumentNullException.ThrowIfNull(actorRef);
 
-        var key = path.ToString();
         var cached = new CachedActorRef(actorRef);
 
         lock (_lockObject)
@@ -67,14 +67,13 @@ public class ActorCacheService
     /// Retrieves an actor reference from the cache.
     /// Returns <c>null</c> if not found or if the cache entry has expired.
     /// </summary>
-    /// <param name="path">The actor path to look up.</param>
+    /// <param name="path">The actor path to look up. Must not be null, empty, or exceed 260 characters.</param>
     /// <returns>The cached <see cref="ActorRef"/> or <c>null</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public ActorRef? Get(ActorPath path)
     {
-        ArgumentNullException.ThrowIfNull(path);
-
-        var key = path.ToString();
+        string key = NormalizeAndValidatePath(path);
         if (!_cache.TryGetValue(key, out var cached))
             return null;
 
@@ -91,14 +90,13 @@ public class ActorCacheService
     /// <summary>
     /// Checks if a path is in the cache.
     /// </summary>
-    /// <param name="path">The actor path to check.</param>
+    /// <param name="path">The actor path to check. Must not be null, empty, or exceed 260 characters.</param>
     /// <returns><c>true</c> if the path exists and is not expired; otherwise, <c>false</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public bool Contains(ActorPath path)
     {
-        ArgumentNullException.ThrowIfNull(path);
-
-        var key = path.ToString();
+        string key = NormalizeAndValidatePath(path);
         if (!_cache.TryGetValue(key, out var cached))
             return false;
 
@@ -114,14 +112,13 @@ public class ActorCacheService
     /// <summary>
     /// Removes an entry from the cache.
     /// </summary>
-    /// <param name="path">The actor path to remove.</param>
+    /// <param name="path">The actor path to remove. Must not be null, empty, or exceed 260 characters.</param>
     /// <returns><c>true</c> if the entry was removed; otherwise, <c>false</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public bool Remove(ActorPath path)
     {
-        ArgumentNullException.ThrowIfNull(path);
-
-        var key = path.ToString();
+        string key = NormalizeAndValidatePath(path);
         return _cache.TryRemove(key, out _);
     }
 
@@ -129,11 +126,12 @@ public class ActorCacheService
     /// Invalidates a cached actor reference, typically called when the actor terminates or restarts.
     /// Supervisors should invoke this method to purge stale references.
     /// </summary>
-    /// <param name="path">The actor path whose cache entry should be removed.</param>
+    /// <param name="path">The actor path whose cache entry should be removed. Must not be null, empty, or exceed 260 characters.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public void Invalidate(ActorPath path)
     {
-        ArgumentNullException.ThrowIfNull(path);
+        string key = NormalizeAndValidatePath(path);
         // Alias for Remove – kept for semantic clarity.
         Remove(path);
     }
@@ -173,6 +171,28 @@ public class ActorCacheService
         {
             _cache.TryRemove(lruItem.Key, out _);
         }
+    }
+
+    /// <summary>
+    /// Normalizes and validates an actor path for use as a cache key.
+    /// </summary>
+    /// <param name="path">The actor path to normalize and validate.</param>
+    /// <returns>The normalized path string suitable for use as a cache key.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
+    private string NormalizeAndValidatePath(ActorPath path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+
+        string pathString = path.ToString();
+        if (string.IsNullOrWhiteSpace(pathString))
+            throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+
+        if (pathString.Length > 260)
+            throw new ArgumentException($"Actor path exceeds maximum length of 260. Actual length: {pathString.Length}.", nameof(path));
+
+        // Normalize to lowercase for case-insensitive caching
+        return pathString.ToLowerInvariant();
     }
 
     private class CachedActorRef
