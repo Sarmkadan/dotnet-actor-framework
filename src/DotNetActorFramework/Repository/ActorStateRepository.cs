@@ -15,6 +15,11 @@ public class ActorStateRepository
     private readonly PersistenceService _persistenceService;
     private readonly ILogger<ActorStateRepository>? _logger;
 
+    protected ActorStateRepository()
+    {
+        _persistenceService = null!;
+    }
+
     public ActorStateRepository(PersistenceService persistenceService, ILogger<ActorStateRepository>? logger = null)
     {
         _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
@@ -94,8 +99,25 @@ public class ActorStateRepository
             if (snapshot?.State is string serializedState)
             {
                 _logger?.LogDebug("Loaded state for actor {ActorId} at path {ActorPath} with sequence {SequenceNr}", actorId, actorPath, snapshot.SequenceNr);
-                // Deserialize the object (JSON string) back to Dictionary<string, object>
-                return JsonSerializer.Deserialize<Dictionary<string, object>>(serializedState);
+                // Deserialize the JSON string back to Dictionary<string, object>
+                // JsonSerializer deserializes values as JsonElement; convert them to native types
+                var raw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(serializedState);
+                if (raw == null) return null;
+                var result = new Dictionary<string, object>();
+                foreach (var kvp in raw)
+                {
+                    result[kvp.Key] = kvp.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => (object)kvp.Value.GetString()!,
+                        JsonValueKind.Number when kvp.Value.TryGetInt64(out var l) => l,
+                        JsonValueKind.Number => kvp.Value.GetDouble(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        JsonValueKind.Null => null!,
+                        _ => kvp.Value.GetRawText()
+                    };
+                }
+                return result;
             }
             _logger?.LogDebug("No state found for actor {ActorId} at path {ActorPath}", actorId, actorPath);
             return null;

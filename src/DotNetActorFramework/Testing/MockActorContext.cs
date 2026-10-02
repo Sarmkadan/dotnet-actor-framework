@@ -4,6 +4,7 @@
 // =============================================================================
 
 using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using DotNetActorFramework.Models;
 
 namespace DotNetActorFramework.Testing;
@@ -21,6 +22,7 @@ public class MockActorContext
     public ActorPath ActorPath { get; }
     public Guid ActorId { get; }
 
+    [JsonConstructor]
     public MockActorContext(ActorPath actorPath)
     {
         ActorPath = actorPath ?? throw new ArgumentNullException(nameof(actorPath));

@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace DotNetActorFramework.Models;
@@ -20,6 +21,7 @@ public class ActorPath : IEquatable<ActorPath>
     public ActorPath? Parent { get; }
     public IReadOnlyList<string> Segments { get; }
 
+    [JsonConstructor]
     public ActorPath(string path)
     {
         if (string.IsNullOrWhiteSpace(path))

@@ -21,7 +21,7 @@ public class MailboxOverflowTests
     public async Task EnqueueAsync_WithBurstTraffic_DoesNotCauseMessageLoss()
     {
         // Arrange
-        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 10 });
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 10, DefaultMailboxOverflowPolicy = Enums.MailboxOverflowPolicy.Fail });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 10);
 
@@ -83,7 +83,7 @@ public class MailboxOverflowTests
     public async Task EnqueueAsync_WithConcurrentAccess_DoesNotCauseRaceConditions()
     {
         // Arrange
-        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 5 });
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 5, DefaultMailboxOverflowPolicy = Enums.MailboxOverflowPolicy.Fail });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 5);
 
@@ -140,7 +140,7 @@ public class MailboxOverflowTests
     public async Task Mailbox_IsFull_AccuratelyReflectsCapacity()
     {
         // Arrange
-        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 3 });
+        var mailboxService = new MailboxService(new ActorSystemOptions { DefaultMailboxCapacity = 3, DefaultMailboxOverflowPolicy = Enums.MailboxOverflowPolicy.Fail });
         var actorId = Guid.NewGuid();
         var mailbox = mailboxService.CreateMailbox(actorId, capacity: 3);
 

@@ -29,7 +29,7 @@ public static class GuardExtensionsJsonExtensions
     public static string ToJson(this Delegate guardPattern, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(guardPattern);
-        return JsonSerializer.Serialize(guardPattern.Method.Name, GetJsonSerializerOptions(indented));
+        return guardPattern.Method.Name;
     }
 
     /// <summary>
@@ -48,13 +48,11 @@ public static class GuardExtensionsJsonExtensions
             return null;
         }
 
-        string patternName = JsonSerializer.Deserialize<string>(json, _jsonSerializerOptions) ?? string.Empty;
-
-        return patternName switch
+        return json switch
         {
             "NotNullOrEmpty" => GuardExtensions.NotNullOrEmpty,
             "NotNullOrWhiteSpace" => GuardExtensions.NotNullOrWhiteSpace,
-            _ => throw new JsonException($"Unknown guard pattern: {patternName}")
+            _ => throw new JsonException($"Unknown guard pattern: {json}")
         };
     }
 
@@ -70,14 +68,12 @@ public static class GuardExtensionsJsonExtensions
 
         if (string.IsNullOrEmpty(json))
         {
-            return true;
+            return false;
         }
 
         try
         {
-            string patternName = JsonSerializer.Deserialize<string>(json, _jsonSerializerOptions) ?? string.Empty;
-
-            value = patternName switch
+            value = json switch
             {
                 "NotNullOrEmpty" => GuardExtensions.NotNullOrEmpty,
                 "NotNullOrWhiteSpace" => GuardExtensions.NotNullOrWhiteSpace,

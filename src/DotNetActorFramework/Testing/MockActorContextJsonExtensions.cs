@@ -48,9 +48,10 @@ public static class MockActorContextJsonExtensions
     /// <returns>A deserialized MockActorContext instance, or null if deserialization fails.</returns>
     /// <exception cref="ArgumentException"><paramref name="json"/> is null or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized to MockActorContext.</exception>
-    public static MockActorContext? FromJson(string json)
+    public static MockActorContext? FromJson(string? json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        if (string.IsNullOrEmpty(json))
+            return null;
         try
         {
             return JsonSerializer.Deserialize<MockActorContext>(json, CamelCaseOptions);
@@ -68,10 +69,11 @@ public static class MockActorContextJsonExtensions
     /// <param name="value">Receives the deserialized MockActorContext if successful.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
     /// <exception cref="ArgumentException"><paramref name="json"/> is null or empty.</exception>
-    public static bool TryFromJson(string json, out MockActorContext? value)
+    public static bool TryFromJson(string? json, out MockActorContext? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
         value = null;
+        if (string.IsNullOrEmpty(json))
+            return false;
         try
         {
             value = JsonSerializer.Deserialize<MockActorContext>(json, CamelCaseOptions);

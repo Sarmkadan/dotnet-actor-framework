@@ -109,7 +109,7 @@ public class CoreFunctionalityTests
     public async Task MailboxService_EnqueueToFullMailbox_ShouldFail()
     {
         // Arrange
-        var options = new ActorSystemOptions { DefaultMailboxCapacity = 1 };
+        var options = new ActorSystemOptions { DefaultMailboxCapacity = 1, DefaultMailboxOverflowPolicy = Enums.MailboxOverflowPolicy.Fail };
         var service = new MailboxService(options);
         var actorId = Guid.NewGuid();
         service.CreateMailbox(actorId);

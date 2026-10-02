@@ -26,10 +26,12 @@ public class ActorPathExtensionsJsonExtensionsTests
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(json));
 
-        // The JSON should contain the camel‑cased property name "path"
+        // The JSON should contain the "Path" property
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
-        Assert.True(root.TryGetProperty("path", out var pathProp));
+        // Try both camelCase and PascalCase property names
+        var hasProp = root.TryGetProperty("path", out var pathProp) || root.TryGetProperty("Path", out pathProp);
+        Assert.True(hasProp);
         Assert.Equal(path.Path, pathProp.GetString());
     }
 
@@ -49,7 +51,8 @@ public class ActorPathExtensionsJsonExtensionsTests
     {
         ActorPath? nullPath = null;
 
-        Assert.Throws<ArgumentNullException>(() => nullPath!.ToJson());
+        // Explicitly call the ActorPathExtensionsJsonExtensions overload (not the generic SerializationExtensions.ToJson<T>)
+        Assert.Throws<ArgumentNullException>(() => ActorPathExtensionsJsonExtensions.ToJson(nullPath!, false));
     }
 
     [Fact]

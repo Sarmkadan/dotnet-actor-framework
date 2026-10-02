@@ -116,7 +116,7 @@ public class BoundedMailbox : IMailbox
             {
                 MailboxOverflowPolicy.DropNewest => BoundedChannelFullMode.DropNewest,
                 MailboxOverflowPolicy.DropOldest => BoundedChannelFullMode.DropOldest,
-                MailboxOverflowPolicy.Fail => BoundedChannelFullMode.DropNewest, // Handled manually
+                MailboxOverflowPolicy.Fail => BoundedChannelFullMode.Wait, // TryWrite returns false when full
                 MailboxOverflowPolicy.Wait => BoundedChannelFullMode.Wait,
                 _ => BoundedChannelFullMode.DropNewest // Default to DropNewest for unknown policies
             }
@@ -144,18 +144,22 @@ public class BoundedMailbox : IMailbox
 
         try
         {
-            // For Fail policy, check if the mailbox is full and throw exception immediately
-            // instead of using the channel's Wait mode which would block indefinitely
-            if (_overflowPolicy == MailboxOverflowPolicy.Fail && IsFull)
+            // For Fail policy, use TryWrite to atomically check capacity and enqueue
+            if (_overflowPolicy == MailboxOverflowPolicy.Fail)
             {
-                throw new MailboxFullException(
-                    ActorId,
-                    _capacity,
-                    GetSize(),
-                    $"Mailbox is full for actor {ActorId} with Fail policy. Capacity: {_capacity}, Current: {GetSize()}");
+                if (!_channel.Writer.TryWrite(envelope))
+                {
+                    throw new MailboxFullException(
+                        ActorId,
+                        _capacity,
+                        GetSize(),
+                        $"Mailbox is full for actor {ActorId} with Fail policy. Capacity: {_capacity}, Current: {GetSize()}");
+                }
             }
-
-            await _channel.Writer.WriteAsync(envelope);
+            else
+            {
+                await _channel.Writer.WriteAsync(envelope);
+            }
 
             // Check if we've crossed the high watermark threshold and issue warning if needed
             var currentLoadFactor = GetLoadFactor();
@@ -370,7 +374,7 @@ public class BoundedPriorityMailbox : IMailbox
             {
                 MailboxOverflowPolicy.DropNewest => BoundedChannelFullMode.DropNewest,
                 MailboxOverflowPolicy.DropOldest => BoundedChannelFullMode.DropOldest,
-                MailboxOverflowPolicy.Fail => BoundedChannelFullMode.DropNewest, // Handled manually
+                MailboxOverflowPolicy.Fail => BoundedChannelFullMode.Wait, // TryWrite returns false when full
                 MailboxOverflowPolicy.Wait => BoundedChannelFullMode.Wait,
                 _ => BoundedChannelFullMode.DropNewest // Default to DropNewest for unknown policies
             }
@@ -398,21 +402,25 @@ public class BoundedPriorityMailbox : IMailbox
 
         try
         {
-            // For Fail policy, check if the mailbox is full and throw exception immediately
-            // instead of using the channel's Wait mode which would block indefinitely
-            if (_overflowPolicy == MailboxOverflowPolicy.Fail && IsFull)
-            {
-                throw new MailboxFullException(
-                    ActorId,
-                    _capacity,
-                    GetSize(),
-                    $"Mailbox is full for actor {ActorId} with Fail policy. Capacity: {_capacity}, Current: {GetSize()}");
-            }
-
             // Create prioritized envelope (default priority is 0)
             var prioritizedEnvelope = new PrioritizedEnvelope(envelope, envelope.Message.Priority);
 
-            await _channel.Writer.WriteAsync(prioritizedEnvelope);
+            // For Fail policy, use TryWrite to atomically check capacity and enqueue
+            if (_overflowPolicy == MailboxOverflowPolicy.Fail)
+            {
+                if (!_channel.Writer.TryWrite(prioritizedEnvelope))
+                {
+                    throw new MailboxFullException(
+                        ActorId,
+                        _capacity,
+                        GetSize(),
+                        $"Mailbox is full for actor {ActorId} with Fail policy. Capacity: {_capacity}, Current: {GetSize()}");
+                }
+            }
+            else
+            {
+                await _channel.Writer.WriteAsync(prioritizedEnvelope);
+            }
 
             // Check if we've crossed the high watermark threshold and issue warning if needed
             var currentLoadFactor = GetLoadFactor();
