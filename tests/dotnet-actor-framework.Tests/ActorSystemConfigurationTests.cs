@@ -77,7 +77,7 @@ public class ActorSystemConfigurationTests
         await configuration.InitializeAsync();
 
         // Act
-        var actorRef = await configuration.CreateActorAsync(new ActorPath("test"));
+        var actorRef = await configuration.CreateActorAsync(new ActorPath("/test"));
 
         // Assert
         Assert.NotNull(actorRef);

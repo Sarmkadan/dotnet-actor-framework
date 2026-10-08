@@ -18,6 +18,11 @@ public class MessagePersistenceRepository
     private readonly object _lockObject = new();
     private long _sequenceNumber;
 
+    protected MessagePersistenceRepository()
+    {
+        _connectionManager = null!;
+    }
+
     public MessagePersistenceRepository(ConnectionManager connectionManager)
     {
         _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));

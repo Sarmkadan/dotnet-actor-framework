@@ -20,6 +20,12 @@ public class SupervisionService
     private readonly Dictionary<Guid, SupervisionContext> _supervisionContexts = [];
     private readonly object _lockObject = new();
 
+    protected SupervisionService()
+    {
+        _registry = null!;
+        _dispatcher = null!;
+    }
+
     public SupervisionService(ActorRegistry registry, MessageDispatcher dispatcher)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));

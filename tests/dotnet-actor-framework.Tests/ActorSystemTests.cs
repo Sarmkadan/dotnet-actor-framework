@@ -45,7 +45,7 @@ public class ActorSystemTests
     {
         // Arrange
         var system = new ActorSystem("TestSystem");
-        var path = new ActorPath("TestActor");
+        var path = new ActorPath("/TestActor");
 
         // Act
         var actorRef = system.CreateActorAsync(path).Result;
@@ -59,7 +59,7 @@ public class ActorSystemTests
     {
         // Arrange
         var system = new ActorSystem("TestSystem");
-        var path = new ActorPath("TestActor");
+        var path = new ActorPath("/TestActor");
         system.CreateActorAsync(path).Wait();
 
         // Act
@@ -74,7 +74,7 @@ public class ActorSystemTests
     {
         // Arrange
         var system = new ActorSystem("TestSystem");
-        var path = new ActorPath("NonExistentActor");
+        var path = new ActorPath("/NonExistentActor");
 
         // Act
         var actorRef = system.GetActorRef(path);

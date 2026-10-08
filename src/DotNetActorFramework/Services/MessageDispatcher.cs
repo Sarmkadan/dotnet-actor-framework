@@ -24,6 +24,13 @@ public class MessageDispatcher
     private int _totalFailed;
     private readonly object _lockObject = new();
 
+    protected MessageDispatcher()
+    {
+        _mailboxService = null!;
+        _registry = null!;
+        _actorSystem = null!;
+    }
+
     public MessageDispatcher(MailboxService mailboxService, ActorRegistry registry, ActorSystem actorSystem)
     {
         _mailboxService = mailboxService ?? throw new ArgumentNullException(nameof(mailboxService));

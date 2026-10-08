@@ -12,13 +12,10 @@ public class DotnetActorFrameworkException : Exception
 
     public DotnetActorFrameworkException(string? message) : base(message)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
     }
 
     public DotnetActorFrameworkException(string? message, Exception? innerException) : base(message, innerException)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
-        ArgumentNullException.ThrowIfNull(innerException);
     }
 
     /// <summary>
@@ -26,7 +23,7 @@ public class DotnetActorFrameworkException : Exception
     /// </summary>
     public static DotnetActorFrameworkException Create(string format, params object?[] args)
     {
-        ArgumentException.ThrowIfNullOrEmpty(format);
+        ArgumentNullException.ThrowIfNull(format);
         ArgumentNullException.ThrowIfNull(args);
         return new DotnetActorFrameworkException(string.Format(format, args));
     }
@@ -37,7 +34,7 @@ public class DotnetActorFrameworkException : Exception
     public static DotnetActorFrameworkException Create(Exception innerException, string format, params object?[] args)
     {
         ArgumentNullException.ThrowIfNull(innerException);
-        ArgumentException.ThrowIfNullOrEmpty(format);
+        ArgumentNullException.ThrowIfNull(format);
         ArgumentNullException.ThrowIfNull(args);
         return new DotnetActorFrameworkException(string.Format(format, args), innerException);
     }

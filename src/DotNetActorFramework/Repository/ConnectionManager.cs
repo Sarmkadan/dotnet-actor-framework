@@ -20,6 +20,14 @@ public class ConnectionManager : IDisposable
     private readonly string _providerName;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionManager"/> class for testing/reflection.
+    /// </summary>
+    protected ConnectionManager()
+    {
+        _providerName = "System.Data.SqlClient";
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
     /// </summary>
     /// <param name="providerName">The ADO.NET provider invariant name.</param>

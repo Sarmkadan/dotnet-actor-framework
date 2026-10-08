@@ -17,6 +17,11 @@ public class ActorMetricsRepository
     private readonly Dictionary<Guid, List<MetricsSnapshot>> _metricsHistory = [];
     private readonly object _lockObject = new();
 
+    protected ActorMetricsRepository()
+    {
+        _connectionManager = null!;
+    }
+
     public ActorMetricsRepository(ConnectionManager connectionManager)
     {
         _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));

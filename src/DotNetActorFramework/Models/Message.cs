@@ -237,14 +237,15 @@ public record FailureMessage : Message
     /// <param name="exception">The exception that caused the failure.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <c>null</c>.</exception>
-    public FailureMessage(string reason, Exception exception)
+    public FailureMessage(string reason, Exception? exception)
         : this(reason)
     {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        ExceptionType = exception.GetType().FullName;
-        ExceptionMessage = exception.Message;
-        StackTrace = exception.StackTrace;
+        if (exception != null)
+        {
+            ExceptionType = exception.GetType().FullName;
+            ExceptionMessage = exception.Message;
+            StackTrace = exception.StackTrace;
+        }
     }
 
     /// <summary>

@@ -24,6 +24,15 @@ public class MailboxService
     private readonly int _defaultCapacity;
     private readonly ILogger<MailboxService>? _logger;
 
+    /// <summary>
+    /// Protected parameterless constructor for testing/mocking.
+    /// </summary>
+    protected MailboxService()
+    {
+        _options = new ActorSystemOptions();
+        _defaultCapacity = _options.DefaultMailboxCapacity;
+    }
+
     public MailboxService(ActorSystemOptions options, ILogger<MailboxService>? logger = null) // Injected options
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
