@@ -53,8 +53,7 @@ public class EventBus
     /// </summary>
     public void Subscribe<TEvent>(EventHandler<TEvent> handler) where TEvent : IDomainEvent
     {
-        if (handler == null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         var eventType = typeof(TEvent);
 
@@ -81,8 +80,7 @@ public class EventBus
     /// </exception>
     public void SubscribeOnce<TEvent>(EventHandler<TEvent> handler) where TEvent : IDomainEvent
     {
-        if (handler == null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         EventHandler<TEvent>? oneTimeHandler = null;
         var invoked = 0;
@@ -126,8 +124,7 @@ public class EventBus
     /// </summary>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : IDomainEvent
     {
-        if (@event == null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(@event);
 
         // Look up by the static type parameter so it matches the key used by Subscribe;
         // handlers are stored as EventHandler<TEvent> and would otherwise be silently skipped.
@@ -170,8 +167,7 @@ public class EventBus
     public async Task<IReadOnlyList<Exception>> TryPublishAsync<TEvent>(TEvent @event)
         where TEvent : IDomainEvent
     {
-        if (@event == null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(@event);
 
         var eventType = typeof(TEvent);
         List<Delegate>? handlers = null;
