@@ -80,7 +80,8 @@ public class Actor
 
     public Actor(ActorPath path, ActorRef? supervisor = null)
     {
-        Path = path ?? throw new ArgumentNullException(nameof(path));
+        ArgumentNullException.ThrowIfNull(path);
+        Path = path;
         Id = Guid.NewGuid();
         Ref = new ActorRef(path, Id);
         Supervisor = supervisor;
@@ -125,8 +126,7 @@ public class Actor
     /// <exception cref="InvalidOperationException">Thrown when the actor is not in <see cref="ActorState.Started"/> state.</exception>
     public async Task ProcessMessageAsync(Message message)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         if (State != ActorState.Started)
             throw new InvalidOperationException($"Actor {Path} is not in Started state.");
