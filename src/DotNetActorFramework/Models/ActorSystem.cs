@@ -81,8 +81,7 @@ public class ActorSystem
     /// <param name="envelope">The envelope that failed to be delivered.</param>
     internal void InvokeDeadLetterHandler(Envelope envelope)
     {
-        if (envelope == null)
-            throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
 
         Action<Envelope>? handler;
         lock (_lockObject)
@@ -103,8 +102,7 @@ public class ActorSystem
     /// <exception cref="InvalidOperationException">Thrown if the actor system is not running or an actor already exists at the specified path.</exception>
     public async Task<ActorRef> CreateActorAsync(ActorPath path, ActorRef? supervisor = null)
     {
-        if (path == null)
-            throw new ArgumentNullException(nameof(path));
+        ArgumentNullException.ThrowIfNull(path);
 
         if (!IsRunning)
             throw new InvalidOperationException("Actor system is not running.");
@@ -137,8 +135,7 @@ public class ActorSystem
     /// </summary>
     public ActorRef? GetActorRef(ActorPath path)
     {
-        if (path == null)
-            throw new ArgumentNullException(nameof(path));
+        ArgumentNullException.ThrowIfNull(path);
 
         lock (_lockObject)
         {
@@ -156,8 +153,7 @@ public class ActorSystem
     /// </summary>
     public IReadOnlyList<ActorRef> GetActorsByParent(ActorPath parentPath)
     {
-        if (parentPath == null)
-            throw new ArgumentNullException(nameof(parentPath));
+        ArgumentNullException.ThrowIfNull(parentPath);
 
         lock (_lockObject)
         {
@@ -185,8 +181,7 @@ public class ActorSystem
     /// </summary>
     public async Task TerminateActorAsync(ActorRef actorRef)
     {
-        if (actorRef == null)
-            throw new ArgumentNullException(nameof(actorRef));
+        ArgumentNullException.ThrowIfNull(actorRef);
 
         Actor? actor = null;
         lock (_lockObject)
@@ -240,8 +235,7 @@ public class ActorSystem
     /// </returns>
     public ActorMetricsSummary? GetActorMetricsSummary(ActorPath path)
     {
-        if (path == null)
-            throw new ArgumentNullException(nameof(path));
+        ArgumentNullException.ThrowIfNull(path);
 
         lock (_lockObject)
         {
