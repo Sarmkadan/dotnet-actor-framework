@@ -46,22 +46,46 @@ public class MailboxOptions
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <see cref="Capacity"/> is not positive, <see cref="Type"/> or <see cref="OverflowPolicy"/>
     /// is not a defined enum value, or <see cref="HighWatermarkWarningThreshold"/> is outside 0-100.
+    /// Only the first violation is reported; use <see cref="GetValidationFailures"/> to collect all of them.
     /// </exception>
     public void Validate()
     {
+        var failure = GetValidationFailures().FirstOrDefault();
+        if (failure is not null)
+            throw new ArgumentOutOfRangeException(failure.Parameter, failure.Value, failure.Message);
+    }
+
+    /// <summary>
+    /// Collects every mailbox setting that violates its rule, without throwing.
+    /// </summary>
+    /// <returns>One entry per violation, in declaration order. Empty when the settings are valid.</returns>
+    public IReadOnlyList<MailboxValidationFailure> GetValidationFailures()
+    {
+        var failures = new List<MailboxValidationFailure>();
+
         if (Capacity <= 0)
-            throw new ArgumentOutOfRangeException(nameof(Capacity), Capacity, "Mailbox capacity must be greater than zero.");
+            failures.Add(new(nameof(Capacity), Capacity, "Mailbox capacity must be greater than zero."));
 
         if (!Enum.IsDefined(Type))
-            throw new ArgumentOutOfRangeException(nameof(Type), Type, $"Unknown mailbox type: {Type}.");
+            failures.Add(new(nameof(Type), Type, $"Unknown mailbox type: {Type}."));
 
         if (!Enum.IsDefined(OverflowPolicy))
-            throw new ArgumentOutOfRangeException(nameof(OverflowPolicy), OverflowPolicy, $"Unknown mailbox overflow policy: {OverflowPolicy}.");
+            failures.Add(new(nameof(OverflowPolicy), OverflowPolicy, $"Unknown mailbox overflow policy: {OverflowPolicy}."));
 
         if (HighWatermarkWarningThreshold < MinThresholdPercent || HighWatermarkWarningThreshold > MaxThresholdPercent)
-            throw new ArgumentOutOfRangeException(
+            failures.Add(new(
                 nameof(HighWatermarkWarningThreshold),
                 HighWatermarkWarningThreshold,
-                "High watermark threshold must be between 0 and 100.");
+                "High watermark threshold must be between 0 and 100."));
+
+        return failures;
     }
+
+    /// <summary>
+    /// A single violated mailbox setting rule.
+    /// </summary>
+    /// <param name="Parameter">The name of the offending property.</param>
+    /// <param name="Value">The offending value.</param>
+    /// <param name="Message">A human-readable description of the violation.</param>
+    public sealed record MailboxValidationFailure(string Parameter, object? Value, string Message);
 }

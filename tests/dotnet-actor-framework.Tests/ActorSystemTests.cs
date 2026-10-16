@@ -1,3 +1,5 @@
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Models;
 using Xunit;
 
@@ -23,6 +25,38 @@ public class ActorSystemTests
     {
         // Act and Assert
         Assert.Throws<ArgumentException>(() => new ActorSystem(string.Empty));
+    }
+
+    [Fact]
+    public void Constructor_ValidOptions_CreatesSystem()
+    {
+        // Arrange
+        var options = ActorSystemOptions.CreateDefault();
+
+        // Act
+        var system = new ActorSystem("TestSystem", null, options);
+
+        // Assert
+        Assert.True(system.IsRunning);
+    }
+
+    [Fact]
+    public void Constructor_InvalidOptions_ThrowsOptionsValidationListingAllViolations()
+    {
+        // Arrange
+        var options = new ActorSystemOptions
+        {
+            DefaultTimeoutSeconds = 0,
+            MaxActorDepth = 0
+        };
+
+        // Act
+        var exception = Assert.Throws<OptionsValidationException>(() => new ActorSystem("TestSystem", null, options));
+
+        // Assert
+        Assert.Equal(2, exception.Failures.Count);
+        Assert.Contains("Default timeout must be greater than zero.", exception.Message);
+        Assert.Contains("Max actor depth must be greater than zero.", exception.Message);
     }
 
     [Fact]

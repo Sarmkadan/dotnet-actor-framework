@@ -5,6 +5,7 @@
 
 using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Enums;
+using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Services;
 using FluentAssertions;
 using Xunit;
@@ -117,7 +118,8 @@ public class MailboxOptionsTests
         var act = () => options.Validate();
 
         // Assert
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        act.Should().ThrowExactly<OptionsValidationException>()
+            .Which.Failures.Should().Contain("Mailbox capacity must be greater than zero.");
     }
 
     /// <summary>

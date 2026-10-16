@@ -78,7 +78,7 @@ public class ActorSystemConfiguration
             }
 
             // Create the actor system
-            _actorSystem = new ActorSystem(_options.SystemName, _dispatcher);
+            _actorSystem = new ActorSystem(_options.SystemName, _dispatcher, _options);
 
             _logger?.LogInformation($"Actor system initialized: {_actorSystem.Name} ({_actorSystem.Id:N})");
             _logger?.LogInformation($"Configuration: Mailbox Capacity={_options.DefaultMailboxCapacity}, " +

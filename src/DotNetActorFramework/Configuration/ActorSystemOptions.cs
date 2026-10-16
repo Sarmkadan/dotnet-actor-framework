@@ -5,6 +5,7 @@
 
 using DotNetActorFramework.Constants;
 using DotNetActorFramework.Enums;
+using DotNetActorFramework.Exceptions;
 
 namespace DotNetActorFramework.Configuration;
 
@@ -62,44 +63,54 @@ public MailboxOverflowPolicy DefaultMailboxOverflowPolicy { get; set; } = Mailbo
 public int HighWatermarkWarningThreshold { get; set; } = 80;
 
     /// <summary>
-    /// Validates the configuration options.
+    /// Validates the configuration options. Every violated rule is collected before anything is thrown,
+    /// so a single exception reports all problems at once.
     /// </summary>
+    /// <exception cref="OptionsValidationException">
+    /// Thrown when one or more settings are invalid. <see cref="OptionsValidationException.Failures"/>
+    /// lists each violation.
+    /// </exception>
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(SystemName))
-            throw new InvalidOperationException("System name cannot be null or empty.");
+        var failures = new List<string>();
 
-        ToMailboxOptions().Validate();
+        if (string.IsNullOrWhiteSpace(SystemName))
+            failures.Add("System name cannot be null or empty.");
+
+        failures.AddRange(ToMailboxOptions().GetValidationFailures().Select(failure => failure.Message));
 
         if (DefaultTimeoutSeconds <= 0)
-            throw new InvalidOperationException("Default timeout must be greater than zero.");
+            failures.Add("Default timeout must be greater than zero.");
 
         if (MaxMessageRetries < 0)
-            throw new InvalidOperationException("Max message retries cannot be negative.");
+            failures.Add("Max message retries cannot be negative.");
 
         if (MaxActorDepth <= 0)
-            throw new InvalidOperationException("Max actor depth must be greater than zero.");
+            failures.Add("Max actor depth must be greater than zero.");
 
         if (SnapshotIntervalSeconds <= 0)
-            throw new InvalidOperationException("Snapshot interval must be greater than zero.");
+            failures.Add("Snapshot interval must be greater than zero.");
 
         if (UnhealthyErrorRateThreshold < 0 || UnhealthyErrorRateThreshold > 1)
-            throw new InvalidOperationException("Unhealthy error rate threshold must be between 0 and 1.");
+            failures.Add("Unhealthy error rate threshold must be between 0 and 1.");
 
         if (CriticalErrorRateThreshold < 0 || CriticalErrorRateThreshold > 1)
-            throw new InvalidOperationException("Critical error rate threshold must be between 0 and 1.");
+            failures.Add("Critical error rate threshold must be between 0 and 1.");
 
         if (UnhealthyErrorRateThreshold >= CriticalErrorRateThreshold)
-            throw new InvalidOperationException("Unhealthy threshold must be less than critical threshold.");
+            failures.Add("Unhealthy threshold must be less than critical threshold.");
 
         if (InitialBackoffDelayMs <= 0)
-            throw new InvalidOperationException("Initial backoff delay must be greater than zero.");
+            failures.Add("Initial backoff delay must be greater than zero.");
 
         if (MaxBackoffDelayMs <= InitialBackoffDelayMs)
-            throw new InvalidOperationException("Max backoff delay must be greater than initial backoff delay.");
+            failures.Add("Max backoff delay must be greater than initial backoff delay.");
 
         if (BackoffMultiplier <= 1.0)
-            throw new InvalidOperationException("Backoff multiplier must be greater than 1.");
+            failures.Add("Backoff multiplier must be greater than 1.");
+
+        if (failures.Count > 0)
+            throw new OptionsValidationException(nameof(ActorSystemOptions), failures);
     }
 
     /// <summary>

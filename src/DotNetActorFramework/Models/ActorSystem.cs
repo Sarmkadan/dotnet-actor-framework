@@ -3,7 +3,9 @@
 // CTO & Software Architect
 // =============================================================================
 
+using DotNetActorFramework.Configuration;
 using DotNetActorFramework.Enums;
+using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Services;
 
 namespace DotNetActorFramework.Models;
@@ -35,11 +37,18 @@ public class ActorSystem
     /// Initializes a new instance of the <see cref="ActorSystem"/> class.
     /// </summary>
     /// <param name="name">The unique name for this actor system.</param>
+    /// <param name="messageDispatcher">The dispatcher used for message delivery, or <c>null</c> for none.</param>
+    /// <param name="options">
+    /// Optional settings to validate before the system is created. When <c>null</c>, no options are validated.
+    /// </param>
     /// <exception cref="ArgumentException">Thrown if the provided name is null or whitespace.</exception>
-    public ActorSystem(string name, MessageDispatcher? messageDispatcher = null)
+    /// <exception cref="OptionsValidationException">Thrown if <paramref name="options"/> contains invalid settings.</exception>
+    public ActorSystem(string name, MessageDispatcher? messageDispatcher = null, ActorSystemOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("System name cannot be null or empty.", nameof(name));
+
+        options?.Validate();
 
         Name = name;
         Id = Guid.NewGuid();
