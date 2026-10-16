@@ -38,11 +38,7 @@ public class MailboxService
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger;
 
-        if (_options.DefaultMailboxCapacity <= 0)
-            throw new ArgumentException("Default capacity must be greater than zero.", nameof(_options.DefaultMailboxCapacity));
-
-        if (_options.HighWatermarkWarningThreshold < 0 || _options.HighWatermarkWarningThreshold > 100)
-            throw new ArgumentException("High watermark threshold must be between 0 and 100.", nameof(_options.HighWatermarkWarningThreshold));
+        _options.ToMailboxOptions().Validate();
 
         _defaultCapacity = _options.DefaultMailboxCapacity;
     }
@@ -52,11 +48,12 @@ public class MailboxService
     /// Uses atomic TryAdd to prevent TOCTOU race between existence check and insertion.
     /// </summary>
     /// <param name="actorId">The ID of the actor for which to create the mailbox.</param>
-    /// <param name="capacity">Optional: the capacity of the mailbox. If 0, uses default capacity.</param>
+    /// <param name="capacity">Optional: the capacity of the mailbox. If 0, uses default capacity; negative values are rejected.</param>
     /// <param name="mailboxType">Optional: the type of mailbox to create. If not specified, uses default from options.</param>
     /// <param name="overflowPolicy">Optional: the overflow policy for the mailbox. If not specified, uses default from options.</param>
     /// <returns>The newly created mailbox.</returns>
-    /// <exception cref="ArgumentException">Thrown when actorId is empty or capacity is invalid.</exception>
+    /// <exception cref="ArgumentException">Thrown when actorId is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the effective mailbox settings are invalid.</exception>
     /// <exception cref="InvalidOperationException">Thrown when a mailbox already exists for the actor.</exception>
     public IMailbox CreateMailbox(
         Guid actorId,
@@ -67,28 +64,32 @@ public class MailboxService
         if (actorId == Guid.Empty)
             throw new ArgumentException("Actor ID cannot be empty.", nameof(actorId));
 
-        var actualCapacity = capacity > 0 ? capacity : _defaultCapacity;
-        var actualMailboxType = mailboxType ?? _options.DefaultMailboxType;
-        var actualOverflowPolicy = overflowPolicy ?? _options.DefaultMailboxOverflowPolicy;
+        var mailboxOptions = new MailboxOptions
+        {
+            Capacity = capacity == 0 ? _defaultCapacity : capacity,
+            Type = mailboxType ?? _options.DefaultMailboxType,
+            OverflowPolicy = overflowPolicy ?? _options.DefaultMailboxOverflowPolicy,
+            HighWatermarkWarningThreshold = _options.HighWatermarkWarningThreshold
+        };
+        mailboxOptions.Validate();
 
         IMailbox mailbox;
-        var highWatermarkThreshold = _options.HighWatermarkWarningThreshold;
-        if (actualMailboxType == MailboxType.Priority)
+        if (mailboxOptions.Type == MailboxType.Priority)
         {
             mailbox = new BoundedPriorityMailbox(
                 actorId,
-                actualCapacity,
-                actualOverflowPolicy,
-                highWatermarkThreshold,
+                mailboxOptions.Capacity,
+                mailboxOptions.OverflowPolicy,
+                mailboxOptions.HighWatermarkWarningThreshold,
                 _logger as ILogger<BoundedPriorityMailbox>);
         }
         else
         {
             mailbox = new BoundedMailbox(
                 actorId,
-                actualCapacity,
-                actualOverflowPolicy,
-                highWatermarkThreshold,
+                mailboxOptions.Capacity,
+                mailboxOptions.OverflowPolicy,
+                mailboxOptions.HighWatermarkWarningThreshold,
                 _logger as ILogger<BoundedMailbox>);
         }
 

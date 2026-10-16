@@ -69,8 +69,7 @@ public int HighWatermarkWarningThreshold { get; set; } = 80;
         if (string.IsNullOrWhiteSpace(SystemName))
             throw new InvalidOperationException("System name cannot be null or empty.");
 
-        if (DefaultMailboxCapacity <= 0)
-            throw new InvalidOperationException("Default mailbox capacity must be greater than zero.");
+        ToMailboxOptions().Validate();
 
         if (DefaultTimeoutSeconds <= 0)
             throw new InvalidOperationException("Default timeout must be greater than zero.");
@@ -103,7 +102,17 @@ public int HighWatermarkWarningThreshold { get; set; } = 80;
             throw new InvalidOperationException("Backoff multiplier must be greater than 1.");
     }
 
-    // Overflow policy is always valid, no validation needed
+    /// <summary>
+    /// Creates the per-mailbox settings described by these options.
+    /// </summary>
+    /// <returns>A new <see cref="MailboxOptions"/> populated from the default mailbox settings.</returns>
+    public MailboxOptions ToMailboxOptions() => new()
+    {
+        Capacity = DefaultMailboxCapacity,
+        Type = DefaultMailboxType,
+        OverflowPolicy = DefaultMailboxOverflowPolicy,
+        HighWatermarkWarningThreshold = HighWatermarkWarningThreshold
+    };
 
     /// <summary>
     /// Creates a default configuration.
