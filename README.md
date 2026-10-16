@@ -65,6 +65,176 @@ Hello, Carol!
 System shut down.
 ```
 
+## Supervision and fault tolerance
+
+An actor's message handler can throw. `Actor.ProcessMessageAsync` catches the exception, records it in the actor's metrics, and calls your `OnErrorAsync` override. The framework does not apply a supervision strategy on its own. Your actor reports the failure by calling `SupervisionService.HandleFailureAsync(ActorRef actor, Exception exception, SupervisionStrategy strategy)`, which sends a control message (`restart`, `stop`, `resume`) through `MessageDispatcher`, or a `FailureMessage` to the parent for escalation. The actor's `OnReceiveAsync` has to handle the control commands it receives. Nothing resets its state for you.
+
+### Strategies
+
+`SupervisionStrategy` (in `DotNetActorFramework.Enums`) has five values:
+
+| Strategy | What `HandleFailureAsync` does |
+|---|---|
+| `Restart` | Sends a `restart` control message. Your `OnReceiveAsync` resets the actor's state. After more than 5 restarts, further failures escalate instead. |
+| `Stop` | Sends a `stop` control message with the exception message as the `failure_reason` parameter. |
+| `Resume` | Sends a `resume` control message. The actor keeps its state and carries on. |
+| `Escalate` | Sends a `FailureMessage` to the parent actor (derived from the path). If there is no parent, the actor is stopped. |
+| `Backoff` | Waits a delay that grows with each failure (100 ms base, capped at 30 s), then sends `resume`. |
+
+### Defaults
+
+| Setting | Default | Notes |
+|---|---|---|
+| Strategy | Chosen by the caller on each `HandleFailureAsync` call | `ActorSystemOptions.DefaultSupervisionStrategy` is `Restart`, but nothing in the framework reads it |
+| Max restarts | 5 per actor (the 6th restart request escalates) | Hard-coded in `SupervisionService`; not configurable |
+| Restart time window | None. The count is not decayed by time | Cleared only by `SupervisionService.ResetContext(Guid actorId)` |
+| Backoff base delay / cap | 100 ms / 30,000 ms | From `ActorConstants`; the `ActorSystemOptions` backoff properties are not read by `SupervisionService` |
+
+### Example
+
+The parent creates a `Worker` child and picks its strategy. The worker throws when it receives a `"poison"` job. Its `OnErrorAsync` hands the failure to `SupervisionService` with `Restart`. The `restart` control message then resets the worker's counter, and the worker keeps processing the jobs that follow. `DrainAsync` plays the role of a dispatcher loop: it processes one message at a time, so the restart runs before the next job.
+
+Create a console app as in [Getting Started](#getting-started) and replace `Program.cs` with the following:
+
+```csharp
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Enums;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+
+public sealed record Job(string Payload) : Message;
+
+public class Worker : Actor
+{
+    private readonly SupervisionService _supervision;
+    private readonly SupervisionStrategy _strategy;
+    private int _processed;
+
+    public Worker(ActorPath path, ActorRef supervisor, SupervisionService supervision, SupervisionStrategy strategy)
+        : base(path, supervisor)
+    {
+        _supervision = supervision;
+        _strategy = strategy;
+    }
+
+    protected override Task OnReceiveAsync(Message message)
+    {
+        switch (message)
+        {
+            case Job { Payload: "poison" }:
+                throw new InvalidOperationException("Cannot process 'poison' job");
+
+            case Job job:
+                _processed++;
+                Console.WriteLine($"[{Path}] processed '{job.Payload}' (total since start: {_processed})");
+                break;
+
+            case ControlMessage { Command: "restart" }:
+                _processed = 0;
+                Console.WriteLine($"[{Path}] restarted, state reset");
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnErrorAsync(Message message, Exception exception)
+    {
+        Console.WriteLine($"[{Path}] failed: {exception.Message}");
+        await _supervision.HandleFailureAsync(Ref, exception, _strategy);
+    }
+}
+
+public class Parent : Actor
+{
+    private readonly MailboxService _mailboxes;
+    private readonly ActorRegistry _registry;
+    private readonly MessageDispatcher _dispatcher;
+    private readonly SupervisionService _supervision;
+
+    public Parent(
+        ActorPath path,
+        MailboxService mailboxes,
+        ActorRegistry registry,
+        MessageDispatcher dispatcher,
+        SupervisionService supervision) : base(path)
+    {
+        _mailboxes = mailboxes;
+        _registry = registry;
+        _dispatcher = dispatcher;
+        _supervision = supervision;
+    }
+
+    public async Task<Worker> SpawnWorkerAsync(string name, SupervisionStrategy strategy)
+    {
+        var worker = new Worker(Path.GetChild(name), Ref, _supervision, strategy);
+        await worker.InitializeAsync();
+        _mailboxes.CreateMailbox(worker.Id);
+        _registry.Register(worker.Ref);
+        return worker;
+    }
+
+    protected override Task OnReceiveAsync(Message message)
+    {
+        if (message is FailureMessage failure)
+            Console.WriteLine($"[{Path}] escalated failure: {failure.Reason}");
+
+        return Task.CompletedTask;
+    }
+}
+
+public static class Program
+{
+    public static async Task Main()
+    {
+        var system = new ActorSystem("supervision-demo");
+        var mailboxes = new MailboxService(new ActorSystemOptions());
+        var registry = new ActorRegistry();
+        var dispatcher = new MessageDispatcher(mailboxes, registry, system);
+        var supervision = new SupervisionService(registry, dispatcher);
+
+        var parent = new Parent(new ActorPath("/user/parent"), mailboxes, registry, dispatcher, supervision);
+        await parent.InitializeAsync();
+        mailboxes.CreateMailbox(parent.Id);
+        registry.Register(parent.Ref);
+
+        var worker = await parent.SpawnWorkerAsync("worker", SupervisionStrategy.Restart);
+
+        await dispatcher.SendAsync(worker.Ref, new Job("a"));
+        await dispatcher.SendAsync(worker.Ref, new Job("b"));
+        await dispatcher.SendAsync(worker.Ref, new Job("poison"));
+        await DrainAsync(dispatcher, worker);
+
+        await dispatcher.SendAsync(worker.Ref, new Job("c"));
+        await DrainAsync(dispatcher, worker);
+
+        var context = supervision.GetContext(worker.Id);
+        Console.WriteLine($"Restarts: {context?.RestartCount ?? 0}");
+
+        await system.ShutdownAsync();
+    }
+
+    private static async Task DrainAsync(MessageDispatcher dispatcher, Actor actor)
+    {
+        while (await dispatcher.GetNextMessageAsync(actor.Id) is { } envelope)
+            await actor.ProcessMessageAsync(envelope.Message);
+    }
+}
+```
+
+Run it with `dotnet run`. Expected output:
+
+```text
+[/user/parent/worker] processed 'a' (total since start: 1)
+[/user/parent/worker] processed 'b' (total since start: 2)
+[/user/parent/worker] failed: Cannot process 'poison' job
+[/user/parent/worker] restarted, state reset
+[/user/parent/worker] processed 'c' (total since start: 1)
+Restarts: 1
+```
+
+To try another strategy, change the `SupervisionStrategy.Restart` argument. This `Worker` only handles `restart`, so with `Resume` or `Stop` the control message is ignored until you add a `case` for it.
+
 ## EventBusTests
 
 The `EventBusTests` class provides unit tests for the EventBus pub/sub functionality, verifying that subscribers can subscribe and unsubscribe, events are published to all subscribers, handler exceptions are handled appropriately, and event types are properly isolated.
