@@ -1,3 +1,70 @@
+## Getting Started
+
+Create a console app and add the package (targets .NET 10):
+
+```bash
+dotnet new console -n Greeting
+cd Greeting
+dotnet add package Zaiets.dotnet.actor.framework --version 1.0.0
+```
+
+Replace `Program.cs` with the following. It defines a `Greeter` actor that prints a greeting for each `Greet` message, sends it three messages, and shuts the system down:
+
+```csharp
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+
+public sealed record Greet(string Name) : Message;
+
+public class Greeter(ActorPath path) : Actor(path)
+{
+    protected override Task OnReceiveAsync(Message message)
+    {
+        if (message is Greet greet)
+            Console.WriteLine($"Hello, {greet.Name}!");
+        return Task.CompletedTask;
+    }
+}
+
+public static class Program
+{
+    public static async Task Main()
+    {
+        var system = new ActorSystem("demo");
+        var mailboxes = new MailboxService(new ActorSystemOptions());
+        var registry = new ActorRegistry();
+        var dispatcher = new MessageDispatcher(mailboxes, registry, system);
+
+        var greeter = new Greeter(new ActorPath("/user/greeter"));
+        await greeter.InitializeAsync();
+        mailboxes.CreateMailbox(greeter.Id);
+        registry.Register(greeter.Ref);
+
+        await dispatcher.SendAsync(greeter.Ref, new Greet("Alice"));
+        await dispatcher.SendAsync(greeter.Ref, new Greet("Bob"));
+        await dispatcher.SendAsync(greeter.Ref, new Greet("Carol"));
+
+        // Messages are delivered to the mailbox; the actor handles them one at a time
+        while (await dispatcher.GetNextMessageAsync(greeter.Id) is { } envelope)
+            await greeter.ProcessMessageAsync(envelope.Message);
+
+        await greeter.TerminateAsync();
+        await system.ShutdownAsync();
+        Console.WriteLine("System shut down.");
+    }
+}
+```
+
+Run it with `dotnet run`. Expected output:
+
+```text
+Hello, Alice!
+Hello, Bob!
+Hello, Carol!
+System shut down.
+```
+
 ## EventBusTests
 
 The `EventBusTests` class provides unit tests for the EventBus pub/sub functionality, verifying that subscribers can subscribe and unsubscribe, events are published to all subscribers, handler exceptions are handled appropriately, and event types are properly isolated.
