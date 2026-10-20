@@ -307,7 +307,7 @@ public class MessageDispatcher
         lock (_lockObject)
         {
             _deadLetterQueue.Enqueue(envelope);
-            if (_deadLetterQueue.Count > 10000)
+            if (_deadLetterQueue.Count > MessageConstants.MaxDeadLetterQueueSize)
             {
                 // Remove oldest
                 _deadLetterQueue.Dequeue();

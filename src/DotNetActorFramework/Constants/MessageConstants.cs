@@ -79,4 +79,10 @@ public static class MessageConstants
     /// Default message batch size for processing.
     /// </summary>
     public const int DefaultMessageBatchSize = 100;
+
+    /// <summary>
+    /// Maximum number of envelopes retained in the dead letter queue.
+    /// When the queue exceeds this limit, the oldest envelope is discarded.
+    /// </summary>
+    public const int MaxDeadLetterQueueSize = 10000;
 }
