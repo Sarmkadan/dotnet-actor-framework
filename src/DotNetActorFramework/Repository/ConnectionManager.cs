@@ -68,6 +68,7 @@ public class ConnectionManager : IDisposable
     /// <param name="connectionString">The database connection string.</param>
     public void Initialize(string connectionString)
     {
+        ArgumentNullException.ThrowIfNull(connectionString);
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new ArgumentException("Connection string cannot be null or empty.", nameof(connectionString));
 
@@ -81,6 +82,7 @@ public class ConnectionManager : IDisposable
     /// <returns>A <see cref="PooledConnection"/> instance.</returns>
     public PooledConnection GetConnection(string key = "default")
     {
+        ArgumentNullException.ThrowIfNull(key);
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Connection key cannot be null or empty.", nameof(key));
 
@@ -107,6 +109,7 @@ public class ConnectionManager : IDisposable
     /// <param name="key">The connection key.</param>
     public void ReleaseConnection(string key = "default")
     {
+        ArgumentNullException.ThrowIfNull(key);
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Connection key cannot be null or empty.", nameof(key));
 
