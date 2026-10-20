@@ -377,3 +377,57 @@ var tests = new DotnetActorFrameworkExceptionTests();
 tests.Constructor_WithMessage_ShouldCreateExceptionWithMessage();
 tests.Create_WithInnerExceptionAndFormat_ShouldCreateExceptionWithInnerException();
 ```
+
+## ActorSystem
+
+`ActorSystem` (in `DotNetActorFramework.Models`) is the root coordinator that owns every actor in a single logical domain. It manages the actor registry, routes messages through its `MessageDispatcher`, tracks system health, and performs an orderly shutdown when you are done.
+
+Each system has a unique `Name`, a generated `Id`, and an `IsRunning` flag that gates all operations. Actors are created with `CreateActorAsync`, looked up with `GetActorRef`, and removed with `TerminateActorAsync`. A dead-letter handler registered via `SetDeadLetterHandler` is called whenever a message cannot be delivered.
+
+### Basic usage
+
+```csharp
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+using DotNetActorFramework.Configuration;
+
+// 1. Bootstrap the system and its services
+var system = new ActorSystem("my-system");
+var mailboxes = new MailboxService(new ActorSystemOptions());
+var registry = new ActorRegistry();
+var dispatcher = new MessageDispatcher(mailboxes, registry, system);
+
+// 2. Optional: observe undeliverable messages
+system.SetDeadLetterHandler(envelope =>
+    Console.WriteLine($"Dead letter to {envelope.Recipient.Path}: {envelope.Message}"));
+
+// 3. Create an actor
+var path = new ActorPath("/user/worker");
+var actorRef = await system.CreateActorAsync(path);
+
+// 4. Query the system
+Console.WriteLine($"Actor count: {system.GetActorCount()}");
+
+var health = system.GetHealthSummary();
+Console.WriteLine($"Healthy: {health.IsHealthy}, actors: {health.TotalActors}");
+
+// 5. Shut down gracefully
+await system.ShutdownAsync();
+Console.WriteLine($"Shut down at {system.ShutdownAt}");
+```
+
+### Key members
+
+| Member | Description |
+|---|---|
+| `CreateActorAsync(path, supervisor?)` | Creates and registers a new actor; throws if the path is taken or the system is stopped. |
+| `GetActorRef(path)` | Returns the `ActorRef` at the given path, or `null`. |
+| `GetAllActors()` | Returns every registered `ActorRef`. |
+| `GetActorsByParent(parentPath)` | Returns actors whose path descends from `parentPath`. |
+| `TerminateActorAsync(actorRef)` | Stops and unregisters an actor. |
+| `GetActorCount()` | Number of live actors. |
+| `GetHealthSummary()` | Returns a `SystemHealthSummary` with counts and error rates. |
+| `GetActorMetricsSummary(path)` | Per-actor metrics (message count, error count, etc.). |
+| `GetErrorActors()` | Actors currently in the `Error` state. |
+| `SetDeadLetterHandler(handler)` | Registers (or clears) a callback for undeliverable messages. |
+| `ShutdownAsync()` | Terminates all actors and marks the system as stopped. |
