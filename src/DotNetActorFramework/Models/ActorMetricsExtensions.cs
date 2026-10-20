@@ -121,5 +121,24 @@ namespace DotNetActorFramework.Models
             // Consider saturated if error rate exceeds threshold OR mailbox depth is high
             return metrics.GetErrorRate() > threshold || metrics.MailboxDepth > 100;
         }
+
+        /// <summary>
+        /// Calculates the throughput ratio as the proportion of received messages that have been fully processed.
+        /// A value of 1.0 means every received message has been processed; lower values indicate a processing backlog.
+        /// </summary>
+        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+        /// <returns>
+        /// A value between 0 and 1 representing the fraction of messages processed.
+        /// Returns 1.0 when no messages have been received (no backlog by definition).
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+        public static double GetThroughputRatio(this ActorMetrics metrics)
+        {
+            ArgumentNullException.ThrowIfNull(metrics);
+            var messageCount = metrics.MessageCount;
+            return messageCount > 0
+                ? (double)metrics.ProcessedCount / messageCount
+                : 1d;
+        }
     }
 }
