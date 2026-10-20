@@ -12,16 +12,36 @@ namespace DotNetActorFramework.Middleware;
 /// </summary>
 public class ErrorHandlingMiddleware : IActorMiddleware
 {
+    /// <summary>
+    /// Gets the name of this middleware.
+    /// </summary>
     public string Name => "ErrorHandlingMiddleware";
+
+    /// <summary>
+    /// Gets the execution order of this middleware in the pipeline.
+    /// </summary>
     public int Order => 100;
 
     private readonly ErrorHandlingStrategy _strategy;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ErrorHandlingMiddleware"/> class with the specified error handling strategy.
+    /// </summary>
+    /// <param name="strategy">The strategy used to handle errors during message processing.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strategy"/> is null.</exception>
     public ErrorHandlingMiddleware(ErrorHandlingStrategy strategy)
     {
         _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
     }
 
+    /// <summary>
+    /// Intercepts message processing, delegating to the next handler and catching any exceptions
+    /// via the configured <see cref="ErrorHandlingStrategy"/>.
+    /// </summary>
+    /// <param name="envelope">The message envelope being processed.</param>
+    /// <param name="next">The next handler in the middleware pipeline.</param>
+    /// <returns><c>true</c> if the message was processed successfully or the error was handled; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is null.</exception>
     public async Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)
     {
         if (envelope == null)
@@ -44,6 +64,12 @@ public class ErrorHandlingMiddleware : IActorMiddleware
 /// </summary>
 public abstract class ErrorHandlingStrategy
 {
+    /// <summary>
+    /// Handles an error that occurred during message processing.
+    /// </summary>
+    /// <param name="envelope">The message envelope that caused the error.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <returns><c>true</c> if the error was handled and processing can continue; <c>false</c> if it should be treated as a failure.</returns>
     public abstract Task<bool> HandleErrorAsync(Envelope envelope, Exception exception);
 }
 
@@ -52,6 +78,7 @@ public abstract class ErrorHandlingStrategy
 /// </summary>
 public class SuppressErrorStrategy : ErrorHandlingStrategy
 {
+    /// <inheritdoc />
     public override Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
         => Task.FromResult(true);
 }
@@ -66,6 +93,12 @@ public class RetryErrorStrategy : ErrorHandlingStrategy
     private readonly double _backoffMultiplier;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, int> _retryCounts = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RetryErrorStrategy"/> class.
+    /// </summary>
+    /// <param name="maxRetries">The maximum number of retry attempts before giving up.</param>
+    /// <param name="initialDelay">The delay before the first retry. Defaults to 100 milliseconds.</param>
+    /// <param name="backoffMultiplier">The multiplier applied to the delay on each subsequent retry.</param>
     public RetryErrorStrategy(
         int maxRetries = 3,
         TimeSpan? initialDelay = null,
@@ -76,6 +109,7 @@ public class RetryErrorStrategy : ErrorHandlingStrategy
         _backoffMultiplier = backoffMultiplier;
     }
 
+    /// <inheritdoc />
     public override async Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
     {
         var id = envelope.EnvelopeId;
@@ -99,6 +133,7 @@ public class RetryErrorStrategy : ErrorHandlingStrategy
 /// </summary>
 public class FailFastErrorStrategy : ErrorHandlingStrategy
 {
+    /// <inheritdoc />
     public override Task<bool> HandleErrorAsync(Envelope envelope, Exception exception)
     {
         throw new InvalidOperationException(
