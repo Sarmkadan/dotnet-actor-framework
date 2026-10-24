@@ -431,3 +431,7 @@ Console.WriteLine($"Shut down at {system.ShutdownAt}");
 | `GetErrorActors()` | Actors currently in the `Error` state. |
 | `SetDeadLetterHandler(handler)` | Registers (or clears) a callback for undeliverable messages. |
 | `ShutdownAsync()` | Terminates all actors and marks the system as stopped. |
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
