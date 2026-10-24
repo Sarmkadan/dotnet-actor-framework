@@ -430,6 +430,7 @@ Console.WriteLine($"Shut down at {system.ShutdownAt}");
 | `GetActorMetricsSummary(path)` | Per-actor metrics (message count, error count, etc.). |
 | `GetErrorActors()` | Actors currently in the `Error` state. |
 | `SetDeadLetterHandler(handler)` | Registers (or clears) a callback for undeliverable messages. |
+| `DeadLetters` | Bounded `DeadLetterQueue` holding undeliverable envelopes (oldest evicted when full). Use `Subscribe(handler)` to observe them. |
 | `ShutdownAsync()` | Terminates all actors and marks the system as stopped. |
 
 ## License

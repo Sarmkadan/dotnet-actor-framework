@@ -1,6 +1,9 @@
 using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Constants;
 using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+using FluentAssertions;
 using Xunit;
 
 namespace DotNetActorFramework.Tests;
@@ -72,6 +75,69 @@ public class ActorSystemTests
         // Assert
         var retrievedHandler = system.GetDeadLetterHandler();
         Assert.NotNull(retrievedHandler);
+    }
+
+    [Fact]
+    public void DeadLetters_NewSystem_ShouldBeEmptyWithDefaultCapacity()
+    {
+        // Arrange and Act
+        var system = new ActorSystem("TestSystem");
+
+        // Assert
+        system.DeadLetters.Should().NotBeNull();
+        system.DeadLetters.Count.Should().Be(0);
+        system.DeadLetters.Capacity.Should().Be(MessageConstants.MaxDeadLetterQueueSize);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_UnknownRecipient_ShouldRouteEnvelopeToDeadLetters()
+    {
+        // Arrange
+        var system = new ActorSystem("TestSystem");
+        var dispatcher = new MessageDispatcher(new MailboxService(new ActorSystemOptions()), new ActorRegistry(), system);
+        var recipient = new ActorRef(new ActorPath("/missing"), Guid.NewGuid());
+        var envelope = new Envelope(new ControlMessage("ping"), recipient);
+
+        // Act
+        var act = () => dispatcher.DispatchAsync(envelope);
+
+        // Assert
+        await act.Should().ThrowAsync<MessageDispatchException>();
+        system.DeadLetters.GetSnapshot().Should().ContainSingle().Which.Should().BeSameAs(envelope);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_UnknownRecipient_ShouldNotifyDeadLetterSubscribers()
+    {
+        // Arrange
+        var system = new ActorSystem("TestSystem");
+        var dispatcher = new MessageDispatcher(new MailboxService(new ActorSystemOptions()), new ActorRegistry(), system);
+        var received = new List<Envelope>();
+        using var _ = system.DeadLetters.Subscribe(received.Add);
+        var recipient = new ActorRef(new ActorPath("/missing"), Guid.NewGuid());
+        var envelope = new Envelope(new ControlMessage("ping"), recipient);
+
+        // Act
+        await Assert.ThrowsAsync<MessageDispatchException>(() => dispatcher.DispatchAsync(envelope));
+
+        // Assert
+        received.Should().ContainSingle().Which.Should().BeSameAs(envelope);
+    }
+
+    [Fact]
+    public void InvokeDeadLetterHandler_WithHandlerThatThrows_ShouldStillRetainEnvelope()
+    {
+        // Arrange
+        var system = new ActorSystem("TestSystem");
+        system.SetDeadLetterHandler(_ => throw new InvalidOperationException("handler failure"));
+        var envelope = new Envelope(new ControlMessage("ping"), new ActorRef(new ActorPath("/gone"), Guid.NewGuid()));
+
+        // Act
+        var act = () => system.InvokeDeadLetterHandler(envelope);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>();
+        system.DeadLetters.GetSnapshot().Should().ContainSingle().Which.Should().BeSameAs(envelope);
     }
 
     [Fact]

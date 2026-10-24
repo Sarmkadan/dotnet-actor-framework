@@ -4,6 +4,7 @@
 // =============================================================================
 
 using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Constants;
 using DotNetActorFramework.Enums;
 using DotNetActorFramework.Exceptions;
 using DotNetActorFramework.Services;
@@ -26,6 +27,11 @@ public class ActorSystem
     public DateTime? ShutdownAt { get; private set; }
     /// <summary>Gets a value indicating whether the actor system is currently running and accepting messages.</summary>
     public bool IsRunning { get; private set; }
+    /// <summary>
+    /// Gets the bounded queue holding every envelope that could not be delivered.
+    /// Subscribe to it to observe dead letters as they occur.
+    /// </summary>
+    public DeadLetterQueue DeadLetters { get; } = new(MessageConstants.MaxDeadLetterQueueSize);
 
     private readonly Dictionary<Guid, Actor> _actors = [];
     private readonly Dictionary<ActorPath, Guid> _pathIndex = [];
@@ -85,12 +91,16 @@ public class ActorSystem
     }
 
     /// <summary>
-    /// Invokes the dead-letter handler with the given envelope, if one is registered.
+    /// Routes an undeliverable envelope to <see cref="DeadLetters"/> and then invokes the dead-letter handler,
+    /// if one is registered.
     /// </summary>
     /// <param name="envelope">The envelope that failed to be delivered.</param>
     internal void InvokeDeadLetterHandler(Envelope envelope)
     {
         ArgumentNullException.ThrowIfNull(envelope);
+
+        // Queue first so the envelope is retained even if the handler throws.
+        DeadLetters.Enqueue(envelope);
 
         Action<Envelope>? handler;
         lock (_lockObject)
