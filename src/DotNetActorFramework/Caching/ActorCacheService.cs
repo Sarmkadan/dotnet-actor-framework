@@ -4,8 +4,7 @@
 // =============================================================================
 
 using System;
-using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using DotNetActorFramework.Models;
 
 namespace DotNetActorFramework.Caching;
@@ -13,33 +12,44 @@ namespace DotNetActorFramework.Caching;
 /// <summary>
 /// Caching service for actor references and paths.
 /// Reduces lookups and improves performance when frequently accessing the same actors.
-/// Uses LRU (Least Recently Used) eviction when capacity is reached.
+/// Uses LRU (Least Recently Used) eviction when capacity is reached. Capacity is a hard cap:
+/// no insert can leave more than <c>maxCapacity</c> entries in the cache.
+/// Expired entries are swept at most once per TTL period from <see cref="Set"/>, so entries that are
+/// never read again are still reclaimed without a background timer.
 /// </summary>
 public class ActorCacheService
 {
-    private readonly ConcurrentDictionary<string, CachedActorRef> _cache;
+    private readonly Dictionary<string, LinkedListNode<Entry>> _index = new(StringComparer.Ordinal);
+    private readonly LinkedList<Entry> _lruOrder = new();
     private readonly int _maxCapacity;
     private readonly TimeSpan _ttl;
     private readonly object _lockObject = new();
+    private DateTime _lastSweepUtc;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ActorCacheService"/>.
     /// </summary>
-    /// <param name="maxCapacity">Maximum number of cached entries. Must be positive.</param>
-    /// <param name="ttl">Time‑to‑live for each entry. If <c>null</c>, defaults to 5 minutes.</param>
+    /// <param name="maxCapacity">Hard cap on the number of cached entries. Must be positive.</param>
+    /// <param name="ttl">Time‑to‑live for each entry. If <c>null</c>, defaults to 5 minutes. Must be positive when provided.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="maxCapacity"/> is not positive.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="ttl"/> is zero or negative.</exception>
     public ActorCacheService(int maxCapacity = 1000, TimeSpan? ttl = null)
     {
         if (maxCapacity <= 0)
             throw new ArgumentException("Max capacity must be positive.", nameof(maxCapacity));
 
+        if (ttl is { } explicitTtl && explicitTtl <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(ttl), explicitTtl, "TTL must be positive.");
+
         _maxCapacity = maxCapacity;
         _ttl = ttl ?? TimeSpan.FromMinutes(5);
-        _cache = new ConcurrentDictionary<string, CachedActorRef>();
+        _lastSweepUtc = DateTime.UtcNow;
     }
 
     /// <summary>
     /// Adds or updates an actor reference in the cache.
+    /// If the cache is full, expired entries are swept first when a sweep is due; if it is still full,
+    /// the least recently used entry is evicted. Both steps are O(1) amortized.
     /// </summary>
     /// <param name="path">The actor path to cache. Must not be null, empty, or exceed 260 characters.</param>
     /// <param name="actorRef">The actor reference to associate with the path. Must not be null.</param>
@@ -47,24 +57,31 @@ public class ActorCacheService
     /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
     public void Set(ActorPath path, ActorRef actorRef)
     {
-        string key = NormalizeAndValidatePath(path);
         ArgumentNullException.ThrowIfNull(actorRef);
-
-        var cached = new CachedActorRef(actorRef);
+        string key = NormalizeAndValidatePath(path);
+        DateTime nowUtc = DateTime.UtcNow;
 
         lock (_lockObject)
         {
-            if (_cache.Count >= _maxCapacity)
+            if (_index.TryGetValue(key, out var existing))
             {
-                EvictLRU();
+                existing.Value = new Entry(key, actorRef, nowUtc);
+                MoveToFront(existing);
+                return;
             }
-        }
 
-        _cache.AddOrUpdate(key, cached, (_, _) => cached);
+            if (IsSweepDue(nowUtc))
+                SweepExpiredLocked(nowUtc);
+
+            if (_index.Count >= _maxCapacity)
+                EvictLeastRecentlyUsedLocked();
+
+            _index[key] = _lruOrder.AddFirst(new Entry(key, actorRef, nowUtc));
+        }
     }
 
     /// <summary>
-    /// Retrieves an actor reference from the cache.
+    /// Retrieves an actor reference from the cache and marks it as most recently used.
     /// Returns <c>null</c> if not found or if the cache entry has expired.
     /// </summary>
     /// <param name="path">The actor path to look up. Must not be null, empty, or exceed 260 characters.</param>
@@ -74,17 +91,22 @@ public class ActorCacheService
     public ActorRef? Get(ActorPath path)
     {
         string key = NormalizeAndValidatePath(path);
-        if (!_cache.TryGetValue(key, out var cached))
-            return null;
+        DateTime nowUtc = DateTime.UtcNow;
 
-        if (DateTime.UtcNow - cached.CachedAt > _ttl)
+        lock (_lockObject)
         {
-            _cache.TryRemove(key, out _);
-            return null;
-        }
+            if (!_index.TryGetValue(key, out var node))
+                return null;
 
-        cached.LastAccessedAt = DateTime.UtcNow;
-        return cached.ActorRef;
+            if (IsExpired(node.Value, nowUtc))
+            {
+                RemoveNodeLocked(node);
+                return null;
+            }
+
+            MoveToFront(node);
+            return node.Value.ActorRef;
+        }
     }
 
     /// <summary>
@@ -97,16 +119,19 @@ public class ActorCacheService
     public bool Contains(ActorPath path)
     {
         string key = NormalizeAndValidatePath(path);
-        if (!_cache.TryGetValue(key, out var cached))
-            return false;
+        DateTime nowUtc = DateTime.UtcNow;
 
-        if (DateTime.UtcNow - cached.CachedAt > _ttl)
+        lock (_lockObject)
         {
-            _cache.TryRemove(key, out _);
+            if (!_index.TryGetValue(key, out var node))
+                return false;
+
+            if (!IsExpired(node.Value, nowUtc))
+                return true;
+
+            RemoveNodeLocked(node);
             return false;
         }
-
-        return true;
     }
 
     /// <summary>
@@ -119,7 +144,15 @@ public class ActorCacheService
     public bool Remove(ActorPath path)
     {
         string key = NormalizeAndValidatePath(path);
-        return _cache.TryRemove(key, out _);
+
+        lock (_lockObject)
+        {
+            if (!_index.TryGetValue(key, out var node))
+                return false;
+
+            RemoveNodeLocked(node);
+            return true;
+        }
     }
 
     /// <summary>
@@ -129,22 +162,34 @@ public class ActorCacheService
     /// <param name="path">The actor path whose cache entry should be removed. Must not be null, empty, or exceed 260 characters.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
-    public void Invalidate(ActorPath path)
-    {
-        string key = NormalizeAndValidatePath(path);
-        // Alias for Remove – kept for semantic clarity.
-        Remove(path);
-    }
+    public void Invalidate(ActorPath path) => Remove(path);
 
     /// <summary>
     /// Clears all cached entries.
     /// </summary>
-    public void Clear() => _cache.Clear();
+    public void Clear()
+    {
+        lock (_lockObject)
+        {
+            _index.Clear();
+            _lruOrder.Clear();
+        }
+    }
 
     /// <summary>
-    /// Gets the number of items currently in the cache.
+    /// Gets the number of items currently in the cache, including entries that have expired but
+    /// have not yet been swept.
     /// </summary>
-    public int Count => _cache.Count;
+    public int Count
+    {
+        get
+        {
+            lock (_lockObject)
+            {
+                return _index.Count;
+            }
+        }
+    }
 
     /// <summary>
     /// Removes expired entries from the cache.
@@ -152,25 +197,55 @@ public class ActorCacheService
     /// <returns>The number of entries removed.</returns>
     public int RemoveExpired()
     {
-        var removed = 0;
-        foreach (var kvp in _cache)
+        DateTime nowUtc = DateTime.UtcNow;
+
+        lock (_lockObject)
         {
-            if (DateTime.UtcNow - kvp.Value.CachedAt > _ttl)
-            {
-                if (_cache.TryRemove(kvp.Key, out _))
-                    removed++;
-            }
+            return SweepExpiredLocked(nowUtc);
         }
+    }
+
+    private bool IsSweepDue(DateTime nowUtc) => nowUtc - _lastSweepUtc >= _ttl;
+
+    private bool IsExpired(Entry entry, DateTime nowUtc) => nowUtc - entry.CachedAtUtc > _ttl;
+
+    private int SweepExpiredLocked(DateTime nowUtc)
+    {
+        var removed = 0;
+        var node = _lruOrder.Last;
+
+        while (node is not null)
+        {
+            var previous = node.Previous;
+            if (IsExpired(node.Value, nowUtc))
+            {
+                RemoveNodeLocked(node);
+                removed++;
+            }
+
+            node = previous;
+        }
+
+        _lastSweepUtc = nowUtc;
         return removed;
     }
 
-    private void EvictLRU()
+    private void EvictLeastRecentlyUsedLocked()
     {
-        var lruItem = _cache.OrderBy(x => x.Value.LastAccessedAt).FirstOrDefault();
-        if (!string.IsNullOrEmpty(lruItem.Key))
-        {
-            _cache.TryRemove(lruItem.Key, out _);
-        }
+        if (_lruOrder.Last is { } leastRecentlyUsed)
+            RemoveNodeLocked(leastRecentlyUsed);
+    }
+
+    private void MoveToFront(LinkedListNode<Entry> node)
+    {
+        _lruOrder.Remove(node);
+        _lruOrder.AddFirst(node);
+    }
+
+    private void RemoveNodeLocked(LinkedListNode<Entry> node)
+    {
+        _index.Remove(node.Value.Key);
+        _lruOrder.Remove(node);
     }
 
     /// <summary>
@@ -180,7 +255,7 @@ public class ActorCacheService
     /// <returns>The normalized path string suitable for use as a cache key.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is empty or exceeds 260 characters.</exception>
-    private string NormalizeAndValidatePath(ActorPath path)
+    private static string NormalizeAndValidatePath(ActorPath path)
     {
         ArgumentNullException.ThrowIfNull(path);
 
@@ -195,17 +270,5 @@ public class ActorCacheService
         return pathString.ToLowerInvariant();
     }
 
-    private class CachedActorRef
-    {
-        public ActorRef ActorRef { get; }
-        public DateTime CachedAt { get; }
-        public DateTime LastAccessedAt { get; set; }
-
-        public CachedActorRef(ActorRef actorRef)
-        {
-            ActorRef = actorRef;
-            CachedAt = DateTime.UtcNow;
-            LastAccessedAt = DateTime.UtcNow;
-        }
-    }
+    private sealed record Entry(string Key, ActorRef ActorRef, DateTime CachedAtUtc);
 }
