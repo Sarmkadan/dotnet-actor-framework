@@ -157,7 +157,7 @@ public class ActorMetrics
 /// </summary>
 public class ActorMetricsSummary
 {
-    public ActorPath ActorPath { get; set; }
+    public ActorPath ActorPath { get; set; } = null!;
     public long MessageCount { get; set; }
     public long ProcessedCount { get; set; }
     public long ErrorCount { get; set; }

@@ -17,7 +17,7 @@ public class ActorSystemBenchmarks
     /// <summary>
     /// The ActorPath used for benchmarking.
     /// </summary>
-    private ActorPath _path;
+    private ActorPath _path = null!;
 
     /// <summary>
     /// Sets up the ActorSystem and ActorPath for benchmarking.

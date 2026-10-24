@@ -216,7 +216,7 @@ public class DeadLetterQueue
 public class DeadLetteredMessage
 {
     public Guid Id { get; set; }
-    public Envelope Envelope { get; set; }
-    public string Reason { get; set; }
+    public Envelope Envelope { get; set; } = null!;
+    public string Reason { get; set; } = null!;
     public DateTime ArrivedAt { get; set; }
 }

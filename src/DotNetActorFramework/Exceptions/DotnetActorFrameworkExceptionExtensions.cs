@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 
-namespace DotNetActorFramework.Exceptions
-{
+namespace DotNetActorFramework.Exceptions;
+
 	/// <summary>
 	/// Provides extension methods for <see cref="DotnetActorFrameworkException"/> to enhance exception handling and analysis.
 	/// </summary>
@@ -64,4 +64,3 @@ namespace DotNetActorFramework.Exceptions
 			};
 		}
 	}
-}

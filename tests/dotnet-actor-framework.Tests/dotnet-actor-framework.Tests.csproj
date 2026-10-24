@@ -3,9 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- xUnit1031: a few tests block on Task results (.Result/.Wait()). Converting them to async is a separate test cleanup. -->
+    <NoWarn>$(NoWarn);xUnit1031</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -42,7 +42,7 @@ public class ClusterActorRegistry
 
             var actorsOnNode = _nodeActors.GetOrAdd(nodeAddress, _ => new ConcurrentBag<ActorRef>());
             actorsOnNode.Add(actorRef);
-            _logger.LogInformation("RegisterActor called with {NodeAddress} and {ActorId}", nodeAddress, actorRef.Id);
+            _logger?.LogInformation("RegisterActor called with {NodeAddress} and {ActorId}", nodeAddress, actorRef.Id);
             _logger?.LogDebug("Registered actor {ActorPath} on node {NodeAddress}", actorRef.Path, nodeAddress);
         }
         catch (ArgumentNullException)

@@ -3,10 +3,9 @@ using System.Threading.Tasks;
 using DotNetActorFramework.Integration;
 using DotNetActorFramework.Tests;
 
-namespace DotNetActorFramework.Tests
+namespace DotNetActorFramework.Tests;
+
+public class ExternalServiceClientTests
 {
-    public class ExternalServiceClientTests
-    {
-        // Test methods go here
-    }
+    // Test methods go here
 }

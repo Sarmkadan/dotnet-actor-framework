@@ -3,10 +3,9 @@ using DotNetActorFramework.Models;
 using System;
 using System.Threading.Tasks;
 
-namespace DotNetActorFramework.Tests
+namespace DotNetActorFramework.Tests;
+
+public class ActorTests
 {
-    public class ActorTests
-    {
-        // Write unit tests for Actor
-    }
+    // Write unit tests for Actor
 }

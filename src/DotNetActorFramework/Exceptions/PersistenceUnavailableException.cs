@@ -34,7 +34,7 @@ public class PersistenceUnavailableException : PersistenceConfigurationException
     /// <param name="format">The format string.</param>
     /// <param name="args">The format arguments.</param>
     /// <returns>A new PersistenceUnavailableException instance.</returns>
-    public static PersistenceUnavailableException Create(string format, params object?[] args)
+    public static new PersistenceUnavailableException Create(string format, params object?[] args)
     {
         return new PersistenceUnavailableException(string.Format(format, args));
     }
@@ -46,7 +46,7 @@ public class PersistenceUnavailableException : PersistenceConfigurationException
     /// <param name="format">The format string.</param>
     /// <param name="args">The format arguments.</param>
     /// <returns>A new PersistenceUnavailableException instance.</returns>
-    public static PersistenceUnavailableException Create(Exception innerException, string format, params object?[] args)
+    public static new PersistenceUnavailableException Create(Exception innerException, string format, params object?[] args)
     {
         return new PersistenceUnavailableException(string.Format(format, args), innerException);
     }

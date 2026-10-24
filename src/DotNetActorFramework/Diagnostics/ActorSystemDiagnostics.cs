@@ -219,11 +219,11 @@ public class ActorSystemDiagnostics
 /// </summary>
 public class DiagnosticsExportDto
 {
-    public PerformanceSnapshot Snapshot { get; set; }
-    public MemoryStatistics Memory { get; set; }
-    public GcStatistics Gc { get; set; }
-    public ActorPathAnalysis Hierarchy { get; set; }
-    public List<ActorLoadInfo> HeaviestActors { get; set; }
+    public PerformanceSnapshot Snapshot { get; set; } = null!;
+    public MemoryStatistics Memory { get; set; } = null!;
+    public GcStatistics Gc { get; set; } = null!;
+    public ActorPathAnalysis Hierarchy { get; set; } = null!;
+    public List<ActorLoadInfo> HeaviestActors { get; set; } = null!;
 }
 
 /// <summary>
@@ -280,7 +280,7 @@ public class ActorPathAnalysis
 /// </summary>
 public class ActorLoadInfo
 {
-    public string Path { get; set; }
+    public string Path { get; set; } = null!;
     public long MessageCount { get; set; }
     public long ErrorCount { get; set; }
 }

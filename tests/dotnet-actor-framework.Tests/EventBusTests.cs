@@ -23,10 +23,8 @@ public class EventBusTests
     {
         // Arrange
         var eventBus = new EventBus();
-        var handlerCalled = false;
         global::DotNetActorFramework.Events.EventHandler<TestEvent> handler = (@event) =>
         {
-            handlerCalled = true;
             return Task.CompletedTask;
         };
 
@@ -45,10 +43,8 @@ public class EventBusTests
     {
         // Arrange
         var eventBus = new EventBus();
-        var handlerCalled = false;
         global::DotNetActorFramework.Events.EventHandler<TestEvent> handler = (@event) =>
         {
-            handlerCalled = true;
             return Task.CompletedTask;
         };
 
@@ -243,18 +239,14 @@ public class EventBusTests
     {
         // Arrange
         var eventBus = new EventBus();
-        var handler1Called = false;
-        var handler2Called = false;
 
         global::DotNetActorFramework.Events.EventHandler<TestEvent> handler1 = (@event) =>
         {
-            handler1Called = true;
             return Task.CompletedTask;
         };
 
         global::DotNetActorFramework.Events.EventHandler<TestEvent> handler2 = (@event) =>
         {
-            handler2Called = true;
             return Task.CompletedTask;
         };
 

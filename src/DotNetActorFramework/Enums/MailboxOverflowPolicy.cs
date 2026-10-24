@@ -23,7 +23,7 @@ public enum MailboxOverflowPolicy
     DropOldest,
 
     /// <summary>
-    /// Fails the enqueue operation by throwing a <see cref="MailboxFullException"/>.
+    /// Fails the enqueue operation by throwing a <see cref="DotNetActorFramework.Exceptions.MailboxFullException"/>.
     /// This applies backpressure to the sender, forcing it to handle the overload.
     /// </summary>
     Fail,

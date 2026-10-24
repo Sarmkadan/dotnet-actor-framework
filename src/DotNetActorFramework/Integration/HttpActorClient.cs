@@ -22,9 +22,9 @@ public class HttpActorClient : IDisposable
     private readonly string _baseUrl;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid ActorId { get; set; }
-    public string State { get; set; }
+    public string State { get; set; } = null!;
     public long MessageCount { get; set; }
     public long ErrorCount { get; set; }
     public double ErrorRate { get; set; }
@@ -181,9 +181,9 @@ public class HttpActorClient : IDisposable
 /// </summary>
 public class ActorHealthStatus
 {
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid ActorId { get; set; }
-    public string State { get; set; }
+    public string State { get; set; } = null!;
     public long MessageCount { get; set; }
     public long ErrorCount { get; set; }
     public double ErrorRate { get; set; }
@@ -195,7 +195,7 @@ public class ActorHealthStatus
 /// </summary>
 public class SystemHealthStatus
 {
-    public string SystemName { get; set; }
+    public string SystemName { get; set; } = null!;
     public Guid SystemId { get; set; }
     public int TotalActors { get; set; }
     public int HealthyActors { get; set; }

@@ -41,7 +41,7 @@ public class ActorExtensionsTests
     public void IsTerminated_NullActor_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => ActorExtensions.IsTerminated(null);
+        Action act = () => ActorExtensions.IsTerminated(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -78,7 +78,7 @@ public class ActorExtensionsTests
     public void IsActive_NullActor_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => ActorExtensions.IsActive(null);
+        Action act = () => ActorExtensions.IsActive(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -101,7 +101,7 @@ public class ActorExtensionsTests
     public void GetMetricsSummary_NullActor_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => ActorExtensions.GetMetricsSummary(null);
+        Action act = () => ActorExtensions.GetMetricsSummary(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();

@@ -192,7 +192,7 @@ public class ActorManagementApi
 public class ApiResponse
 {
     public bool Success { get; set; }
-    public string Message { get; set; }
+    public string Message { get; set; } = null!;
     public object? Data { get; set; }
 }
 
@@ -201,7 +201,7 @@ public class ApiResponse
 /// </summary>
 public class ActorInfo
 {
-    public string Path { get; set; }
+    public string Path { get; set; } = null!;
     public Guid Id { get; set; }
     public bool IsAlive { get; set; }
     public DateTime CreatedAt { get; set; }

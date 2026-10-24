@@ -110,7 +110,7 @@ public class PersistenceService
         {
             // Use a simple sequence number based on the current timestamp
             var sequenceNr = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            await SaveSnapshotAsync(actorId, actorPath, null, sequenceNr);
+            await SaveSnapshotAsync(actorId, actorPath, null!, sequenceNr);
 
             // Reset the counter for this actor
             _eventCounters[key] = 0;

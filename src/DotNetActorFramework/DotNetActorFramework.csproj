@@ -3,13 +3,9 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Zaiets.dotnet.actor.framework</PackageId>
     <Version>1.0.0</Version>
-    <Authors>Vladyslav Zaiets</Authors>
     <Description>A lightweight actor model framework for .NET with mailboxes, supervision trees, and scheduling for building concurrent, message-driven applications.</Description>
     <PackageTags>actor actors concurrency mailbox supervision dotnet</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -24,6 +20,8 @@
     <DebugType>portable</DebugType>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- NU1510: System.Text.Json is in-box on net10, but the explicit reference is kept so the published package keeps its dependency. -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

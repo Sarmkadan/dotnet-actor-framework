@@ -1,0 +1,32 @@
+<Project>
+
+  <!--
+    =============================================================================
+    Author: Vladyslav Zaiets | https://sarmkadan.com
+    CTO & Software Architect
+    =============================================================================
+    Shared MSBuild properties for every project under this directory.
+  -->
+
+  <PropertyGroup>
+    <Authors>Vladyslav Zaiets</Authors>
+    <Copyright>Copyright © Vladyslav Zaiets 2026</Copyright>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!--
+      CS1591: missing XML comment on a public member. The codebase has ~1000 such members;
+      backfilling them is a separate docs pass. Remove this entry once they are documented.
+      CA2264: ArgumentNullException.ThrowIfNull on a non-nullable parameter is "a no-op" per the analyzer.
+      The guards are deliberate: callers outside nullable-aware code (or using `!`) can still pass null.
+    -->
+    <NoWarn>$(NoWarn);CS1591;CA2264</NoWarn>
+  </PropertyGroup>
+
+</Project>

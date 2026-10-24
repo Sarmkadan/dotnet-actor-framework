@@ -2,143 +2,142 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace DotNetActorFramework.Models
+namespace DotNetActorFramework.Models;
+
+/// <summary>
+/// Extension methods for <see cref="ActorMetrics"/>.
+/// </summary>
+public static class ActorMetricsExtensions
 {
     /// <summary>
-    /// Extension methods for <see cref="ActorMetrics"/>.
+    /// Calculates the average number of messages processed per second since the actor was created.
     /// </summary>
-    public static class ActorMetricsExtensions
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>The messages per second as a <see cref="double"/>. Returns 0 if uptime is zero.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static double GetMessagesPerSecond(this ActorMetrics metrics)
     {
-        /// <summary>
-        /// Calculates the average number of messages processed per second since the actor was created.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>The messages per second as a <see cref="double"/>. Returns 0 if uptime is zero.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static double GetMessagesPerSecond(this ActorMetrics metrics)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            var uptimeSeconds = metrics.GetUptime().TotalSeconds;
-            return uptimeSeconds > 0 ? metrics.MessageCount / uptimeSeconds : 0d;
-        }
+        ArgumentNullException.ThrowIfNull(metrics);
+        var uptimeSeconds = metrics.GetUptime().TotalSeconds;
+        return uptimeSeconds > 0 ? metrics.MessageCount / uptimeSeconds : 0d;
+    }
 
-        /// <summary>
-        /// Returns a culture‑invariant, single‑line representation of the most important metric values.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>A formatted string.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static string ToInvariantString(this ActorMetrics metrics)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "ActorId={0} Path={1} Msgs={2} Errors={3} SuccessRate={4:P2} AvgProcTimeMs={5:F2} Uptime={6}",
-                metrics.ActorId,
-                metrics.ActorPath,
-                metrics.MessageCount,
-                metrics.ErrorCount,
-                metrics.GetSuccessRate(),
-                metrics.AverageProcessingTimeMs,
-                metrics.GetUptime());
-        }
+    /// <summary>
+    /// Returns a culture‑invariant, single‑line representation of the most important metric values.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>A formatted string.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static string ToInvariantString(this ActorMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            "ActorId={0} Path={1} Msgs={2} Errors={3} SuccessRate={4:P2} AvgProcTimeMs={5:F2} Uptime={6}",
+            metrics.ActorId,
+            metrics.ActorPath,
+            metrics.MessageCount,
+            metrics.ErrorCount,
+            metrics.GetSuccessRate(),
+            metrics.AverageProcessingTimeMs,
+            metrics.GetUptime());
+    }
 
-        /// <summary>
-        /// Projects the metric values into a read‑only list of key/value pairs suitable for logging or diagnostics.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>An <see cref="IReadOnlyList{KeyValuePair{string, object}}"/> containing the metric data.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static IReadOnlyList<KeyValuePair<string, object>> ToKeyValuePairs(this ActorMetrics metrics)
+    /// <summary>
+    /// Projects the metric values into a read‑only list of key/value pairs suitable for logging or diagnostics.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>A read-only list of <c>KeyValuePair&lt;string, object&gt;</c> containing the metric data.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static IReadOnlyList<KeyValuePair<string, object>> ToKeyValuePairs(this ActorMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        var list = new List<KeyValuePair<string, object>>
         {
-            ArgumentNullException.ThrowIfNull(metrics);
-            var list = new List<KeyValuePair<string, object>>
-            {
-                new(nameof(metrics.ActorId), metrics.ActorId),
-                new(nameof(metrics.ActorPath), metrics.ActorPath?.ToString()),
-                new(nameof(metrics.MessageCount), metrics.MessageCount),
-                new(nameof(metrics.ErrorCount), metrics.ErrorCount),
-                new(nameof(metrics.ProcessedCount), metrics.ProcessedCount),
-                new(nameof(metrics.AverageProcessingTimeMs), metrics.AverageProcessingTimeMs),
-                new(nameof(metrics.CreatedAt), metrics.CreatedAt),
-                new(nameof(metrics.LastMessageTime), metrics.LastMessageTime),
-                new(nameof(metrics.MailboxDepth), metrics.MailboxDepth),
-                new("ErrorRate", metrics.GetErrorRate()),
-                new("SuccessRate", metrics.GetSuccessRate()),
-                new("Uptime", metrics.GetUptime())
-            };
-            return list.AsReadOnly();
-        }
+            new(nameof(metrics.ActorId), metrics.ActorId),
+            new(nameof(metrics.ActorPath), metrics.ActorPath.ToString()),
+            new(nameof(metrics.MessageCount), metrics.MessageCount),
+            new(nameof(metrics.ErrorCount), metrics.ErrorCount),
+            new(nameof(metrics.ProcessedCount), metrics.ProcessedCount),
+            new(nameof(metrics.AverageProcessingTimeMs), metrics.AverageProcessingTimeMs),
+            new(nameof(metrics.CreatedAt), metrics.CreatedAt),
+            new(nameof(metrics.LastMessageTime), metrics.LastMessageTime!),
+            new(nameof(metrics.MailboxDepth), metrics.MailboxDepth),
+            new("ErrorRate", metrics.GetErrorRate()),
+            new("SuccessRate", metrics.GetSuccessRate()),
+            new("Uptime", metrics.GetUptime())
+        };
+        return list.AsReadOnly();
+    }
 
-        /// <summary>
-        /// Determines whether the actor is considered healthy based on a configurable error‑rate threshold.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <param name="errorRateThreshold">The maximum acceptable error rate (default 0.25).</param>
-        /// <returns><c>true</c> if the error rate is less than or equal to the threshold; otherwise <c>false</c>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static bool IsHealthy(this ActorMetrics metrics, double errorRateThreshold = 0.25)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            return metrics.GetErrorRate() <= errorRateThreshold;
-        }
+    /// <summary>
+    /// Determines whether the actor is considered healthy based on a configurable error‑rate threshold.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <param name="errorRateThreshold">The maximum acceptable error rate (default 0.25).</param>
+    /// <returns><c>true</c> if the error rate is less than or equal to the threshold; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static bool IsHealthy(this ActorMetrics metrics, double errorRateThreshold = 0.25)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        return metrics.GetErrorRate() <= errorRateThreshold;
+    }
 
-        /// <summary>
-        /// Calculates the number of messages processed per second since the actor was created.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>The messages per second as a <see cref="double"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static double MessagesPerSecond(this ActorMetrics metrics)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            var uptimeSeconds = metrics.GetUptime().TotalSeconds;
-            return uptimeSeconds > 0 ? metrics.MessageCount / uptimeSeconds : 0d;
-        }
+    /// <summary>
+    /// Calculates the number of messages processed per second since the actor was created.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>The messages per second as a <see cref="double"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static double MessagesPerSecond(this ActorMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        var uptimeSeconds = metrics.GetUptime().TotalSeconds;
+        return uptimeSeconds > 0 ? metrics.MessageCount / uptimeSeconds : 0d;
+    }
 
-        /// <summary>
-        /// Gets the error rate as the ratio of errors to total messages processed.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>The error rate as a value between 0 and 1.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static double ErrorRate(this ActorMetrics metrics)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            return metrics.GetErrorRate();
-        }
+    /// <summary>
+    /// Gets the error rate as the ratio of errors to total messages processed.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>The error rate as a value between 0 and 1.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static double ErrorRate(this ActorMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        return metrics.GetErrorRate();
+    }
 
-        /// <summary>
-        /// Determines whether the actor is saturated based on a threshold for error rate or mailbox depth.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <param name="threshold">The saturation threshold (default 0.8 for error rate, or mailbox depth > 100).</param>
-        /// <returns><c>true</c> if the actor is considered saturated; otherwise <c>false</c>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static bool IsSaturated(this ActorMetrics metrics, double threshold = 0.8)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            // Consider saturated if error rate exceeds threshold OR mailbox depth is high
-            return metrics.GetErrorRate() > threshold || metrics.MailboxDepth > 100;
-        }
+    /// <summary>
+    /// Determines whether the actor is saturated based on a threshold for error rate or mailbox depth.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <param name="threshold">The saturation threshold (default 0.8 for error rate, or mailbox depth > 100).</param>
+    /// <returns><c>true</c> if the actor is considered saturated; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static bool IsSaturated(this ActorMetrics metrics, double threshold = 0.8)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        // Consider saturated if error rate exceeds threshold OR mailbox depth is high
+        return metrics.GetErrorRate() > threshold || metrics.MailboxDepth > 100;
+    }
 
-        /// <summary>
-        /// Calculates the throughput ratio as the proportion of received messages that have been fully processed.
-        /// A value of 1.0 means every received message has been processed; lower values indicate a processing backlog.
-        /// </summary>
-        /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
-        /// <returns>
-        /// A value between 0 and 1 representing the fraction of messages processed.
-        /// Returns 1.0 when no messages have been received (no backlog by definition).
-        /// </returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
-        public static double GetThroughputRatio(this ActorMetrics metrics)
-        {
-            ArgumentNullException.ThrowIfNull(metrics);
-            var messageCount = metrics.MessageCount;
-            return messageCount > 0
-                ? (double)metrics.ProcessedCount / messageCount
-                : 1d;
-        }
+    /// <summary>
+    /// Calculates the throughput ratio as the proportion of received messages that have been fully processed.
+    /// A value of 1.0 means every received message has been processed; lower values indicate a processing backlog.
+    /// </summary>
+    /// <param name="metrics">The <see cref="ActorMetrics"/> instance.</param>
+    /// <returns>
+    /// A value between 0 and 1 representing the fraction of messages processed.
+    /// Returns 1.0 when no messages have been received (no backlog by definition).
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    public static double GetThroughputRatio(this ActorMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        var messageCount = metrics.MessageCount;
+        return messageCount > 0
+            ? (double)metrics.ProcessedCount / messageCount
+            : 1d;
     }
 }

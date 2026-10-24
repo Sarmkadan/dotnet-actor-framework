@@ -122,7 +122,7 @@ public class BackgroundWorkerService : IDisposable
         // Wait for workers to complete (with timeout)
         var completionTasks = _workers.Values
             .Where(wt => wt.Task != null)
-            .Select(wt => Task.WhenAny(wt.Task, Task.Delay(5000)))
+            .Select(wt => Task.WhenAny(wt.Task!, Task.Delay(5000)))
             .ToList();
 
         if (completionTasks.Count > 0)

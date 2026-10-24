@@ -14,7 +14,7 @@ namespace DotNetActorFramework.Messaging;
 /// <see cref="Message.CorrelationId"/> plumbing.
 /// </summary>
 /// <remarks>
-/// A caller sends <typeparamref name="TRequest"/> and gets back a <see cref="Task{TResult}"/> that
+/// A caller sends a <c>TRequest</c> and gets back a <see cref="Task{TResult}"/> that
 /// completes when a reply correlated to that request arrives, faults with
 /// <see cref="AskFailedException"/> if the reply is a <see cref="FailureMessage"/>, and faults with
 /// <see cref="AskTimeoutException"/> if no reply arrives before <c>timeout</c> elapses.

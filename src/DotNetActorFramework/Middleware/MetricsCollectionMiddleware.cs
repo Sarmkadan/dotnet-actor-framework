@@ -183,7 +183,7 @@ public class MetricsCollector
 /// </summary>
 public class MessageTypeMetrics
 {
-    public string MessageType { get; set; }
+    public string MessageType { get; set; } = null!;
     public long ProcessedCount { get; set; }
     public long ErrorCount { get; set; }
     public long TotalLatencyMs { get; set; }
@@ -200,7 +200,7 @@ public class MessageTypeMetrics
 /// </summary>
 public class ActorMetrics
 {
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public long ProcessedCount { get; set; }
     public long ErrorCount { get; set; }
     public long TotalLatencyMs { get; set; }

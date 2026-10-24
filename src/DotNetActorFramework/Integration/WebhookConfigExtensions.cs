@@ -1,76 +1,75 @@
 using System;
 
-namespace DotNetActorFramework.Integration
+namespace DotNetActorFramework.Integration;
+
+/// <summary>
+/// Extension methods that add convenient, reusable behaviour to <see cref="WebhookConfig"/>.
+/// </summary>
+public static class WebhookConfigExtensions
 {
     /// <summary>
-    /// Extension methods that add convenient, reusable behaviour to <see cref="WebhookConfig"/>.
+    /// Activates the webhook and returns the same instance for fluent chaining.
     /// </summary>
-    public static class WebhookConfigExtensions
+    /// <param name="config">The webhook configuration to activate.</param>
+    /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
+    public static WebhookConfig Activate(this WebhookConfig config) =>
+        config.WhenNotNull(c => c.IsActive = true);
+
+    /// <summary>
+    /// Deactivates the webhook and returns the same instance for fluent chaining.
+    /// </summary>
+    /// <param name="config">The webhook configuration to deactivate.</param>
+    /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
+    public static WebhookConfig Deactivate(this WebhookConfig config) =>
+        config.WhenNotNull(c => c.IsActive = false);
+
+    /// <summary>
+    /// Configures the retry policy for the webhook.
+    /// </summary>
+    /// <param name="config">The webhook configuration to configure.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts.</param>
+    /// <param name="retryDelay">Delay between retry attempts.</param>
+    /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxRetries"/> is negative. -or- <paramref name="retryDelay"/> is negative.</exception>
+    public static WebhookConfig WithRetryPolicy(this WebhookConfig config, int maxRetries, TimeSpan retryDelay)
     {
-        /// <summary>
-        /// Activates the webhook and returns the same instance for fluent chaining.
-        /// </summary>
-        /// <param name="config">The webhook configuration to activate.</param>
-        /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
-        public static WebhookConfig Activate(this WebhookConfig config) =>
-            config.WhenNotNull(c => c.IsActive = true);
+        if (config == null)
+            throw new ArgumentNullException(nameof(config));
 
-        /// <summary>
-        /// Deactivates the webhook and returns the same instance for fluent chaining.
-        /// </summary>
-        /// <param name="config">The webhook configuration to deactivate.</param>
-        /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
-        public static WebhookConfig Deactivate(this WebhookConfig config) =>
-            config.WhenNotNull(c => c.IsActive = false);
+        if (maxRetries < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxRetries), maxRetries, "MaxRetries cannot be negative.");
 
-        /// <summary>
-        /// Configures the retry policy for the webhook.
-        /// </summary>
-        /// <param name="config">The webhook configuration to configure.</param>
-        /// <param name="maxRetries">Maximum number of retry attempts.</param>
-        /// <param name="retryDelay">Delay between retry attempts.</param>
-        /// <returns>The same <see cref="WebhookConfig"/> instance for fluent chaining.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxRetries"/> is negative. -or- <paramref name="retryDelay"/> is negative.</exception>
-        public static WebhookConfig WithRetryPolicy(this WebhookConfig config, int maxRetries, TimeSpan retryDelay)
-        {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
+        if (retryDelay < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(retryDelay), retryDelay, "RetryDelay cannot be negative.");
 
-            if (maxRetries < 0)
-                throw new ArgumentOutOfRangeException(nameof(maxRetries), maxRetries, "MaxRetries cannot be negative.");
+        config.MaxRetries = maxRetries;
+        config.RetryDelay = retryDelay;
+        return config;
+    }
 
-            if (retryDelay < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(retryDelay), retryDelay, "RetryDelay cannot be negative.");
+    /// <summary>
+    /// Returns the amount of time that has elapsed since the webhook was created.
+    /// </summary>
+    /// <param name="config">The webhook configuration to calculate age for.</param>
+    /// <returns>The elapsed time since the webhook was created.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
+    public static TimeSpan GetAge(this WebhookConfig config)
+    {
+        if (config == null)
+            throw new ArgumentNullException(nameof(config));
 
-            config.MaxRetries = maxRetries;
-            config.RetryDelay = retryDelay;
-            return config;
-        }
+        return DateTime.UtcNow - config.CreatedAt;
+    }
 
-        /// <summary>
-        /// Returns the amount of time that has elapsed since the webhook was created.
-        /// </summary>
-        /// <param name="config">The webhook configuration to calculate age for.</param>
-        /// <returns>The elapsed time since the webhook was created.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="config"/> is <see langword="null"/>.</exception>
-        public static TimeSpan GetAge(this WebhookConfig config)
-        {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
+    private static T WhenNotNull<T>(this T value, Action<T> action) where T : class
+    {
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
 
-            return DateTime.UtcNow - config.CreatedAt;
-        }
-
-        private static T WhenNotNull<T>(this T value, Action<T> action) where T : class
-        {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-
-            action(value);
-            return value;
-        }
+        action(value);
+        return value;
     }
 }

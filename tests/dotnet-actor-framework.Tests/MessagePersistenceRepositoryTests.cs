@@ -3,10 +3,9 @@ using System.Threading.Tasks;
 using Xunit;
 using Moq;
 
-namespace dotnet_actor_framework.Tests
+namespace dotnet_actor_framework.Tests;
+
+public class MessagePersistenceRepositoryTests
 {
-    public class MessagePersistenceRepositoryTests
-    {
-        // TODO: Write tests
-    }
+    // TODO: Write tests
 }

@@ -77,7 +77,7 @@ public class MockActorContextTests
     public void RecordReceivedMessage_ShouldNotAddNullMessage()
     {
         // Act
-        _mockContext.RecordReceivedMessage(null);
+        _mockContext.RecordReceivedMessage(null!);
 
         // Assert
         var receivedMessages = _mockContext.GetReceivedMessages();
@@ -109,7 +109,7 @@ public class MockActorContextTests
     public void RecordSentMessage_ShouldNotAddNullMessage()
     {
         // Act
-        _mockContext.RecordSentMessage(null);
+        _mockContext.RecordSentMessage(null!);
 
         // Assert
         var sentMessages = _mockContext.GetSentMessages();

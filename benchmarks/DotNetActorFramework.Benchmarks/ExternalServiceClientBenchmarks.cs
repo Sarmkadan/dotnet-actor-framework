@@ -9,7 +9,7 @@ namespace DotNetActorFramework.Benchmarks;
 [MemoryDiagnoser]
 public class ExternalServiceClientBenchmarks
 {
-    private ExternalServiceClient _client;
+    private ExternalServiceClient _client = null!;
     private const string BaseUrl = "http://localhost:5000";
 
     [Params(1, 3)]

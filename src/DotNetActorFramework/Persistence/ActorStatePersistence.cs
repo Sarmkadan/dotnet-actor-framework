@@ -181,8 +181,8 @@ public class FileActorStatePersistence : IActorStatePersistence
 public class ActorStateSnapshot
 {
     public Guid ActorId { get; set; }
-    public string ActorPath { get; set; }
-    public byte[] StateData { get; set; }
+    public string ActorPath { get; set; } = null!;
+    public byte[] StateData { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public long Version { get; set; }
 

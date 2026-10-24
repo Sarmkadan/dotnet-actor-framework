@@ -21,7 +21,7 @@ namespace DotNetActorFramework.Middleware;
 /// </para>
 /// <para>
 /// <strong>When the limit is exceeded:</strong> the message is silently dropped —
-/// <see cref="InvokeAsync"/> returns <c>false</c> and <paramref name="next"/> is
+/// <see cref="InvokeAsync"/> returns <c>false</c> and <c>next</c> is
 /// <em>not</em> called. No error is raised and the sender is not notified.
 /// Consider pairing this middleware with <see cref="LoggingMiddleware"/> (lower
 /// <c>Order</c> value) so that dropped messages are still visible in logs.

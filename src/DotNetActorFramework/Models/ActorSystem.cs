@@ -30,7 +30,7 @@ public class ActorSystem
     private readonly Dictionary<Guid, Actor> _actors = [];
     private readonly Dictionary<ActorPath, Guid> _pathIndex = [];
     private readonly object _lockObject = new();
-    private readonly MessageDispatcher _messageDispatcher;
+    private readonly MessageDispatcher _messageDispatcher = null!;
     private Action<Envelope>? _deadLetterHandler;
 
     /// <summary>
@@ -325,7 +325,7 @@ public class ActorSystem
 public class SystemHealthSummary
 {
     public Guid SystemId { get; set; }
-    public string SystemName { get; set; }
+    public string SystemName { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public int TotalActors { get; set; }
     public int HealthyActors { get; set; }

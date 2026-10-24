@@ -158,7 +158,7 @@ public class DotnetActorFrameworkExceptionTests
     public void Create_WithNullFormat_ShouldThrowArgumentNullException()
     {
         // Arrange & Act
-        Action act = () => DotnetActorFrameworkException.Create(null);
+        Action act = () => DotnetActorFrameworkException.Create(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -210,7 +210,7 @@ public class DotnetActorFrameworkExceptionTests
         var format = "Error with null arg: {0}";
 
         // Act
-        Action act = () => DotnetActorFrameworkException.Create(format, null);
+        Action act = () => DotnetActorFrameworkException.Create(format, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -267,7 +267,7 @@ public class DotnetActorFrameworkExceptionTests
         var innerException = new InvalidOperationException("Inner error");
 
         // Act
-        Action act = () => DotnetActorFrameworkException.Create(innerException, null);
+        Action act = () => DotnetActorFrameworkException.Create(innerException, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();

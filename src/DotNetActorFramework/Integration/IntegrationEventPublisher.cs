@@ -96,7 +96,7 @@ public class IntegrationEventPublisher : IDisposable
     private class IntegrationEventEnvelope
     {
         public Guid Id { get; set; }
-        public IDomainEvent Event { get; set; }
+        public IDomainEvent Event { get; set; } = null!;
         public DateTime EnqueuedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public int Attempts { get; set; }

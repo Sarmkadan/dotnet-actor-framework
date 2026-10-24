@@ -180,7 +180,7 @@ public class SystemMetricsApi
 /// </summary>
 public class HealthSummary
 {
-    public string SystemName { get; set; }
+    public string SystemName { get; set; } = null!;
     public Guid SystemId { get; set; }
     public bool IsHealthy { get; set; }
     public int TotalActors { get; set; }
@@ -200,7 +200,7 @@ public class HealthSummary
 /// </summary>
 public class MessageTypeMetricsInfo
 {
-    public string MessageType { get; set; }
+    public string MessageType { get; set; } = null!;
     public long ProcessedCount { get; set; }
     public long ErrorCount { get; set; }
     public double AverageLatencyMs { get; set; }
@@ -212,7 +212,7 @@ public class MessageTypeMetricsInfo
 /// </summary>
 public class ActorMetricsInfo
 {
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public long ProcessedCount { get; set; }
     public long ErrorCount { get; set; }
     public double AverageLatencyMs { get; set; }

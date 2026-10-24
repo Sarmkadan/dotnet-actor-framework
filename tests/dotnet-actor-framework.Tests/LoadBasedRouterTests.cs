@@ -4,10 +4,9 @@ using DotNetActorFramework.Routing;
 using System.Collections.Generic;
 using System;
 
-namespace DotNetActorFramework.Tests
+namespace DotNetActorFramework.Tests;
+
+public class LoadBasedRouterTests
 {
-    public class LoadBasedRouterTests
-    {
-        // TODO: Write tests for LoadBasedRouter
-    }
+    // TODO: Write tests for LoadBasedRouter
 }

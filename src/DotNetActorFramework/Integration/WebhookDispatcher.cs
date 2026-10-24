@@ -15,8 +15,8 @@ namespace DotNetActorFramework.Integration;
 public class WebhookConfig
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string Url { get; set; }
-    public string EventType { get; set; } // e.g., "actor.error", "*" for all
+    public string Url { get; set; } = null!;
+    public string EventType { get; set; } = null!; // e.g., "actor.error", "*" for all
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? MaxRetries { get; set; } = 3;

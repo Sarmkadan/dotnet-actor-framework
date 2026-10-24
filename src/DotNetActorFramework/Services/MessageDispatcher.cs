@@ -78,7 +78,7 @@ public class MessageDispatcher
                     IncrementDelivered();
                     return true;
                 }
-                catch (MailboxException ex) when (attempt < maxRetries)
+                catch (MailboxException) when (attempt < maxRetries)
                 {
                     envelope.IncrementRetryCount();
                     await Task.Delay(backoffDelay);
@@ -87,7 +87,7 @@ public class MessageDispatcher
                         ActorConstants.MaxBackoffDelayMs
                     );
                 }
-                catch (Exception ex) when (attempt < maxRetries)
+                catch (Exception) when (attempt < maxRetries)
                 {
                     // Log unexpected errors during enqueue attempts
                     envelope.IncrementRetryCount();

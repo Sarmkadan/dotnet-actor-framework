@@ -4,10 +4,9 @@ using DotNetActorFramework.Exceptions;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace DotNetActorFramework.Tests
+namespace DotNetActorFramework.Tests;
+
+public class MessageDispatcherTests
 {
-    public class MessageDispatcherTests
-    {
-        // Test methods go here
-    }
+    // Test methods go here
 }

@@ -35,7 +35,7 @@ public static class MessageExtensions
     /// <param name="key">Header key.</param>
     /// <param name="defaultValue">Value to return when the header is missing or cannot be cast.</param>
     /// <returns>The header value cast to <typeparamref name="T"/> or <paramref name="defaultValue"/>.</returns>
-    public static T GetHeaderOrDefault<T>(this Message message, string key, T defaultValue = default)
+    public static T GetHeaderOrDefault<T>(this Message message, string key, T defaultValue = default!)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Header key cannot be null or whitespace.", nameof(key));

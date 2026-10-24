@@ -1,13 +1,13 @@
 namespace DotNetActorFramework.Options;
 
 /// <summary>
-/// Configuration options for the <see cref="MetricsCollectorWorker"/>.
+/// Configuration options for the <see cref="DotNetActorFramework.BackgroundWorkers.MetricsCollectorWorker"/>.
 /// These values can be bound from an <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> source (e.g., appsettings.json).
 /// </summary>
 public class MetricsCollectorOptions
 {
     /// <summary>
-    /// How often the <see cref="MetricsCollectorWorker"/> should run.
+    /// How often the <see cref="DotNetActorFramework.BackgroundWorkers.MetricsCollectorWorker"/> should run.
     /// Default: 30 seconds.
     /// </summary>
     public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);

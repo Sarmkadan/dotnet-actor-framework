@@ -234,7 +234,7 @@ public class EventBus
 /// </summary>
 public abstract class ActorSystemEvent : DomainEvent
 {
-    public string SystemName { get; set; }
+    public string SystemName { get; set; } = null!;
     public Guid SystemId { get; set; }
 }
 
@@ -244,7 +244,7 @@ public abstract class ActorSystemEvent : DomainEvent
 public class ActorCreatedEvent : ActorSystemEvent
 {
     public override string EventType => "actor.created";
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid ActorId { get; set; }
 }
 
@@ -254,7 +254,7 @@ public class ActorCreatedEvent : ActorSystemEvent
 public class ActorTerminatedEvent : ActorSystemEvent
 {
     public override string EventType => "actor.terminated";
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid ActorId { get; set; }
 }
 
@@ -264,10 +264,10 @@ public class ActorTerminatedEvent : ActorSystemEvent
 public class ActorErrorEvent : ActorSystemEvent
 {
     public override string EventType => "actor.error";
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid ActorId { get; set; }
-    public string ErrorMessage { get; set; }
-    public string StackTrace { get; set; }
+    public string ErrorMessage { get; set; } = null!;
+    public string StackTrace { get; set; } = null!;
 }
 
 /// <summary>
@@ -276,8 +276,8 @@ public class ActorErrorEvent : ActorSystemEvent
 public class MessageProcessedEvent : ActorSystemEvent
 {
     public override string EventType => "message.processed";
-    public string ActorPath { get; set; }
+    public string ActorPath { get; set; } = null!;
     public Guid MessageId { get; set; }
-    public string MessageType { get; set; }
+    public string MessageType { get; set; } = null!;
     public long ElapsedMilliseconds { get; set; }
 }
