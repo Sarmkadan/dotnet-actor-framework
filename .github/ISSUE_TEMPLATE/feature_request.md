@@ -1,19 +1,19 @@
 ---
-name: Feature Request
-about: Suggest a feature for DotNetActorFramework
-title: '[FEATURE] '
+name: Feature request
+about: Suggest an enhancement to DotNetActorFramework
+title: "[Feature] "
 labels: enhancement
 assignees: ''
 ---
 
-## Problem Statement
-A clear description of the problem or limitation.
+## Problem
+A clear description of the problem or limitation you are facing.
 
-## Proposed Solution
-Describe the solution you'd like to see.
+## Proposed solution
+Describe the change you would like to see.
 
-## Alternatives Considered
-List any alternative solutions or workarounds you've considered.
+## Alternatives considered
+Workarounds or other approaches you have considered.
 
-## Additional Context
-Any other context, mockups, or examples.
+## Additional context
+Any other context, examples, or code samples.
