@@ -21,7 +21,7 @@ namespace DotNetActorFramework.Routing;
 /// Round-robin routing ignores current load and guarantees even distribution
 /// over time, which is preferable when messages have comparable processing cost.
 /// </remarks>
-public sealed class LoadBasedRouter
+public sealed class LoadBasedRouter : IRouter
 {
     private readonly ActorDiscoveryService _discovery;
     private readonly MailboxService _mailbox;
@@ -63,7 +63,7 @@ public sealed class LoadBasedRouter
 
     /// <summary>
     /// Dispatches <paramref name="envelope"/> to the least-loaded live actor registered
-    /// under <paramref name="capability"/>.
+    /// under <paramref name="capability"/> (implements <see cref="IRouter.RouteAsync"/>).
     /// </summary>
     /// <param name="capability">The capability identifier that selects the actor pool.</param>
     /// <param name="envelope">The envelope to route and deliver.</param>
