@@ -1,112 +1,65 @@
 # Contributing to DotNetActorFramework
 
-First off, thank you for considering contributing to DotNetActorFramework! It's people like you that make open source such a great community.
+Thanks for contributing. This guide covers building, testing, and submitting changes.
 
-## Development Requirements
+## Prerequisites
 
-To build and run tests for this project, you will need:
-- .NET 10.0 SDK or later ([download](https://dotnet.microsoft.com/download))
+- .NET 10 SDK. The projects target `net10.0` and there is no `global.json`, so any 10.0 SDK works.
+- Git.
 
-## Building Locally
+Check your setup with `dotnet --version`.
 
-```bash
-# Clone the repository
-git clone https://github.com/sarmkadan/dotnet-actor-framework.git
-cd dotnet-actor-framework
-
-# Restore dependencies
-dotnet restore
-
-# Build in Release configuration
-dotnet build --configuration Release
-
-# Build in Debug configuration (for local development)
-dotnet build --configuration Debug
-```
-
-## Running Tests
+## Build
 
 ```bash
-# Run the full test suite
-dotnet test
-
-# Run with verbose output
-dotnet test --verbosity normal
-
-# Run with code coverage reporting
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
-
-# Run a specific test class
-dotnet test --filter "FullyQualifiedName~ActorPathTests"
-
-# Run tests and export TRX report
-dotnet test --logger "trx;LogFileName=test-results.trx"
+dotnet restore DotNetActorFramework.sln
+dotnet build DotNetActorFramework.sln -c Release --no-restore
 ```
 
-## How to Contribute
+`make build` runs the same steps.
 
-1. **Fork the Repository:** Start by forking the repository to your own GitHub account.
-2. **Clone the Repository:** Clone the forked repository to your local machine.
-3. **Create a Branch:** Create a new branch for your feature or bug fix (`git checkout -b feature/your-feature-name`).
-4. **Make Changes:** Write your code, following the guidelines below.
-5. **Run Tests:** Ensure all existing and new tests pass locally before submitting your changes.
-6. **Submit a PR:** Push your branch to your fork and submit a Pull Request to the main repository.
-
-## Code Style and Conventions
-
-- **Follow existing conventions:** Please maintain the coding style currently used in the project.
-- **XML Documentation:** Ensure all public APIs, methods, and classes include proper XML documentation comments.
-- **Author Headers:** **KEEP ALL author headers** - DO NOT remove them from existing files. If you modify a file, leave the existing author headers intact.
-
-## Testing Requirements
-
-All contributions must include appropriate test coverage:
+## Test
 
 ```bash
-# Run the full test suite
-dotnet test
-
-# Run with code coverage reporting
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
-
-# Run a specific test class
-dotnet test --filter "FullyQualifiedName~ActorPathTests"
+dotnet test DotNetActorFramework.sln -c Release
+dotnet test --filter "FullyQualifiedName~ActorPathTests"   # one test class
 ```
 
-**Guidelines:**
-- New public methods must have corresponding unit tests.
-- Aim for a minimum of 80% code coverage on changed files.
-- Tests should follow the Arrange-Act-Assert pattern.
-- Use the `MockActorContext` from `DotNetActorFramework.Testing` for actor-level tests.
+Tests live in `tests/dotnet-actor-framework.Tests/` (xUnit, FluentAssertions, Moq). Put new tests there.
+`src/DotNetActorFramework.Tests/` holds stray files that are not part of the solution.
 
-## Architecture Decisions
+## Coding Conventions
 
-When proposing architectural changes, please document the reasoning in your PR description. Key areas that require careful consideration:
+- 4-space indentation, UTF-8, lines up to 120 columns (see `.editorconfig`).
+- `Nullable` and `ImplicitUsings` are enabled. Keep new code free of nullable warnings.
+- Use file-scoped namespaces, as most existing files do.
+- Every public type and member needs an XML doc comment (`GenerateDocumentationFile` is on).
+- Naming: PascalCase for types and members, `I` prefix for interfaces, and the suffixes `*Service`,
+  `*Middleware`, `*Options`, and `*Extensions` where they fit.
+- Keep the author header block at the top of any file you edit. Do not remove it.
+- Tests: one `<Type>Tests.cs` file per type, method names like `Method_Scenario_ShouldExpected`,
+  Arrange-Act-Assert structure, and FluentAssertions `.Should()` assertions.
+- Run `make format` before committing to apply `dotnet format`.
 
-- **Thread safety**: All shared state in actors uses `lock` objects. Follow this pattern in new code.
-- **Middleware ordering**: New middleware should specify an `Order` value that fits logically in the pipeline.
-- **Message immutability**: Messages are `record` types and should remain immutable after construction.
+## Pull Requests
+
+1. Branch from `main`, for example `git checkout -b feat/short-name`. If you do not have push access,
+   fork the repository first.
+2. Keep each PR focused on one feature, fix, or refactor.
+3. Use conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, or `chore:`.
+4. Build and run the tests locally before pushing.
+5. Make sure CI is green. `.github/workflows/ci.yml` runs restore, build, and test on .NET 10 for pushes
+   and pull requests targeting `main`.
+6. Describe the change in the PR body: what changed, why, how you tested it, and any impact on the public
+   API or runtime behavior. For architectural changes, explain the reasoning (thread safety, middleware
+   ordering, message immutability).
 
 ## Reporting Issues
 
-If you find a bug or have a feature request, please use GitHub Issues. 
-
-When reporting a bug, please include:
-- A clear and descriptive title.
-- Detailed reproduction steps.
-- Expected behavior vs. actual behavior.
-- Version of the framework you are using.
-- .NET SDK version (`dotnet --version`).
-- Operating system and version.
-
-### Feature Requests
-
-For feature requests, describe:
-- The problem you are trying to solve.
-- Your proposed solution or API design.
-- Any alternatives you have considered.
-- Whether you are willing to implement it yourself.
+Use GitHub Issues. For bugs, include reproduction steps, expected and actual behavior, the framework
+version, the output of `dotnet --version`, and your OS. For feature requests, describe the problem,
+your proposed API, and any alternatives you considered.
 
 ## License
 
-By contributing to DotNetActorFramework, you agree that your contributions will be licensed under its MIT License.
+By contributing, you agree that your changes are licensed under the MIT License (see `LICENSE`).
