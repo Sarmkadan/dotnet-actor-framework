@@ -182,6 +182,9 @@ public class ConnectionManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all pooled connections and marks the connection manager as disposed.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -210,12 +213,36 @@ public class PooledConnection : IDisposable
     private bool _disposed;
     private string? _connectionString;
 
+    /// <summary>
+    /// Gets the key that identifies this connection in the pool.
+    /// </summary>
     public string Key { get; }
+
+    /// <summary>
+    /// Gets the connection string used by this connection, or an empty string if none is set.
+    /// </summary>
     public string ConnectionString => _connectionString ?? string.Empty;
+
+    /// <summary>
+    /// Gets the UTC time at which this connection was created.
+    /// </summary>
     public DateTime CreatedAt { get; }
+
+    /// <summary>
+    /// Gets the UTC time at which this connection was last used.
+    /// </summary>
     public DateTime LastUsedAt { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this connection is currently open.
+    /// </summary>
     public bool IsOpen { get; private set; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PooledConnection"/> class.
+    /// </summary>
+    /// <param name="key">The connection key used to identify this connection in the pool.</param>
+    /// <param name="connectionString">The database connection string.</param>
     public PooledConnection(string key, string connectionString)
     {
         Key = key ?? throw new ArgumentNullException(nameof(key));
@@ -225,6 +252,10 @@ public class PooledConnection : IDisposable
         IsOpen = false;
     }
 
+    /// <summary>
+    /// Marks the connection as open and updates its last-used time.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">The connection has been disposed.</exception>
     public void Open()
     {
         if (_disposed)
@@ -233,15 +264,28 @@ public class PooledConnection : IDisposable
         LastUsedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Marks the connection as closed.
+    /// </summary>
     public void Close()
     {
         IsOpen = false;
     }
 
+    /// <summary>
+    /// Updates the last-used time of the connection to the current UTC time.
+    /// </summary>
     public void UpdateLastUsed() => LastUsedAt = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets the amount of time elapsed since the connection was last used.
+    /// </summary>
+    /// <returns>The idle time as a <see cref="TimeSpan"/>.</returns>
     public TimeSpan GetIdleTime() => DateTime.UtcNow - LastUsedAt;
 
+    /// <summary>
+    /// Closes the connection and marks it as disposed. Subsequent calls have no effect.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -258,9 +302,28 @@ public class PooledConnection : IDisposable
 /// </summary>
 public class ConnectionStatistics
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the connection manager is initialized with a connection string.
+    /// </summary>
     public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of connections in the pool.
+    /// </summary>
     public int PoolSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of active connections.
+    /// </summary>
     public int ActiveConnections { get; set; }
+
+    /// <summary>
+    /// Gets or sets the connection string used by the connection manager.
+    /// </summary>
     public string? ConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the statistics were captured.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
 }
