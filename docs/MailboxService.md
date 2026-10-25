@@ -1,168 +1,202 @@
 # MailboxService
 
-The `MailboxService` is a concurrency-safe mailbox manager for actor-based systems in the dotnet-actor-framework. It maintains per-actor message queues, enforces capacity limits, and provides asynchronous enqueue/dequeue semantics for message passing between actors. The service tracks mailbox statistics and allows inspection of queue state without blocking.
+`MailboxService` (`src/DotNetActorFramework/Services/MailboxService.cs`) owns the per-actor mailboxes of an actor system. It maps each actor's `Guid` to one `IMailbox`, creates mailboxes from `ActorSystemOptions` defaults or per-call overrides, and forwards enqueue/dequeue calls to the mailbox it finds. It wraps unexpected failures in `MailboxException`.
 
-## API
+The service does not implement `IDisposable`. Mailboxes are released explicitly through `RemoveMailbox` or `Clear`.
 
-### `public MailboxService(int capacity)`
-Initializes a new `MailboxService` with the specified maximum number of messages it can hold.
+## Mailbox lifecycle
 
-- **capacity**: The maximum number of messages the mailbox can store. Must be a positive integer.
+1. **Create.** `CreateMailbox(actorId, ...)` validates the effective settings, builds a `BoundedPriorityMailbox` (when `MailboxType.Priority`) or a `BoundedMailbox` (otherwise), and registers it under `actorId`. A second `CreateMailbox` call for the same actor throws `InvalidOperationException`; the new instance is disposed before the throw.
+2. **Use.** `EnqueueAsync` and `DequeueAsync` route through the registered mailbox. `GetMailbox` returns the same instance for direct access.
+3. **Remove.** `RemoveMailbox(actorId)` deregisters the mailbox and disposes it. Messages still queued are discarded. Later service calls for that actor fail with `MailboxException` ("Mailbox not found"). Holders of an earlier `IMailbox` reference get `ObjectDisposedException` on further use.
+4. **Clear.** `Clear()` disposes every registered mailbox and empties the registry. The service stays usable, and new mailboxes can be created afterwards.
 
-Throws `ArgumentOutOfRangeException` if `capacity` is zero or negative.
+## Configuration
 
----
+Defaults come from the `ActorSystemOptions` passed to the constructor:
 
-### `public IMailbox CreateMailbox()`
-Creates and registers a new mailbox instance associated with this service.
+| Option | Default | Used when |
+|---|---|---|
+| `DefaultMailboxCapacity` | `ActorConstants.DefaultMailboxCapacity` (1000) | `capacity` argument is `0` |
+| `DefaultMailboxType` | `MailboxType.FIFO` | `mailboxType` argument is `null` |
+| `DefaultMailboxOverflowPolicy` | `MailboxOverflowPolicy.DropNewest` | `overflowPolicy` argument is `null` |
+| `HighWatermarkWarningThreshold` | `80` | always (not overridable per mailbox) |
 
-- **Return value**: A new `IMailbox` instance tied to this service.
+Validation uses `MailboxOptions.Validate()`:
 
-The returned mailbox is automatically tracked by the service and will appear in statistics.
+- The constructor validates the defaults derived from `ActorSystemOptions` and throws `ArgumentOutOfRangeException` if any are invalid.
+- `CreateMailbox` validates the effective settings after defaults are applied. Negative capacity, undefined enum values, and thresholds outside 0-100 throw `ArgumentOutOfRangeException`.
 
----
+## Overflow policies
 
-### `public IMailbox? GetMailbox()`
-Retrieves the mailbox instance associated with the current actor context.
+Each policy applies to `BoundedMailbox` and `BoundedPriorityMailbox`, which are backed by `System.Threading.Channels`:
 
-- **Return value**: The `IMailbox` instance for the current actor, or `null` if none exists.
+| Policy | Behavior when the mailbox is full |
+|---|---|
+| `DropNewest` | The incoming message is dropped. `EnqueueAsync` on the mailbox still returns `true`. |
+| `DropOldest` | The oldest queued message is dropped to make room. `EnqueueAsync` still returns `true`. |
+| `Wait` | The writer waits asynchronously until space is available. There is no timeout. |
+| `Fail` | The mailbox throws `MailboxFullException`. `MailboxService.EnqueueAsync` surfaces it as a `MailboxException` whose inner exception is the `MailboxFullException`. |
 
-This method is typically used within actor logic to access the mailbox tied to the executing actor.
+Messages dropped by `DropNewest` or `DropOldest` do not increment `DroppedMessageCount`, because the channel drops them without throwing. Other exceptions during a mailbox enqueue are logged and increment `DroppedMessageCount`, and `EnqueueAsync` returns `false`. The service then throws `MailboxException` with the message "Mailbox is full". That text is misleading for these non-capacity failures.
 
----
+## Public API
 
-### `public async Task EnqueueAsync(Envelope envelope)`
-Asynchronously enqueues a message into the current actor’s mailbox.
+### `MailboxService` class
 
-- **envelope**: The message envelope to enqueue.
-- **Return value**: A `Task` that completes when the message has been accepted.
-
-If the mailbox is full, this method blocks until space becomes available or the operation is canceled.
-
----
-
-### `public async Task<Envelope?> DequeueAsync()`
-Asynchronously dequeues the next message from the current actor’s mailbox.
-
-- **Return value**: A `Task<Envelope?>` resolving to the next message, or `null` if the mailbox is empty and closed.
-
-Returns `null` if the mailbox is empty and no further messages are expected.
-
----
-
-### `public int GetMailboxSize()`
-Gets the current number of messages in the mailbox.
-
-- **Return value**: The count of messages currently in the mailbox.
-
-This is a snapshot value and may change immediately after return.
+#### `public MailboxService()` (protected)
+Parameterless constructor for testing and mocking. It uses a new `ActorSystemOptions` with default values and no logger. Subclasses can call it; external callers cannot.
 
 ---
 
-### `public bool IsMailboxFull()`
-Determines whether the mailbox has reached its capacity.
+#### `public MailboxService(ActorSystemOptions options, ILogger<MailboxService>? logger = null)`
+Creates a service that uses `options` for defaults.
 
-- **Return value**: `true` if the mailbox is at or above capacity; otherwise, `false`.
+- **options**: The actor system options. Must not be `null`.
+- **logger**: Optional logger. It is stored, but mailboxes do not receive it: `CreateMailbox` casts it to `ILogger<BoundedMailbox>` / `ILogger<BoundedPriorityMailbox>`, and that cast is always `null` because `ILogger<T>` does not allow converting between different `T`. Mailboxes therefore log nothing through this logger.
 
-Useful for backpressure signaling in actor logic.
-
----
-
-### `public void RemoveMailbox()`
-Removes the mailbox associated with the current actor from the service.
-
-The mailbox is deregistered and will no longer be accessible via `GetMailbox()`. Any pending messages are discarded.
+**Throws:** `ArgumentNullException` if `options` is `null`; `ArgumentOutOfRangeException` if the mailbox-related options are invalid.
 
 ---
 
-### `public MailboxStatistics GetStatistics()`
-Retrieves a snapshot of current mailbox statistics.
+#### `public IMailbox CreateMailbox(Guid actorId, int capacity = 0, MailboxType? mailboxType = null, MailboxOverflowPolicy? overflowPolicy = null)`
+Creates a mailbox for an actor and registers it. Registration uses an atomic `ConcurrentDictionary.TryAdd`, so two concurrent calls for the same actor cannot both succeed.
 
-- **Return value**: A `MailboxStatistics` struct containing counts and load metrics.
+- **actorId**: The actor that owns the mailbox.
+- **capacity**: Maximum number of messages. `0` uses `DefaultMailboxCapacity`. Negative values are rejected.
+- **mailboxType**: `FIFO` or `Priority`. `null` uses `DefaultMailboxType`.
+- **overflowPolicy**: The overflow policy. `null` uses `DefaultMailboxOverflowPolicy`.
+- **Returns:** The new mailbox. It is an `IMailbox`, and its runtime type is `BoundedPriorityMailbox` or `BoundedMailbox`.
 
-The returned statistics are a point-in-time snapshot and may not reflect concurrent changes.
-
----
-
-### `public void Clear()`
-Removes all messages from the current actor’s mailbox.
-
-This operation is synchronous and does not block other operations.
-
----
-
-### `public Guid ActorId`
-Gets the unique identifier of the actor associated with the current mailbox context.
-
-- **Return value**: The `Guid` representing the actor’s identity.
-
-This value is constant for the lifetime of the actor.
+**Throws:**
+- `ArgumentException` if `actorId` is `Guid.Empty`.
+- `ArgumentOutOfRangeException` if the effective settings are invalid.
+- `InvalidOperationException` if a mailbox already exists for `actorId`.
 
 ---
 
-### `public int Capacity`
-Gets the maximum number of messages the mailbox can hold.
-
-- **Return value**: The configured capacity as a positive integer.
-
-This value is set at construction and does not change.
+#### `public IMailbox? GetMailbox(Guid actorId)`
+Returns the mailbox registered for `actorId`, or `null` if there is none. It does not validate `actorId`, so `Guid.Empty` simply returns `null`.
 
 ---
 
-### `public IMailbox Mailbox`
-Gets the mailbox instance associated with the current actor context.
+#### `public async Task EnqueueAsync(Guid actorId, Envelope envelope)`
+Enqueues `envelope` into the mailbox of `actorId`.
 
-- **Return value**: The `IMailbox` instance for the current actor.
+- **actorId**: The target actor.
+- **envelope**: The message to enqueue.
+- **Returns:** A task that completes when the mailbox accepts the message.
 
-This property is equivalent to calling `GetMailbox()` and will return `null` if no mailbox exists.
+The method returns normally if the mailbox accepted the message. A message dropped by `DropNewest` or `DropOldest` still counts as accepted. Under `Fail`, a full mailbox throws.
 
----
-
-### `public async Task<bool> EnqueueAsync(Envelope envelope, CancellationToken cancellationToken)`
-Enqueues a message with explicit cancellation support.
-
-- **envelope**: The message envelope to enqueue.
-- **cancellationToken**: A token to observe for cancellation.
-- **Return value**: A `Task<bool>` that returns `true` if the message was enqueued, `false` if canceled.
-
-If the token is canceled before the message is accepted, the operation aborts and returns `false`.
+**Throws:**
+- `ArgumentException` if `actorId` is `Guid.Empty`.
+- `ArgumentNullException` if `envelope` is `null`. This is thrown directly, not wrapped.
+- `MailboxException` if no mailbox exists for `actorId`, the mailbox reports failure (including a full `Fail` mailbox, where the `MailboxFullException` is the inner exception), or the mailbox is disposed.
 
 ---
 
-### `public async Task<Envelope?> DequeueAsync(CancellationToken cancellationToken)`
-Dequeues a message with explicit cancellation support.
+#### `public async Task<Envelope?> DequeueAsync(Guid actorId)`
+Takes the next message from the mailbox of `actorId`. It does not block.
 
-- **cancellationToken**: A token to observe for cancellation.
-- **Return value**: A `Task<Envelope?>` resolving to the next message, `null` if empty and closed, or `null` if canceled.
+- **actorId**: The actor whose mailbox to read.
+- **Returns:** The next envelope, or `null` if the mailbox is empty.
 
-If the token is canceled before a message is available, the operation aborts and returns `null`.
+For `Priority` mailboxes, the highest-priority message comes first (`Envelope.Message.Priority`, higher values first). For `FIFO` mailboxes, messages come out in arrival order.
 
----
-
-### `public int GetSize()`
-Gets the current number of messages in the mailbox.
-
-- **Return value**: The count of messages currently in the mailbox.
-
-This method is identical in behavior to `GetMailboxSize()`.
+**Throws:**
+- `ArgumentException` if `actorId` is `Guid.Empty`.
+- `MailboxException` if no mailbox exists for `actorId` or the dequeue fails unexpectedly.
 
 ---
 
-### `public double GetLoadFactor()`
-Computes the current load as a ratio of messages to capacity.
-
-- **Return value**: A `double` between `0.0` and `1.0`, or greater than `1.0` if over capacity.
-
-Useful for monitoring backpressure and scaling decisions.
-
----
-### `public void Dispose()`
-Releases all resources held by the `MailboxService`.
-
-After disposal, the service is no longer usable. Any pending operations may throw `ObjectDisposedException`.
+#### `public int GetMailboxSize(Guid actorId)`
+Returns the number of queued messages for `actorId`, or `0` if no mailbox exists. The value is a snapshot and can change immediately after it is returned.
 
 ---
 
-## Usage
+#### `public bool IsMailboxFull(Guid actorId)`
+Returns `true` if the mailbox for `actorId` is full, or `false` if the mailbox is not full or does not exist. Useful for backpressure checks. The result is a snapshot.
 
-### Example 1: Basic Actor Mailbox Usage
+---
+
+#### `public void RemoveMailbox(Guid actorId)`
+Deregisters the mailbox for `actorId` and disposes it. Messages still queued are discarded. If no mailbox exists, the call does nothing.
+
+**Throws:**
+- `ArgumentException` if `actorId` is `Guid.Empty`.
+- `MailboxException` if disposal fails unexpectedly.
+
+---
+
+#### `public MailboxStatistics GetStatistics()`
+Returns a snapshot of all registered mailboxes:
+
+- `TotalMailboxes`: number of registered mailboxes.
+- `TotalMessages`: sum of queued messages.
+- `TotalCapacity`: sum of capacities.
+- `FullMailboxes`: number of mailboxes that are full.
+- `AverageLoadFactor`: `TotalMessages / TotalCapacity`, or `0` when there are no mailboxes.
+
+The values are gathered across mailboxes without a global lock, so they may not match one instant exactly.
+
+---
+
+#### `public void Clear()`
+Disposes every registered mailbox and removes all registrations. Messages still queued are discarded. `Clear` reads the registry and then empties it, so a mailbox created by another thread in between is removed without being disposed. Call `Clear` during shutdown, or when no other thread is creating mailboxes.
+
+---
+
+#### `public override string ToString()`
+Returns a one-line summary of `GetStatistics()`, for example `MailboxService { TotalMailboxes = 3, TotalMessages = 12, ... }`.
+
+---
+
+### `MailboxStatistics` class
+
+A plain data class returned by `GetStatistics()`. All properties have public getters and setters.
+
+| Property | Type | Description |
+|---|---|---|
+| `TotalMailboxes` | `int` | Number of registered mailboxes. |
+| `TotalMessages` | `long` | Total queued messages. |
+| `TotalCapacity` | `long` | Sum of mailbox capacities. |
+| `FullMailboxes` | `int` | Number of full mailboxes. |
+| `AverageLoadFactor` | `double` | Average load factor (0-1). |
+
+---
+
+## Other mailbox types in the same file
+
+`MailboxService.cs` also defines `Mailbox` and `PriorityMailbox`. `MailboxService` does not create them. They are standalone `IMailbox` implementations built on `ConcurrentQueue` and `PriorityQueue` with a `SemaphoreSlim` for capacity. Their `EnqueueAsync` waits up to 100 ms for space and returns `false` if none becomes available. They have no overflow policy. Their constructors take a `highWatermarkThreshold` and an optional logger.
+
+## Example
+
+```csharp
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Enums;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+
+var options = new ActorSystemOptions { DefaultMailboxCapacity = 500 };
+var mailboxes = new MailboxService(options);
+
+var actorId = Guid.NewGuid();
+mailboxes.CreateMailbox(actorId, mailboxType: MailboxType.Priority, overflowPolicy: MailboxOverflowPolicy.Fail);
+
+try
+{
+    await mailboxes.EnqueueAsync(actorId, envelope);
+}
+catch (MailboxException ex) when (ex.InnerException is DotNetActorFramework.Exceptions.MailboxFullException)
+{
+    // Back off: the Fail policy rejected the message.
+}
+
+var next = await mailboxes.DequeueAsync(actorId);
+
+mailboxes.RemoveMailbox(actorId);
+mailboxes.Clear();
+```
+
+`envelope` stands for an `Envelope` created by the caller.
