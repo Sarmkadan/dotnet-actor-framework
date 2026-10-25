@@ -646,6 +646,80 @@ await system.ShutdownAsync();
 
 > **Note:** `RetryCount` and `IsDelivered` are public fields, so code can assign them directly. Prefer `IncrementRetryCount()` and `MarkAsDelivered()`, which express the intent and keep the call sites consistent.
 
+## Routing with LoadBasedRouter
+
+`LoadBasedRouter` (in `DotNetActorFramework.Routing`, source in `src/DotNetActorFramework/Routing/LoadBasedRouter.cs`) delivers an `Envelope` to one actor from a pool of actors that share a capability. The pool is resolved through `ActorDiscoveryService.Discover(capability)`, so only live actors registered with that capability take part. Capability names are matched case-insensitively. The router offers two strategies, and each one is a separate method:
+
+| Method | Strategy | How the target is chosen |
+|---|---|---|
+| `RouteAsync(capability, envelope)` | Least-loaded (power of two choices) | Two routees are sampled at random. The one with the smaller mailbox depth wins. |
+| `RouteRoundRobinAsync(capability, envelope)` | Round-robin | A counter per capability advances on every call and selects `pool[counter % pool.Count]`. Load is ignored. |
+
+### Least-loaded routing
+
+`RouteAsync` reads mailbox depths through `MailboxService.GetMailboxSize`. It does not scan the whole pool. It picks two distinct routees at random and sends the envelope to the one whose queue is shorter; on a tie, the first sample wins. This is the power-of-two-choices heuristic. It does not guarantee the absolute least-loaded routee, but the work per decision is constant whatever the pool size.
+
+When the pool holds a single actor, that actor is chosen without sampling.
+
+If you need the exact minimum, `GetLeastLoaded(capability)` scans every routee and returns the one with the fewest queued messages. It costs O(n) per call, so it suits diagnostics and small pools rather than the hot path. `GetLoadSnapshot(capability)` returns the current depth of every routee, keyed by actor path name, for monitoring.
+
+### Round-robin routing
+
+`RouteRoundRobinAsync` advances a counter kept per capability and sends the envelope to the routee at that position. Each routee gets an equal share of messages over time, regardless of its current queue depth. Use it when messages cost about the same to process. The counter wraps back to zero before it overflows, so it stays valid for long-running systems.
+
+Both the counter and the pool order come from discovery. A change in the set of live actors changes which routee each position maps to. The counters are not reset when the pool changes.
+
+### Results
+
+Both routing methods return the same `Task<bool>`:
+
+- `true`: the envelope was accepted for delivery.
+- `false`: no live actors are registered for the capability, or the dispatcher did not accept the envelope (for example, because the target mailbox is full). The router logs a warning in both cases when a logger was supplied.
+
+A blank `capability` throws `ArgumentException`, and a `null` envelope throws `ArgumentNullException`. A cancelled token throws `OperationCanceledException` before anything is dispatched. Each routed envelope is re-created with the chosen recipient and the original message and sender, and then passed to `MessageDispatcher.DispatchAsync`.
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Routing;
+using DotNetActorFramework.Services;
+
+var options = new ActorSystemOptions { SystemName = "orders" };
+var system = new ActorSystem("orders", options: options);
+var registry = new ActorRegistry();
+var mailbox = new MailboxService(options);
+var dispatcher = new MessageDispatcher(mailbox, registry, system);
+var discovery = new ActorDiscoveryService();
+var router = new LoadBasedRouter(discovery, mailbox, dispatcher);
+
+// Create the workers and register each one under the same capability.
+var workers = new List<ActorRef>();
+for (var i = 0; i < 3; i++)
+{
+    var worker = await system.CreateActorAsync(new ActorPath($"/user/worker-{i}"));
+    registry.Register(worker);
+    discovery.Register(worker, new[] { "orders" });
+    workers.Add(worker);
+}
+
+// The recipient passed to the Envelope is replaced by the router's choice.
+var envelope = new Envelope(new OrderPlaced(Guid.NewGuid()), workers[0]);
+
+// Least-loaded: useful when message costs vary.
+bool accepted = await router.RouteAsync("orders", envelope);
+
+// Round-robin: useful when message costs are similar.
+accepted = await router.RouteRoundRobinAsync("orders", envelope);
+
+// Monitoring: current mailbox depth of each routee, keyed by actor path name.
+IReadOnlyDictionary<string, int> depths = router.GetLoadSnapshot("orders");
+
+// Message type used above.
+public sealed record OrderPlaced(Guid OrderId) : Message;
+```
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
