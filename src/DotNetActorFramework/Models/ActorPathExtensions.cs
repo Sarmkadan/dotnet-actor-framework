@@ -67,6 +67,22 @@ public static class ActorPathExtensions
     }
 
     /// <summary>
+    /// Determines whether two <see cref="ActorPath"/> instances are siblings, that is, they are distinct
+    /// paths that share the same parent. Top-level paths (with no parent) are siblings of each other.
+    /// </summary>
+    /// <param name="path">The first path.</param>
+    /// <param name="other">The second path.</param>
+    /// <returns><c>true</c> if <paramref name="path"/> and <paramref name="other"/> are distinct siblings; otherwise, <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="path"/> or <paramref name="other"/> is <c>null</c>.</exception>
+    public static bool IsSiblingOf(this ActorPath path, ActorPath other)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(other);
+
+        return path != other && path.Parent == other.Parent;
+    }
+
+    /// <summary>
     /// Finds the deepest common ancestor of two <see cref="ActorPath"/> instances.
     /// </summary>
     /// <param name="first">The first path.</param>
