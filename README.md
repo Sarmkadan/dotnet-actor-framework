@@ -720,6 +720,119 @@ IReadOnlyDictionary<string, int> depths = router.GetLoadSnapshot("orders");
 public sealed record OrderPlaced(Guid OrderId) : Message;
 ```
 
+## EventBus
+
+`EventBus` (in `DotNetActorFramework.Events`, source in `src/DotNetActorFramework/Events/EventBus.cs`) is an in-process publish/subscribe bus. Components subscribe a handler to a domain event type and publish events without knowing who listens. Subscriptions are keyed by the event's CLR type, so a handler only receives events of the type it subscribed to.
+
+The bus is a plain object, not a background service. It does not queue events and does not raise any events by itself: `ActorSystem` does not publish `ActorCreatedEvent` or the other lifecycle events, so your code calls `PublishAsync` where an event happens. `ActorSystemBuilder.WithEventBus()` creates a bus and `GetEventBus()` returns it.
+
+Events implement `IDomainEvent` (`EventId`, `OccurredAt`, `EventType`). `DomainEvent` is a base class that fills in `EventId` and `OccurredAt`. The built-in events derive from `ActorSystemEvent` and carry `SystemName` and `SystemId`:
+
+| Event | `EventType` | Extra properties |
+|---|---|---|
+| `ActorCreatedEvent` | `actor.created` | `ActorPath`, `ActorId` |
+| `ActorTerminatedEvent` | `actor.terminated` | `ActorPath`, `ActorId` |
+| `ActorErrorEvent` | `actor.error` | `ActorPath`, `ActorId`, `ErrorMessage`, `StackTrace` |
+| `MessageProcessedEvent` | `message.processed` | `ActorPath`, `MessageId`, `MessageType`, `ElapsedMilliseconds` |
+
+| Member | Description |
+|---|---|
+| `Subscribe<TEvent>(handler)` | Adds a handler for `TEvent`. Throws `ArgumentNullException` for null. The same handler can be added more than once and is then invoked once per subscription. |
+| `SubscribeOnce<TEvent>(handler)` | Invokes the handler for the next event of `TEvent` only. The subscription is removed before the handler runs. |
+| `Unsubscribe<TEvent>(handler)` | Removes the handler. Pass the same delegate instance that was subscribed; a null handler is ignored. |
+| `PublishAsync<TEvent>(event)` | Invokes every handler for `TEvent` and returns when all of them have completed. Throws `ArgumentNullException` for a null event. |
+| `TryPublishAsync<TEvent>(event)` | Like `PublishAsync`, but catches handler exceptions and returns them as an `IReadOnlyList<Exception>`. The list is empty when every handler succeeds. |
+| `GetSubscriberCount<TEvent>()` | Number of handlers subscribed to `TEvent`. |
+| `Clear()` | Removes all subscriptions for all event types. |
+
+Keep these behaviours in mind when you publish:
+
+- **Dispatch uses the static type.** `PublishAsync` looks up handlers by the generic type argument, which the compiler infers from the static type of the argument. If you publish through an `IDomainEvent` variable, handlers subscribed to `ActorCreatedEvent` are not invoked. Publish through the concrete type, or pass it explicitly (`PublishAsync<ActorCreatedEvent>`).
+- **Handlers run concurrently, not on their own threads.** Handlers are started in subscription order, and `PublishAsync` awaits them together. A handler that yields continues in the background while the next one starts.
+- **Exceptions.** If a handler throws asynchronously, the other handlers still run to completion, and `PublishAsync` then rethrows one of the exceptions. If a handler throws synchronously (before its first `await`), the loop stops there, so handlers after it are not invoked and the exception propagates from `PublishAsync`. `TryPublishAsync` avoids both problems: every handler runs and every exception is returned.
+- **Snapshot on publish.** `PublishAsync` copies the handler list under a lock before invoking it, so a handler may subscribe or unsubscribe during a publish without changing that publish.
+- **`SubscribeOnce` and `Unsubscribe`.** The bus stores an internal wrapper around a `SubscribeOnce` handler, not your delegate, so `Unsubscribe` cannot remove it. Use `Subscribe` if you need to cancel the handler before it fires.
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Events;
+
+var eventBus = new EventBus();
+
+// Subscribe with a lambda. The lambda is converted to the EventHandler<TEvent> delegate,
+// so the delegate type name does not have to be written here.
+eventBus.Subscribe<ActorCreatedEvent>(async evt =>
+{
+    await Task.CompletedTask;
+    Console.WriteLine($"Created {evt.ActorPath} in {evt.SystemName}");
+});
+
+// Keep the delegate instance if you need to unsubscribe later. The name
+// EventHandler is also in System, so qualify it with the namespace.
+DotNetActorFramework.Events.EventHandler<ActorErrorEvent> onError = evt =>
+{
+    Console.WriteLine($"Error in {evt.ActorPath}: {evt.ErrorMessage}");
+    return Task.CompletedTask;
+};
+eventBus.Subscribe(onError);
+
+// Handle only the first termination event.
+eventBus.SubscribeOnce<ActorTerminatedEvent>(evt =>
+{
+    Console.WriteLine($"First termination: {evt.ActorPath}");
+    return Task.CompletedTask;
+});
+
+// Publish. Every handler for ActorCreatedEvent runs before the call returns.
+await eventBus.PublishAsync(new ActorCreatedEvent
+{
+    SystemName = "orders",
+    SystemId = Guid.NewGuid(),
+    ActorPath = "/user/worker-1",
+    ActorId = Guid.NewGuid()
+});
+
+// TryPublishAsync reports handler failures instead of throwing.
+var errors = await eventBus.TryPublishAsync(new ActorErrorEvent
+{
+    SystemName = "orders",
+    SystemId = Guid.NewGuid(),
+    ActorPath = "/user/worker-1",
+    ActorId = Guid.NewGuid(),
+    ErrorMessage = "Timeout",
+    StackTrace = string.Empty
+});
+Console.WriteLine($"Handler failures: {errors.Count}");
+
+// Remove the error handler.
+eventBus.Unsubscribe(onError);
+Console.WriteLine($"Error subscribers left: {eventBus.GetSubscriberCount<ActorErrorEvent>()}");
+```
+
+### Defining a custom event
+
+Derive from `DomainEvent` to add your own event type. Override `EventType` with a stable name for logs and integrations:
+
+```csharp
+using DotNetActorFramework.Events;
+
+public sealed class OrderShipped : DomainEvent
+{
+    public override string EventType => "order.shipped";
+
+    public required Guid OrderId { get; init; }
+}
+
+eventBus.Subscribe<OrderShipped>(evt =>
+{
+    Console.WriteLine($"Order {evt.OrderId} shipped at {evt.OccurredAt:O}");
+    return Task.CompletedTask;
+});
+
+await eventBus.PublishAsync(new OrderShipped { OrderId = Guid.NewGuid() });
+```
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
