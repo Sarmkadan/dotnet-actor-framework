@@ -40,6 +40,10 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
     private readonly Dictionary<string, string> _remoteActorUrls = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpRemoteActorInvoker"/> class.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the remote actor system.</param>
     public HttpRemoteActorInvoker(string baseUrl)
     {
         _client = new HttpActorClient(baseUrl);
@@ -59,6 +63,15 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
         }
     }
 
+    /// <summary>
+    /// Invokes a remote actor and waits for a response.
+    /// Returns the default value if the call fails or the response is unsuccessful.
+    /// </summary>
+    /// <typeparam name="T">The type of the response payload.</typeparam>
+    /// <param name="remoteActorPath">The path of the remote actor.</param>
+    /// <param name="message">The message to send.</param>
+    /// <param name="timeout">An optional timeout for the call.</param>
+    /// <returns>The deserialized response, or the default value on failure.</returns>
     public async Task<T?> InvokeAsync<T>(string remoteActorPath, Message message, TimeSpan? timeout = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
@@ -80,6 +93,12 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends a message to a remote actor without waiting for response.
+    /// Failures are suppressed.
+    /// </summary>
+    /// <param name="remoteActorPath">The path of the remote actor.</param>
+    /// <param name="message">The message to send.</param>
     public async Task SendAsync(string remoteActorPath, Message message)
     {
         ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
@@ -95,6 +114,12 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
         }
     }
 
+    /// <summary>
+    /// Checks if a remote actor is reachable.
+    /// Returns <c>false</c> if the health check fails or throws.
+    /// </summary>
+    /// <param name="remoteActorPath">The path of the remote actor.</param>
+    /// <returns><c>true</c> if the remote actor reports healthy; otherwise <c>false</c>.</returns>
     public async Task<bool> PingAsync(string remoteActorPath)
     {
         ArgumentException.ThrowIfNullOrEmpty(remoteActorPath);
@@ -110,6 +135,9 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases the underlying HTTP client.
+    /// </summary>
     public void Dispose()
     {
         _client?.Dispose();
@@ -121,9 +149,24 @@ public class HttpRemoteActorInvoker : IRemoteActorInvoker, IDisposable
 /// </summary>
 public class RemoteCallResult<T>
 {
+    /// <summary>
+    /// Gets or sets the value returned by the remote call.
+    /// </summary>
     public T? Result { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the remote call succeeded.
+    /// </summary>
     public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message if the remote call failed.
+    /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the elapsed time of the remote call in milliseconds.
+    /// </summary>
     public long ElapsedMilliseconds { get; set; }
 }
 
@@ -138,6 +181,12 @@ public class RemoteActorCircuitBreaker
     private readonly TimeSpan _timeout;
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RemoteActorCircuitBreaker"/> class.
+    /// </summary>
+    /// <param name="failureThreshold">Consecutive failures before the circuit opens. Must be positive.</param>
+    /// <param name="timeout">How long the circuit stays open before calls resume. Defaults to one minute.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="failureThreshold"/> is not positive.</exception>
     public RemoteActorCircuitBreaker(int failureThreshold = 5, TimeSpan? timeout = null)
     {
         if (failureThreshold <= 0)
