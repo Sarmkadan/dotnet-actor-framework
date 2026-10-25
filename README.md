@@ -833,6 +833,81 @@ eventBus.Subscribe<OrderShipped>(evt =>
 await eventBus.PublishAsync(new OrderShipped { OrderId = Guid.NewGuid() });
 ```
 
+## Persistence
+
+`PersistenceService` (in `DotNetActorFramework.Persistence`, source in `src/DotNetActorFramework/Persistence/PersistenceService.cs`) is a facade over two storage contracts:
+
+- `ISnapshotStore` saves, loads and deletes `ActorSnapshot` records (state plus sequence number and timestamp).
+- `IEventJournal` appends, reads and deletes `ActorEvent` records for each actor.
+
+The facade does not store anything itself. Every call is forwarded to the store or journal you pass to its constructor, so the storage choice is made by whichever implementations you give it.
+
+### Backends overview
+
+| Backend | Type | Covers | Status |
+|---|---|---|---|
+| `InMemorySnapshotStore` | `ISnapshotStore` | Snapshots | Implemented. Keeps only the latest snapshot per actor. Lost when the process exits. |
+| `InMemoryEventJournal` | `IEventJournal` | Events | Implemented. Appends a batch atomically. Lost when the process exits. |
+| `ResilientEventJournal` | Decorator over `IEventJournal` | Events | Implemented. Adds retry with exponential backoff and a circuit breaker around an inner journal. |
+| `InMemoryActorStatePersistence` | `IActorStatePersistence` | Single state object per actor | Implemented. Separate API from `PersistenceService`. |
+| `FileActorStatePersistence` | `IActorStatePersistence` | Single state object per actor | Implemented. Stores each actor's state as a JSON file under a base directory. Separate API from `PersistenceService`. |
+| `PersistenceBackend.File`, `LiteDb`, `PostgreSql` | `ActorSystemOptions.DefaultPersistenceBackend` values | Snapshots and events | Not implemented. `AddActorFramework` throws `NotImplementedException` for these values. |
+
+Only `InMemory` is wired through dependency injection. `AddActorFramework` registers `InMemorySnapshotStore` and `InMemoryEventJournal` for `PersistenceBackend.InMemory`, the default. It then registers `PersistenceService` as a singleton. To use any other store or journal, construct `PersistenceService` yourself with your implementations.
+
+`IActorStatePersistence` is a different, state-only API. It does not use `ISnapshotStore` or `IEventJournal`, and `PersistenceService` does not use it.
+
+### Auto-snapshot policy
+
+`PersistenceService` keeps a per-actor event counter. Each `AppendEventsAsync` call adds the number of events it appended to that counter. When the counter reaches `snapshotIntervalEvents` (default `100`), the service saves a snapshot and resets the counter to `0`. Keep these details in mind:
+
+- The sequence number of an automatic snapshot is the current Unix time in milliseconds, not the last event's sequence number.
+- The automatic snapshot stores `null` as its state. Only snapshots saved with `SaveSnapshotAsync` carry state.
+- The facade does not delete older snapshots. The class summary mentions pruning, but the code does not do it. `InMemorySnapshotStore` keeps only the latest snapshot per actor, so pruning happens there. A custom store must prune in its own `SaveSnapshotAsync`, or you must call `DeleteSnapshotsAsync` yourself.
+- The counter is in memory. A process restart resets it to zero.
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Persistence;
+using DotNetActorFramework.Persistence.Abstractions;
+using DotNetActorFramework.Persistence.InMemory;
+
+var snapshotStore = new InMemorySnapshotStore();
+var eventJournal = new InMemoryEventJournal();
+var persistence = new PersistenceService(snapshotStore, eventJournal, snapshotIntervalEvents: 50);
+
+var actorId = Guid.NewGuid();
+var actorPath = new ActorPath("/user/orders");
+
+// Append events. The string ActorPath on ActorEvent is the same path as the ActorPath parameter.
+await persistence.AppendEventsAsync(actorId, actorPath, new[]
+{
+    new ActorEvent(actorId, actorPath.ToString(), 1, DateTime.UtcNow, "OrderPlaced"),
+    new ActorEvent(actorId, actorPath.ToString(), 2, DateTime.UtcNow, "OrderPaid")
+});
+
+// Read events 1 through 2 (inclusive).
+var events = await persistence.ReadEventsAsync(actorId, actorPath, 1, 2);
+
+// Save an explicit snapshot with state, then load the latest one.
+await persistence.SaveSnapshotAsync(actorId, actorPath, new { Status = "Paid" }, sequenceNr: 2);
+var latest = await persistence.LoadLatestSnapshotAsync(actorId, actorPath);
+Console.WriteLine($"Latest snapshot at sequence {latest?.SequenceNr}");
+```
+
+### Writing a custom backend
+
+To add storage, implement `ISnapshotStore` and `IEventJournal`. Both contracts ask for atomic, thread-safe, idempotent behaviour. Then pass your instances to the `PersistenceService` constructor. `ResilientEventJournal` can wrap your journal:
+
+```csharp
+var resilientJournal = new ResilientEventJournal(myJournal, ResilienceOptions.Production);
+var persistence = new PersistenceService(mySnapshotStore, resilientJournal);
+```
+
+Create `ResilientEventJournal` directly, as above. `ResilientEventJournalExtensions.AddResilientEventJournal` registers the decorator with `TryAddTransient`, which does nothing if an `IEventJournal` is already registered. It also resolves the inner `IEventJournal` from the same container, so the decorator would wrap itself. Use the direct constructor until that is fixed.
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
