@@ -41,8 +41,7 @@ public class JsonMessageSerializer : IMessageSerializer
 
     public byte[] Serialize(Message message)
     {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
+        ArgumentNullException.ThrowIfNull(message);
 
         var json = JsonSerializer.Serialize(message, Options);
         return System.Text.Encoding.UTF8.GetBytes(json);
@@ -90,8 +89,7 @@ public class JsonStateSerializer : IStateSerializer
 
     public byte[] Serialize(object state)
     {
-        if (state == null)
-            throw new ArgumentNullException(nameof(state));
+        ArgumentNullException.ThrowIfNull(state);
 
         var json = JsonSerializer.Serialize(state, state.GetType(), Options);
         return System.Text.Encoding.UTF8.GetBytes(json);
@@ -138,8 +136,7 @@ public class JsonEnvelopeSerializer : IEnvelopeSerializer
 
     public byte[] Serialize(Envelope envelope)
     {
-        if (envelope == null)
-            throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
 
         var json = JsonSerializer.Serialize(envelope, Options);
         return System.Text.Encoding.UTF8.GetBytes(json);
