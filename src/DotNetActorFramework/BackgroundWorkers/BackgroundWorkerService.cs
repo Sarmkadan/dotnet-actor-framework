@@ -207,6 +207,9 @@ public class BackgroundWorkerService : IDisposable
         workerTask.Task = null;
     }
 
+    /// <summary>
+    /// Stops all workers (waiting up to 10 seconds) and disposes their cancellation sources.
+    /// </summary>
     public void Dispose()
     {
         StopAsync().Wait(TimeSpan.FromSeconds(10));
@@ -237,10 +240,33 @@ public class BackgroundWorkerService : IDisposable
 /// </summary>
 public class WorkerStatus
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of the worker.
+    /// </summary>
     public string WorkerId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the worker is currently running.
+    /// </summary>
     public bool IsRunning { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time of the last successful execution, or <c>null</c> if it has never completed one.
+    /// </summary>
     public DateTime? LastExecutedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of successful executions.
+    /// </summary>
     public long ExecutionCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of executions that failed with an error.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message of the most recent error, or <c>null</c> if the last execution succeeded.
+    /// </summary>
     public string? LastError { get; set; }
 }
