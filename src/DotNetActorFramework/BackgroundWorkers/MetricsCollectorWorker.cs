@@ -15,8 +15,14 @@ namespace DotNetActorFramework.BackgroundWorkers;
 /// </summary>
 public class MetricsCollectorWorker : IBackgroundWorker
 {
+    /// <summary>
+    /// Gets the unique identifier of this worker.
+    /// </summary>
     public string WorkerId => "metrics-collector";
 
+    /// <summary>
+    /// Gets or sets the interval between metric collection runs.
+    /// </summary>
     // The interval is now driven by configuration via MetricsCollectorOptions.
     public TimeSpan Interval { get; set; }
 
@@ -25,6 +31,12 @@ public class MetricsCollectorWorker : IBackgroundWorker
     private readonly MetricsCollectorOptions _options;
     private readonly MetricsSnapshot _latestSnapshot = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsCollectorWorker"/> class.
+    /// </summary>
+    /// <param name="actorSystem">The actor system whose health is monitored.</param>
+    /// <param name="metricsCollector">The collector that provides system-level metrics.</param>
+    /// <param name="options">Optional worker options; defaults are used when <c>null</c>.</param>
     public MetricsCollectorWorker(
         ActorSystem actorSystem,
         MetricsCollector metricsCollector,
@@ -43,6 +55,11 @@ public class MetricsCollectorWorker : IBackgroundWorker
         Interval = _options.Interval;
     }
 
+    /// <summary>
+    /// Collects the current system metrics and stores them in the latest snapshot.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the collection run.</param>
+    /// <returns>A task that completes when the metrics have been collected.</returns>
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await Task.Run(() =>
@@ -70,6 +87,10 @@ public class MetricsCollectorWorker : IBackgroundWorker
     /// </summary>
     public MetricsSnapshot GetLatestSnapshot() => _latestSnapshot;
 
+    /// <summary>
+    /// Returns a string representation of the worker and its latest snapshot values.
+    /// </summary>
+    /// <returns>A human-readable summary of the worker state.</returns>
     public override string ToString() =>
         $"MetricsCollectorWorker {{ Interval = {Interval}, Timestamp = {_latestSnapshot.Timestamp}, TotalActors = {_latestSnapshot.TotalActors}, HealthyActors = {_latestSnapshot.HealthyActors}, ErrorActors = {_latestSnapshot.ErrorActors}, TotalMessages = {_latestSnapshot.TotalMessages} }}";
 }
@@ -79,18 +100,55 @@ public class MetricsCollectorWorker : IBackgroundWorker
 /// </summary>
 public class MetricsSnapshot
 {
+    /// <summary>
+    /// Gets or sets the UTC time at which the metrics were collected.
+    /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of actors in the system.
+    /// </summary>
     public int TotalActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors reporting a healthy state.
+    /// </summary>
     public int HealthyActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors reporting an error state.
+    /// </summary>
     public int ErrorActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages processed by the system.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of errors recorded by the system.
+    /// </summary>
     public long TotalErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average message latency in milliseconds.
+    /// </summary>
     public double AverageLatencyMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error rate as a percentage.
+    /// </summary>
     public double ErrorRate { get; set; }
 
     // Configurable threshold – default is 5.0 (percent).
+    /// <summary>
+    /// Gets or sets the error rate threshold, as a percentage, above which the system is unhealthy.
+    /// </summary>
     public double ErrorRateThreshold { get; set; } = 5.0;
 
+    /// <summary>
+    /// Gets a value indicating whether the system is healthy: no error actors and an error rate below the threshold.
+    /// </summary>
     public bool IsHealthy => ErrorActors == 0 && ErrorRate < ErrorRateThreshold;
 }
 
@@ -99,12 +157,24 @@ public class MetricsSnapshot
 /// </summary>
 public class DeadLetterQueueWorker : IBackgroundWorker
 {
+    /// <summary>
+    /// Gets the unique identifier of this worker.
+    /// </summary>
     public string WorkerId => "dead-letter-queue";
+
+    /// <summary>
+    /// Gets or sets the interval between cleanup runs. Defaults to one minute.
+    /// </summary>
     public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(1);
 
     private readonly DeadLetterQueue _deadLetterQueue;
     private readonly int _maxQueueSize;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeadLetterQueueWorker"/> class.
+    /// </summary>
+    /// <param name="deadLetterQueue">The dead letter queue to monitor and clean up.</param>
+    /// <param name="maxQueueSize">The maximum number of messages to keep in the queue.</param>
     public DeadLetterQueueWorker(DeadLetterQueue deadLetterQueue, int maxQueueSize = 10000)
     {
         ArgumentNullException.ThrowIfNull(deadLetterQueue);
@@ -113,6 +183,11 @@ public class DeadLetterQueueWorker : IBackgroundWorker
         _maxQueueSize = maxQueueSize;
     }
 
+    /// <summary>
+    /// Removes dead letters older than one hour and trims the queue to the maximum size.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the cleanup run.</param>
+    /// <returns>A task that completes when the cleanup run has finished.</returns>
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await Task.Run(() =>
@@ -148,6 +223,9 @@ public class DeadLetterQueue
     private readonly List<DeadLetteredMessage> _messages = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Gets the number of messages currently in the queue.
+    /// </summary>
     public int Count
     {
         get
@@ -220,8 +298,23 @@ public class DeadLetterQueue
 /// </summary>
 public class DeadLetteredMessage
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of the dead-lettered message.
+    /// </summary>
     public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the envelope that could not be delivered.
+    /// </summary>
     public Envelope Envelope { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the reason the message could not be delivered.
+    /// </summary>
     public string Reason { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the message was added to the queue.
+    /// </summary>
     public DateTime ArrivedAt { get; set; }
 }
