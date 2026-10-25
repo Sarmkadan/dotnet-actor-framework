@@ -54,8 +54,7 @@ public class BackgroundWorkerService : IDisposable
     /// </summary>
     public void RegisterWorker(IBackgroundWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         if (string.IsNullOrWhiteSpace(worker.WorkerId))
             throw new ArgumentException("Worker ID cannot be empty.", nameof(worker));
@@ -149,6 +148,8 @@ public class BackgroundWorkerService : IDisposable
     /// </summary>
     public WorkerStatus? GetWorkerStatus(string workerId)
     {
+        ArgumentNullException.ThrowIfNull(workerId);
+
         if (!_workers.TryGetValue(workerId, out var workerTask))
             return null;
 
@@ -224,6 +225,8 @@ public class BackgroundWorkerService : IDisposable
 
         public WorkerTask(IBackgroundWorker worker)
         {
+            ArgumentNullException.ThrowIfNull(worker);
+
             Worker = worker;
         }
     }
