@@ -1,136 +1,146 @@
 # PersistenceService
 
-The `PersistenceService` class provides the core infrastructure for persisting and retrieving actor state and event streams within the `dotnet-actor-framework`. It acts as an abstraction layer over the underlying storage mechanism, enabling actors to save snapshots for fast recovery, append domain events for event sourcing, and query historical event data. All operations are asynchronous, ensuring non-blocking I/O during persistence interactions.
+`PersistenceService` (`src/DotNetActorFramework/Persistence/PersistenceService.cs`, namespace `DotNetActorFramework.Persistence`) is a facade over two storage contracts: snapshot storage (`ISnapshotStore`) and event journaling (`IEventJournal`). It gives actors one entry point to save and load snapshots, append and read events, and delete either. It also applies a simple auto-snapshot policy: after a configurable number of appended events for an actor, it writes a snapshot.
 
-## API
+The class holds no storage of its own. Every call is forwarded to the injected `ISnapshotStore` or `IEventJournal`, so the storage technology is decided by whichever implementations are registered.
 
-### Constructors
+## Purpose
 
-#### `public PersistenceService()`
-Initializes a new instance of the `PersistenceService` class. This constructor typically sets up internal dependencies required for database or file system interaction, depending on the framework's configuration.
+- Recover actor state quickly by loading the latest snapshot and replaying only the events that follow it.
+- Record state changes as events (event sourcing) through `AppendEventsAsync`.
+- Keep the snapshot count low by saving snapshots periodically, instead of relying on the full event log for every recovery.
 
-### Methods
+## Backends
 
-#### `public async Task SaveSnapshotAsync`
-Persists the current state of an actor as a snapshot.
-*   **Purpose**: Reduces recovery time by allowing actors to restore state from a recent point rather than replaying the entire event log.
-*   **Parameters**: Implicitly requires context regarding the actor ID and snapshot data (specific signature details depend on framework overload resolution, but generally accepts actor identifier and state object).
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if the storage backend is unavailable, serialization fails, or the actor ID is invalid.
+`PersistenceService` is backend-agnostic. It depends only on the two interfaces below.
 
-#### `public async Task<ActorSnapshot?> LoadLatestSnapshotAsync`
-Retrieves the most recent snapshot for a specific actor.
-*   **Purpose**: Used during actor initialization to restore state to the last known good point.
-*   **Parameters**: Requires the unique identifier of the actor.
-*   **Return Value**: A `Task` yielding an `ActorSnapshot` object if a snapshot exists, or `null` if no snapshots have been saved for the actor.
-*   **Throws**: Throws an exception if the storage backend is unreachable or data corruption is detected.
+| Contract | Namespace | Role |
+|----------|-----------|------|
+| `ISnapshotStore` | `DotNetActorFramework.Persistence.Abstractions` | Save, load latest, and delete snapshots |
+| `IEventJournal` | `DotNetActorFramework.Persistence.Abstractions` | Append, read forward or backward, and delete events |
 
-#### `public async Task DeleteSnapshotsAsync`
-Deletes specific snapshots based on provided criteria (e.g., sequence numbers or timestamps).
-*   **Purpose**: Manages storage retention by removing outdated or intermediate snapshots.
-*   **Parameters**: Requires the actor ID and criteria defining which snapshots to remove.
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if the deletion operation fails due to permissions or backend errors.
+Backends in this repository:
 
-#### `public async Task DeleteAllSnapshotsAsync`
-Removes all snapshots associated with a specific actor.
-*   **Purpose**: Completely clears snapshot history for an actor, forcing future recoveries to rely solely on event replay.
-*   **Parameters**: Requires the unique identifier of the actor.
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if the backend operation fails.
+- **In-memory** (`InMemorySnapshotStore`, `InMemoryEventJournal`), namespace `DotNetActorFramework.Persistence.InMemory`. This is the default: `ActorSystemOptions.DefaultPersistenceBackend` is `PersistenceBackend.InMemory`, and the DI setup registers both implementations as singletons. Data is kept in process memory and is lost on restart. `InMemorySnapshotStore` keeps only the most recent snapshot per actor.
+- **Resilient decorator** (`ResilientEventJournal`), registered with `AddResilientEventJournal` or `AddResilientEventJournalProduction`. It wraps an existing `IEventJournal` with retry and circuit-breaker behavior. It is a decorator, not a storage backend.
 
-#### `public async Task AppendEventsAsync`
-Appends a collection of new events to the actor's event stream.
-*   **Purpose**: The primary method for event sourcing, recording state changes as immutable events.
-*   **Parameters**: Requires the actor ID and an enumerable collection of `ActorEvent` objects.
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if concurrency checks fail (optimistic locking), the stream is sealed, or the write operation fails.
+Other values of `PersistenceBackend` exist, but they are not implemented. Selecting `File`, `LiteDb`, or `PostgreSql` makes the DI setup throw `NotImplementedException` at registration time.
 
-#### `public async Task<IEnumerable<ActorEvent>> ReadEventsAsync`
-Reads events from the actor's event stream in forward chronological order.
-*   **Purpose**: Replays events to reconstruct state or for auditing purposes.
-*   **Parameters**: Requires the actor ID and optionally a starting sequence number or count.
-*   **Return Value**: A `Task` yielding an `IEnumerable<ActorEvent>` containing the requested events.
-*   **Throws**: Throws an exception if the actor ID is not found or the storage backend fails.
+To use a custom store, register your own `ISnapshotStore` and `IEventJournal` implementations. `PersistenceService` is then resolved with those dependencies.
 
-#### `public async Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync`
-Reads events from the actor's event stream in reverse chronological order.
-*   **Purpose**: Useful for debugging recent activities or implementing patterns that require the latest events first.
-*   **Parameters**: Requires the actor ID and optionally a starting sequence number or count.
-*   **Return Value**: A `Task` yielding an `IEnumerable<ActorEvent>` containing the requested events in reverse order.
-*   **Throws**: Throws an exception if the actor ID is not found or the storage backend fails.
+## Constructor
 
-#### `public async Task DeleteEventsAsync`
-Deletes specific events from the actor's event stream based on sequence numbers or ranges.
-*   **Purpose**: Supports compliance requirements (e.g., GDPR) or log compaction strategies.
-*   **Parameters**: Requires the actor ID and the specific range or identifiers of events to delete.
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if the deletion violates stream integrity constraints or fails at the backend level.
+### `public PersistenceService(ISnapshotStore snapshotStore, IEventJournal eventJournal, ILogger<PersistenceService>? logger = null, int snapshotIntervalEvents = 100)`
 
-#### `public async Task DeleteAllEventsAsync`
-Removes the entire event stream for a specific actor.
-*   **Purpose**: Completely resets the actor's history, effectively destroying its persisted state.
-*   **Parameters**: Requires the unique identifier of the actor.
-*   **Return Value**: A `Task` representing the asynchronous operation.
-*   **Throws**: Throws an exception if the operation fails due to backend errors or protection policies.
+- **`snapshotStore`**: the snapshot store. Must not be `null`; otherwise `ArgumentNullException` is thrown.
+- **`eventJournal`**: the event journal. Must not be `null`; otherwise `ArgumentNullException` is thrown.
+- **`logger`**: optional logger. When `null`, no logging is done.
+- **`snapshotIntervalEvents`**: number of events after which an automatic snapshot is written. Default is `100`.
+
+## Methods
+
+All methods are `async` and return a `Task`. Each takes `Guid actorId` and `ActorPath actorPath` to identify the actor. The path is converted to a string (`actorPath.ToString()`) before it is passed to the storage contracts.
+
+### Snapshot operations
+
+#### `Task SaveSnapshotAsync(Guid actorId, ActorPath actorPath, object state, long sequenceNr)`
+Builds an `ActorSnapshot` with the current UTC time as its timestamp and passes it to `ISnapshotStore.SaveSnapshotAsync`. Logs and rethrows any exception.
+
+#### `Task<ActorSnapshot?> LoadLatestSnapshotAsync(Guid actorId, ActorPath actorPath)`
+Returns the most recent snapshot for the actor, or `null` if none exists.
+
+#### `Task DeleteSnapshotsAsync(Guid actorId, ActorPath actorPath, long maxSequenceNr)`
+Deletes the actor's snapshots with a sequence number up to and including `maxSequenceNr`.
+
+#### `Task DeleteAllSnapshotsAsync(Guid actorId, ActorPath actorPath)`
+Deletes all snapshots for the actor.
+
+### Event journal operations
+
+#### `Task AppendEventsAsync(Guid actorId, ActorPath actorPath, IEnumerable<ActorEvent> events)`
+Appends the events to the journal, then updates a per-actor counter of appended events. When the counter reaches `snapshotIntervalEvents`, the method saves a snapshot and resets the counter to `0`. See [Auto-snapshot](#auto-snapshot) below.
+
+#### `Task<IEnumerable<ActorEvent>> ReadEventsAsync(Guid actorId, ActorPath actorPath, long fromSequenceNr, long toSequenceNr)`
+Reads events in forward order. Both bounds are inclusive.
+
+#### `Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync(Guid actorId, ActorPath actorPath, long fromSequenceNr, long toSequenceNr)`
+Reads events in reverse order. Both bounds are inclusive.
+
+#### `Task DeleteEventsAsync(Guid actorId, ActorPath actorPath, long maxSequenceNr)`
+Deletes the actor's events with a sequence number up to and including `maxSequenceNr`.
+
+#### `Task DeleteAllEventsAsync(Guid actorId, ActorPath actorPath)`
+Deletes all events for the actor.
+
+## Data types
+
+These records live in `DotNetActorFramework.Persistence.Abstractions`.
+
+```csharp
+public record ActorSnapshot(Guid ActorId, string ActorPath, object State, long SequenceNr, DateTime Timestamp);
+
+public record ActorEvent(Guid ActorId, string ActorPath, long SequenceNr, DateTime Timestamp, object EventData);
+```
+
+`ActorPath` on both records is the string form of the actor path. `PersistenceService` fills it in from the `ActorPath` argument.
+
+## Auto-snapshot
+
+The counter used for the auto-snapshot policy is kept per actor, keyed by `{actorId}_{actorPath}`.
+
+1. `AppendEventsAsync` appends the events to the journal.
+2. The counter for the actor is increased by the number of events appended.
+3. If the counter is at or above `snapshotIntervalEvents`, `SaveSnapshotAsync` is called with `state = null` and `sequenceNr = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()`. The counter is then reset to `0`.
+
+Because the snapshot is saved with a `null` state, it does not capture actor state. It is not usable for recovery. The sequence number is a millisecond timestamp, not the journal's event sequence number.
+
+The counter lives only in memory. It starts at zero again after a process restart.
 
 ## Usage
 
-### Example 1: Actor Recovery and Event Replay
-This example demonstrates how to initialize an actor by loading the latest snapshot and replaying subsequent events to reach the current state.
+### Example 1: Recover an actor from snapshot and events
 
 ```csharp
-public async Task InitializeActorAsync(string actorId, PersistenceService persistenceService)
+public async Task<long> RecoverAsync(Guid actorId, ActorPath actorPath, PersistenceService persistence)
 {
-    // Attempt to load the latest snapshot
-    var snapshot = await persistenceService.LoadLatestSnapshotAsync(actorId);
-    
-    long currentSequence = 0;
-    if (snapshot != null)
+    var snapshot = await persistence.LoadLatestSnapshotAsync(actorId, actorPath);
+    long fromSequenceNr = 0;
+
+    if (snapshot is not null)
     {
-        // Restore state from snapshot
-        ApplySnapshot(snapshot.Data);
-        currentSequence = snapshot.SequenceNumber;
+        ApplySnapshot(snapshot.State);
+        fromSequenceNr = snapshot.SequenceNr + 1;
     }
 
-    // Read events occurring after the snapshot
-    var events = await persistenceService.ReadEventsAsync(actorId, currentSequence + 1);
-    
+    var events = await persistence.ReadEventsAsync(actorId, actorPath, fromSequenceNr, long.MaxValue);
     foreach (var evt in events)
     {
-        ApplyEvent(evt);
+        ApplyEvent(evt.EventData);
     }
+
+    return fromSequenceNr;
 }
 ```
 
-### Example 2: Saving State and Appending New Events
-This example shows a typical command handler workflow where an action results in new events being appended and a periodic snapshot being saved.
+`ApplySnapshot` and `ApplyEvent` stand in for the actor's own state logic.
+
+### Example 2: Append events
 
 ```csharp
-public async Task ProcessCommandAsync(string actorId, Command cmd, PersistenceService persistenceService)
+public async Task RecordAsync(Guid actorId, ActorPath actorPath, PersistenceService persistence, object evt)
 {
-    var newEvents = new List<ActorEvent>
-    {
-        new ActorEvent("OrderPlaced", new { OrderId = cmd.OrderId, Timestamp = DateTime.UtcNow }),
-        new ActorEvent("InventoryReserved", new { ItemId = cmd.ItemId })
-    };
-
-    // Append the new events to the stream
-    await persistenceService.AppendEventsAsync(actorId, newEvents);
-
-    // If the event count threshold is met, save a snapshot
-    if (ShouldTakeSnapshot())
-    {
-        var currentState = GetCurrentState();
-        await persistenceService.SaveSnapshotAsync(actorId, currentState);
-    }
+    var record = new ActorEvent(actorId, actorPath.ToString(), 0, DateTime.UtcNow, evt);
+    await persistence.AppendEventsAsync(actorId, actorPath, new[] { record });
 }
 ```
+
+The `SequenceNr` value is set by the caller. `PersistenceService` does not assign sequence numbers to events.
 
 ## Notes
 
-*   **Thread Safety**: While the methods are asynchronous, `PersistenceService` instances should generally be treated as stateless or scoped per actor context. Concurrent calls to `AppendEventsAsync` for the same `actorId` from multiple threads without external synchronization may lead to race conditions or concurrency exceptions depending on the underlying storage implementation's optimistic locking strategy.
-*   **Event Ordering**: `ReadEventsAsync` guarantees forward chronological order, while `ReadEventsBackwardAsync` guarantees reverse order. However, consistency is only guaranteed relative to committed transactions; reading immediately after writing may require awaiting the write task fully.
-*   **Null Handling**: `LoadLatestSnapshotAsync` explicitly returns `null` when no snapshot exists. Callers must handle this case gracefully to avoid `NullReferenceException` when accessing snapshot properties.
-*   **Destructive Operations**: Methods such as `DeleteAllEventsAsync` and `DeleteAllSnapshotsAsync` are irreversible. Implementations should ensure these are only invoked during specific lifecycle events (e.g., actor termination or administrative cleanup) to prevent accidental data loss.
-*   **Empty Collections**: If no events match the criteria in `ReadEventsAsync` or `ReadEventsBackwardAsync`, an empty `IEnumerable<ActorEvent>` is returned rather than `null`.
+- **Auto-snapshot stores no state.** The auto-snapshot described above saves `null` as the state. Treat it as a placeholder until the framework passes the real actor state into the policy.
+- **Pruning is not done here.** The class summary says the auto-snapshot policy "prunes older snapshots". The code does not do this. `PersistenceService` never calls `DeleteSnapshotsAsync`. Pruning happens only inside `InMemorySnapshotStore`, which keeps only the highest-sequence snapshot per actor.
+- **Counter is per process.** The auto-snapshot counter is in memory and per actor. Across multiple processes or restarts, snapshots happen at a different rate than the configured interval.
+- **Events are enumerated more than once.** `AppendEventsAsync` calls `Count()` on `events` for logging and for the counter. Pass a materialized collection (for example, an array or `List<T>`) to avoid enumerating a lazy sequence twice.
+- **Concurrency.** `PersistenceService` keeps no per-call state beyond the counter dictionary, which is a `ConcurrentDictionary`. Concurrency control for appends depends on the `IEventJournal` implementation.
+- **Logging.** The `ILogger<PersistenceService>` is optional. Without it, no output is produced. `SaveSnapshotAsync` logs its errors and rethrows them.
