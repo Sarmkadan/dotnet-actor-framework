@@ -118,4 +118,18 @@ public static class EnvelopeExtensions
             _ => $"{elapsed.TotalDays:F1}d ago"
         };
     }
+
+    /// <summary>
+    /// Determines whether the envelope was sent longer ago than the specified age.
+    /// </summary>
+    /// <param name="envelope">The envelope instance.</param>
+    /// <param name="maxAge">The age threshold to compare against.</param>
+    /// <returns><see langword="true"/> if the envelope's age exceeds <paramref name="maxAge"/>; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="envelope"/> is <see langword="null"/>.</exception>
+    public static bool IsOlderThan(this Envelope envelope, TimeSpan maxAge)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+
+        return envelope.GetElapsedTime() > maxAge;
+    }
 }
