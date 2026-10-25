@@ -20,6 +20,13 @@ public class ActorSystemCliHandler
     private readonly MessageFormatterFactory _messageFormatterFactory;
     private readonly HealthCheckFormatterFactory _healthFormatterFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemCliHandler"/> class.
+    /// </summary>
+    /// <param name="actorSystem">The actor system the CLI operates on.</param>
+    /// <param name="managementApi">API used to list, inspect and terminate actors.</param>
+    /// <param name="metricsApi">API used to read system health and metrics.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="managementApi"/> or <paramref name="metricsApi"/> is null.</exception>
     public ActorSystemCliHandler(ActorSystem actorSystem, ActorManagementApi managementApi, SystemMetricsApi metricsApi)
     {
         _managementApi = managementApi ?? throw new ArgumentNullException(nameof(managementApi));
