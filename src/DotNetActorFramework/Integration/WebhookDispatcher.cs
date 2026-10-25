@@ -14,6 +14,9 @@ namespace DotNetActorFramework.Integration;
 /// </summary>
 public class WebhookConfig
 {
+    private const int DefaultMaxRetries = 3;
+    private static readonly TimeSpan DefaultRetryDelay = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// Unique identifier of the webhook, used to unregister it.
     /// </summary>
@@ -42,12 +45,12 @@ public class WebhookConfig
     /// <summary>
     /// Maximum number of delivery attempts for a single event. When null, only one attempt is made.
     /// </summary>
-    public int? MaxRetries { get; set; } = 3;
+    public int? MaxRetries { get; set; } = DefaultMaxRetries;
 
     /// <summary>
     /// Delay between delivery attempts. When null, a 1-second delay is used.
     /// </summary>
-    public TimeSpan? RetryDelay { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan? RetryDelay { get; set; } = DefaultRetryDelay;
 
     /// <summary>
     /// Returns a string representation of the webhook configuration.
@@ -65,6 +68,9 @@ public class WebhookConfig
 /// </summary>
 public class WebhookDispatcher : IDisposable
 {
+    private const int SingleAttempt = 1;
+    private static readonly TimeSpan FallbackRetryDelay = TimeSpan.FromSeconds(1);
+
     private readonly List<WebhookConfig> _webhooks = [];
     private readonly HttpClient _httpClient;
     private readonly object _lockObject = new();
@@ -144,8 +150,8 @@ public class WebhookDispatcher : IDisposable
 
     private async Task SendWebhookAsync(WebhookConfig config, IDomainEvent @event)
     {
-        var maxRetries = config.MaxRetries ?? 1;
-        var retryDelay = config.RetryDelay ?? TimeSpan.FromSeconds(1);
+        var maxRetries = config.MaxRetries ?? SingleAttempt;
+        var retryDelay = config.RetryDelay ?? FallbackRetryDelay;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) // Only retry on 5xx/network errors
         {
