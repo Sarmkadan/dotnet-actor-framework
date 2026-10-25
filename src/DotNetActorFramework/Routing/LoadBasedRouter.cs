@@ -28,6 +28,10 @@ public sealed class LoadBasedRouter : IRouter
     private readonly MessageDispatcher _dispatcher;
     private readonly ILogger<LoadBasedRouter>? _logger;
 
+    // Counter value at which round-robin wraps back to zero, leaving headroom below int.MaxValue
+    // so the increment can never overflow into a negative index.
+    private const int RoundRobinCounterCap = int.MaxValue - 1;
+
     // Per-capability monotonic counters; overflow wraps safely via modulo.
     private readonly ConcurrentDictionary<string, int> _roundRobinCounters =
         new(StringComparer.OrdinalIgnoreCase);
@@ -352,11 +356,11 @@ public sealed class LoadBasedRouter : IRouter
     /// <returns>The selected actor.</returns>
     private ActorRef SelectRoundRobinFromPool(string capability, IReadOnlyList<ActorRef> pool)
     {
-        // Atomically advance the counter; cap at int.MaxValue - 1 to avoid negative overflow.
+        // Atomically advance the counter; wrap at RoundRobinCounterCap to avoid negative overflow.
         var index = _roundRobinCounters.AddOrUpdate(
             capability,
             _ => 0,
-            (_, prev) => prev >= int.MaxValue - 1 ? 0 : prev + 1);
+            (_, prev) => prev >= RoundRobinCounterCap ? 0 : prev + 1);
 
         return pool[index % pool.Count];
     }
