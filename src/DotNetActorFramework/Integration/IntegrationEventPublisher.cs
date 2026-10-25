@@ -21,7 +21,8 @@ public class IntegrationEventPublisher : IDisposable
 
     public IntegrationEventPublisher(WebhookDispatcher webhookDispatcher)
     {
-        _webhookDispatcher = webhookDispatcher ?? throw new ArgumentNullException(nameof(webhookDispatcher));
+        ArgumentNullException.ThrowIfNull(webhookDispatcher);
+        _webhookDispatcher = webhookDispatcher;
 
         // Process queued events every 100ms. The returned task is intentionally not awaited
         // (timer callbacks cannot await); ProcessQueuedEventsAsync observes all exceptions itself.
@@ -33,8 +34,7 @@ public class IntegrationEventPublisher : IDisposable
     /// </summary>
     public Task PublishAsync(IDomainEvent @event)
     {
-        if (@event == null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(@event, nameof(@event));
 
         var envelope = new IntegrationEventEnvelope
         {
@@ -118,7 +118,8 @@ public class DuplicateEventFilteringPublisher
 
     public DuplicateEventFilteringPublisher(EventBus eventBus, TimeSpan? deduplicationWindow = null)
     {
-        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        ArgumentNullException.ThrowIfNull(eventBus);
+        _eventBus = eventBus;
         _deduplicationWindow = deduplicationWindow ?? TimeSpan.FromMinutes(5);
     }
 
