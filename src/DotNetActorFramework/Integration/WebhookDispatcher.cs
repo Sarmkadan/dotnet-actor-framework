@@ -48,8 +48,7 @@ public class WebhookDispatcher : IDisposable
     /// </summary>
     public void RegisterWebhook(WebhookConfig config)
     {
-        if (config == null)
-            throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
 
         if (string.IsNullOrWhiteSpace(config.Url))
             throw new ArgumentException("Webhook URL cannot be empty.", nameof(config));
