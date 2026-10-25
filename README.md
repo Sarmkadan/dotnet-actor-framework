@@ -235,6 +235,31 @@ Restarts: 1
 
 To try another strategy, change the `SupervisionStrategy.Restart` argument. This `Worker` only handles `restart`, so with `Resume` or `Stop` the control message is ignored until you add a `case` for it.
 
+### SupervisionService members
+
+`SupervisionService` keeps one `SupervisionContext` per actor that has failed. Contexts are created on the first `HandleFailureAsync` call for an actor and are never removed.
+
+| Member | Description |
+|---|---|
+| `SupervisionService(ActorRegistry, MessageDispatcher)` | Throws `ArgumentNullException` if either argument is null. |
+| `HandleFailureAsync(ActorRef, Exception, SupervisionStrategy)` | Applies the strategy from the table above. Throws `ArgumentNullException` for null arguments and `ArgumentException` for a value outside the enum. |
+| `GetContext(Guid actorId)` | Returns the actor's `SupervisionContext`, or `null` if it has none. |
+| `GetAllContexts()` | Returns a new dictionary copy of all contexts. The `SupervisionContext` objects are shared, not copied. |
+| `GetStatistics()` | Returns a `SupervisionStatistics` snapshot across all contexts. |
+| `ResetContext(Guid actorId)` | Sets `FailureCount` and `RestartCount` to 0 for the actor. Does nothing if the actor has no context. |
+
+`SupervisionContext` exposes these counters:
+
+| Property | What changes it |
+|---|---|
+| `RestartCount` | Incremented on every `Restart` call, including calls that escalate after the 5th restart. |
+| `FailureCount` | Incremented only by `Backoff`. The other strategies leave it unchanged, so `TotalFailures` and `AverageFailuresPerActor` count only backoff failures. |
+| `LastFailureTime` | Set to the UTC time the context was created and never updated afterwards. `GetTimeSinceLastFailure()` therefore measures time since the actor's first failure. |
+
+`SupervisionStatistics` reports `TotalActorsSupervised` (the number of contexts), `TotalFailures`, `TotalRestarts`, and `AverageFailuresPerActor`.
+
+The `Backoff` delay is computed as `(int)Math.Pow(1.5, FailureCount) * 100` ms. Because of the integer cast, the delays are 100, 200, 300, 500, 700, 1,100, 1,700, 2,500 ms and so on, not a smooth 1.5× curve. The delay is capped at 30,000 ms.
+
 ## EventBusTests
 
 The `EventBusTests` class provides unit tests for the EventBus pub/sub functionality, verifying that subscribers can subscribe and unsubscribe, events are published to all subscribers, handler exceptions are handled appropriately, and event types are properly isolated.
