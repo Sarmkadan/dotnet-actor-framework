@@ -42,7 +42,13 @@ public class ResilientEventJournal : IEventJournal
         _circuitBreaker = new CircuitBreakerState(_options.CircuitBreakerFailureThreshold, _options.CircuitBreakerCooldownPeriod);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Appends events to the underlying journal, retrying transient failures with exponential backoff.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor that owns the events.</param>
+    /// <param name="actorPath">The path of the actor that owns the events.</param>
+    /// <param name="events">The events to append.</param>
+    /// <returns>A task that completes when the events have been appended.</returns>
     public async Task AppendEventsAsync(Guid actorId, string actorPath, IEnumerable<ActorEvent> events)
     {
         ArgumentNullException.ThrowIfNull(actorId);
@@ -56,7 +62,14 @@ public class ResilientEventJournal : IEventJournal
         nameof(AppendEventsAsync), actorId, actorPath);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Reads events from the underlying journal, retrying transient failures with exponential backoff.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor that owns the events.</param>
+    /// <param name="actorPath">The path of the actor that owns the events.</param>
+    /// <param name="fromSequenceNr">The first sequence number to read, inclusive.</param>
+    /// <param name="toSequenceNr">The last sequence number to read, inclusive.</param>
+    /// <returns>The events in the requested sequence range.</returns>
     public async Task<IEnumerable<ActorEvent>> ReadEventsAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
         ArgumentNullException.ThrowIfNull(actorId);
@@ -69,7 +82,14 @@ public class ResilientEventJournal : IEventJournal
         nameof(ReadEventsAsync), actorId, actorPath, fromSequenceNr, toSequenceNr);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Reads events in reverse order from the underlying journal, retrying transient failures with exponential backoff.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor that owns the events.</param>
+    /// <param name="actorPath">The path of the actor that owns the events.</param>
+    /// <param name="fromSequenceNr">The sequence number to start reading from, inclusive.</param>
+    /// <param name="toSequenceNr">The sequence number to stop reading at, inclusive.</param>
+    /// <returns>The events in the requested sequence range, ordered from newest to oldest.</returns>
     public async Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
         ArgumentNullException.ThrowIfNull(actorId);
@@ -82,7 +102,13 @@ public class ResilientEventJournal : IEventJournal
         nameof(ReadEventsBackwardAsync), actorId, actorPath, fromSequenceNr, toSequenceNr);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Deletes events up to the given sequence number from the underlying journal, retrying transient failures with exponential backoff.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor that owns the events.</param>
+    /// <param name="actorPath">The path of the actor that owns the events.</param>
+    /// <param name="maxSequenceNr">The highest sequence number to delete, inclusive.</param>
+    /// <returns>A task that completes when the events have been deleted.</returns>
     public async Task DeleteEventsAsync(Guid actorId, string actorPath, long maxSequenceNr)
     {
         ArgumentNullException.ThrowIfNull(actorId);
@@ -95,7 +121,12 @@ public class ResilientEventJournal : IEventJournal
         nameof(DeleteEventsAsync), actorId, actorPath, maxSequenceNr);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Deletes all events for the actor from the underlying journal, retrying transient failures with exponential backoff.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor that owns the events.</param>
+    /// <param name="actorPath">The path of the actor that owns the events.</param>
+    /// <returns>A task that completes when the events have been deleted.</returns>
     public async Task DeleteAllEventsAsync(Guid actorId, string actorPath)
     {
         ArgumentNullException.ThrowIfNull(actorId);
@@ -275,14 +306,25 @@ public class ResilientEventJournal : IEventJournal
         private DateTime? _lastFailureTime;
         private readonly object _lock = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CircuitBreakerState"/> class.
+        /// </summary>
+        /// <param name="failureThreshold">The number of consecutive failures that opens the circuit.</param>
+        /// <param name="cooldownPeriod">How long the circuit stays open after the last failure.</param>
         public CircuitBreakerState(int failureThreshold, TimeSpan cooldownPeriod)
         {
             _failureThreshold = failureThreshold;
             _cooldownPeriod = cooldownPeriod;
         }
 
+        /// <summary>
+        /// Gets the number of consecutive failures recorded since the last success.
+        /// </summary>
         public int ConsecutiveFailureCount => _consecutiveFailureCount;
 
+        /// <summary>
+        /// Gets a value indicating whether the circuit is open and calls should fail fast.
+        /// </summary>
         public bool IsOpen
         {
             get
@@ -304,6 +346,9 @@ public class ResilientEventJournal : IEventJournal
             }
         }
 
+        /// <summary>
+        /// Resets the failure count and clears the last failure time after a successful call.
+        /// </summary>
         public void RecordSuccess()
         {
             lock (_lock)
@@ -313,6 +358,9 @@ public class ResilientEventJournal : IEventJournal
             }
         }
 
+        /// <summary>
+        /// Increments the consecutive failure count and records the time of the failure.
+        /// </summary>
         public void RecordFailure()
         {
             lock (_lock)
