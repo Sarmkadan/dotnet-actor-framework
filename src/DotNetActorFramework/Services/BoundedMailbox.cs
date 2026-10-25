@@ -539,15 +539,32 @@ public class BoundedPriorityMailbox : IMailbox
 /// </summary>
 internal class PrioritizedEnvelope : IComparable<PrioritizedEnvelope>
 {
+    /// <summary>
+    /// Gets the wrapped message envelope.
+    /// </summary>
     public Envelope Envelope { get; }
+
+    /// <summary>
+    /// Gets the priority of the wrapped envelope. Higher values are dequeued first.
+    /// </summary>
     public int Priority { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PrioritizedEnvelope"/> class.
+    /// </summary>
+    /// <param name="envelope">The message envelope to wrap.</param>
+    /// <param name="priority">The priority of the envelope.</param>
     public PrioritizedEnvelope(Envelope envelope, int priority)
     {
         Envelope = envelope;
         Priority = priority;
     }
 
+    /// <summary>
+    /// Compares this envelope with another by priority, so that higher priorities sort first.
+    /// </summary>
+    /// <param name="other">The envelope to compare with.</param>
+    /// <returns>A negative value, zero, or a positive value, following the <see cref="IComparable{T}"/> contract.</returns>
     public int CompareTo(PrioritizedEnvelope? other)
     {
         if (other == null) return 1;
