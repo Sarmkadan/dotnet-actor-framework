@@ -490,6 +490,72 @@ var parent = created.GetParent();
 await system.ShutdownAsync();
 ```
 
+## ActorRegistry
+
+`ActorRegistry` (in `DotNetActorFramework.Services`, source in `src/DotNetActorFramework/Services/ActorRegistry.cs`) is the in-memory index of actors that the framework uses to resolve them. It keeps three indexes under a single lock: a path index (`ActorPath` to `ActorRef`), an id index (`Guid` to `ActorRef`), and a hierarchy index (parent path to child paths), which lets you walk the actor tree. `MessageDispatcher` takes a registry in its constructor.
+
+Registration is explicit. `Register` adds an `ActorRef` and throws `InvalidOperationException` if the path is already taken. `Unregister` removes an `ActorRef` by its path and id; it does nothing if the actor is not present. Single-actor lookups return `null` when nothing matches instead of throwing. Collection-returning methods return read-only snapshots, so callers can iterate them without holding the registry's lock.
+
+| Member | Description |
+|---|---|
+| `Register(actorRef)` | Adds the actor under its path and id and records it under its parent. Throws `ArgumentNullException` for null and `InvalidOperationException` for a duplicate path. |
+| `Unregister(actorRef)` | Removes the actor from the path, id, and hierarchy indexes. Child actors stay registered. |
+| `GetByPath(path)` | Returns the `ActorRef` at the path, or `null`. |
+| `GetById(id)` | Returns the `ActorRef` with the given `Guid`, or `null`. |
+| `Contains(path)` | `true` if an actor is registered at the path. |
+| `GetChildren(parentPath)` | Returns the direct children of the parent path. |
+| `GetDescendants(parentPath)` | Returns all descendants of the parent path, depth-first. |
+| `GetAll()` | Returns every registered `ActorRef`. |
+| `GetCount()` | Number of registered actors. |
+| `Clear()` | Removes all registrations. |
+
+`ActorRef` cannot be constructed directly, so the registry is fed with references returned by `ActorSystem.CreateActorAsync`. A registry is a separate index: registering an actor here does not change what `ActorSystem` tracks.
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
+
+var system = new ActorSystem("my-system");
+var registry = new ActorRegistry();
+
+// Create actors through the system, then index them in the registry.
+var parent = await system.CreateActorAsync(new ActorPath("/user/parent"));
+var child = await system.CreateActorAsync(new ActorPath("/user/parent/child"));
+registry.Register(parent);
+registry.Register(child);
+
+// Lookups return null when nothing matches.
+var byPath = registry.GetByPath(new ActorPath("/user/parent"));
+var byId = registry.GetById(child.Id);
+Console.WriteLine(byPath == parent);                                   // True
+Console.WriteLine(registry.Contains(new ActorPath("/user/missing")));  // False
+
+// Hierarchy queries.
+var children = registry.GetChildren(new ActorPath("/user/parent"));    // [child]
+var descendants = registry.GetDescendants(new ActorPath("/user"));     // [parent, child]
+Console.WriteLine($"Registered: {registry.GetCount()}");               // 2
+
+// A second registration at the same path is rejected.
+try
+{
+    registry.Register(parent);
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine(ex.Message);  // Actor already registered at path: /user/parent
+}
+
+// Unregistering a parent does not remove its children.
+registry.Unregister(parent);
+Console.WriteLine(registry.Contains(child.Path));                      // True
+
+await system.ShutdownAsync();
+```
+
+> **Note:** `Unregister` removes whatever is indexed under the given path and id, and it does not cascade to child actors. Remove children explicitly if you want them gone too.
+
 ## Envelope
 
 `Envelope` (in `DotNetActorFramework.Models`, source in `src/DotNetActorFramework/Models/Envelope.cs`) is the wrapper that travels through the mailbox layer. It pairs a `Message` with its routing information: the `Recipient` it is addressed to and the optional `Sender` that produced it. It also stamps the send time and a unique identifier, and carries the delivery-tracking state (retry count and delivered flag) that the dispatcher needs to decide what to do with a message.
