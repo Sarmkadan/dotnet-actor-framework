@@ -20,7 +20,15 @@ namespace DotNetActorFramework.Middleware;
 /// </remarks>
 public class LoggingMiddleware : IActorMiddleware
 {
+    /// <summary>
+    /// Name of the middleware for identification and logging.
+    /// </summary>
     public string Name => "LoggingMiddleware";
+
+    /// <summary>
+    /// Order in which this middleware executes relative to others (lower = earlier).
+    /// Always <c>0</c> so logging wraps the pipeline from the outermost position.
+    /// </summary>
     public int Order => 0;
 
     private readonly ILogger<LoggingMiddleware> _logger;
@@ -38,6 +46,16 @@ public class LoggingMiddleware : IActorMiddleware
         _logLevel = logLevel;
     }
 
+    /// <summary>
+    /// Logs the start and completion (or failure) of message processing, then continues the pipeline.
+    /// </summary>
+    /// <param name="envelope">The envelope containing the message and addressing information.</param>
+    /// <param name="next">Delegate that passes control to the next middleware or the final actor handler.</param>
+    /// <returns>
+    /// <c>true</c> when processing completed successfully; <c>false</c> when an exception was thrown
+    /// (after it has been logged at <see cref="LogLevel.Error"/>).
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is <c>null</c>.</exception>
     public async Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)
     {
         if (envelope == null)
