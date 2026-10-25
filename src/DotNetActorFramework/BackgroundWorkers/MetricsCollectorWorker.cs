@@ -157,6 +157,9 @@ public class MetricsSnapshot
 /// </summary>
 public class DeadLetterQueueWorker : IBackgroundWorker
 {
+    private static readonly TimeSpan DefaultCleanupInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan DeadLetterRetention = TimeSpan.FromHours(1);
+
     /// <summary>
     /// Gets the unique identifier of this worker.
     /// </summary>
@@ -165,7 +168,7 @@ public class DeadLetterQueueWorker : IBackgroundWorker
     /// <summary>
     /// Gets or sets the interval between cleanup runs. Defaults to one minute.
     /// </summary>
-    public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(1);
+    public TimeSpan Interval { get; set; } = DefaultCleanupInterval;
 
     private readonly DeadLetterQueue _deadLetterQueue;
     private readonly int _maxQueueSize;
@@ -196,7 +199,7 @@ public class DeadLetterQueueWorker : IBackgroundWorker
 
             foreach (var msg in messages)
             {
-                if (msg.ArrivedAt.AddHours(1) < DateTime.UtcNow)
+                if (msg.ArrivedAt.Add(DeadLetterRetention) < DateTime.UtcNow)
                 {
                     _deadLetterQueue.Remove(msg.Id);
                 }
