@@ -1,243 +1,178 @@
 # SupervisionService
 
-`SupervisionService` is the core runtime component responsible for monitoring, managing, and recovering from failures in actors within the `dotnet-actor-framework`. It tracks failure and restart counts per supervised actor, maintains aggregate statistics across all supervised actors, and provides the mechanism to handle failures asynchronously with configurable reset behavior.
+`SupervisionService` applies a `SupervisionStrategy` to an actor that has failed. It sends the matching control message through the `MessageDispatcher`, escalates to the parent when needed, and keeps per-actor failure and restart counters that you can read back.
+
+`SupervisionService` lives in the `DotNetActorFramework.Services` namespace. The same file also defines `SupervisionContext` (per-actor counters) and `SupervisionStatistics` (aggregate counters). `DependencyInjectionSetup.AddActorFramework` registers the service as a singleton.
+
+The framework does not call `HandleFailureAsync` for you. Nothing in `src/` invokes it, so your code (or a custom supervisor actor) must decide when a failure occurs and which strategy to apply. Supervision settings in `ActorSystemOptions`, such as `DefaultSupervisionStrategy` and the backoff options, are not read by this service.
+
+## Supervision strategies
+
+`HandleFailureAsync` takes one of the five values of the `SupervisionStrategy` enum:
+
+| Strategy | What happens | Counters changed |
+|----------|--------------|------------------|
+| `Restart` | Increments `RestartCount` and sends a `ControlMessage` with the `restart` command. If `RestartCount` is greater than 5, the failure escalates instead, so the sixth restart request escalates. | `RestartCount` |
+| `Stop` | Sends a `ControlMessage` with the `stop` command. The message carries the exception text in the `failure_reason` parameter. | None |
+| `Resume` | Sends a `ControlMessage` with the `resume` command. The failure is otherwise ignored. | None |
+| `Escalate` | If the actor has a parent (`ActorRef.GetParent()`), sends a `FailureMessage` to the parent with the text `Actor {Path} failed` and the exception. If there is no parent, falls back to `Stop`. | None |
+| `Backoff` | Increments `FailureCount`, waits for an exponential delay (see below), then sends a `ControlMessage` with the `resume` command. The wait happens inside `HandleFailureAsync`, so the caller is blocked until it finishes. | `FailureCount` |
+
+### Backoff delay
+
+The delay for failure number *n* is `(int)Math.Pow(1.5, n) * 100` milliseconds, capped at 30,000 ms. The integer cast happens before the multiplication, so the values are not exactly 1.5ⁿ × 100. The first delays are:
+
+| Failure *n* | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | … | 14 | 15 and later |
+|-------------|---|---|---|---|---|---|---|---|---|----|--------------|
+| Delay (ms)  | 100 | 200 | 300 | 500 | 700 | 1100 | 1700 | 2500 | … | 29100 | 30000 |
+
+The service reads these values from `ActorConstants` (`InitialBackoffDelayMs = 100`, `BackoffMultiplier = 1.5`, `MaxBackoffDelayMs = 30000`), not from `ActorSystemOptions`.
 
 ## API
 
-### SupervisionService
+### `SupervisionService` constructor
 
 ```csharp
-public SupervisionService(Guid actorId)
+public SupervisionService(ActorRegistry registry, MessageDispatcher dispatcher)
 ```
 
-Constructs a new supervision service instance bound to a specific actor. The service initializes all failure counters, restart counters, and aggregate statistics to zero. The `actorId` parameter identifies the actor this service will supervise and cannot be changed after construction.
+Creates a service that looks up actors through `registry` and delivers control and failure messages through `dispatcher`.
 
-- **Parameters**: `actorId` — the unique identifier of the actor to supervise.
-- **Exceptions**: None.
+- **Parameters**
+  - `registry`: The actor registry. Must not be `null`.
+  - `dispatcher`: The message dispatcher. Must not be `null`.
+- **Throws**
+  - `ArgumentNullException`: If `registry` or `dispatcher` is `null`.
 
----
+A `protected` parameterless constructor also exists for subclasses. It leaves `registry` and `dispatcher` set to `null`, so the subclass must not use the inherited members that depend on them.
 
-### HandleFailureAsync
+### `Task HandleFailureAsync(ActorRef actor, Exception exception, SupervisionStrategy strategy)`
 
-```csharp
-public async Task HandleFailureAsync(Exception exception, SupervisionContext context)
-```
+Applies `strategy` to a failure of `actor`. See [Supervision strategies](#supervision-strategies) for the behavior of each value.
 
-Processes a failure reported by the supervised actor. This method increments the failure count for the actor, updates the `LastFailureTime`, and increments the total failure aggregate. Depending on the `SupervisionContext` directive, it may trigger an actor restart (incrementing `RestartCount` and `TotalRestarts`) or escalate the failure. The method executes asynchronously to allow restart strategies that involve delays or external coordination.
+- **Parameters**
+  - `actor`: The failed actor. Must not be `null`.
+  - `exception`: The exception that caused the failure. Must not be `null`.
+  - `strategy`: The strategy to apply.
+- **Returns**
+  - A `Task` that completes when the strategy's work is finished. For `Backoff`, this includes the delay.
+- **Throws**
+  - `ArgumentNullException`: If `actor` or `exception` is `null`.
+  - `ArgumentException`: If `strategy` is not a defined `SupervisionStrategy` value.
+  - `MessageDispatchException`: If the dispatcher cannot deliver a message, for example when the actor has no mailbox.
+- **Notes**
+  - The actor's supervision context is created on entry, before the strategy is checked. An invalid strategy still leaves a context behind.
+  - `Stop`, `Resume`, and `Escalate` do not change `FailureCount`. Only `Backoff` increments it, so `TotalFailures` in the statistics counts only backoff failures.
 
-- **Parameters**:
-  - `exception` — the exception that caused the failure.
-  - `context` — the `SupervisionContext` containing the directive (e.g., restart, stop, escalate) and any associated state.
-- **Returns**: A `Task` representing the asynchronous handling operation.
-- **Exceptions**: May throw `ArgumentNullException` if `exception` or `context` is `null`.
+### `SupervisionContext? GetContext(Guid actorId)`
 
----
+Returns the supervision context for an actor.
 
-### ResetContext
+- **Parameters**
+  - `actorId`: The actor's `Id`.
+- **Returns**
+  - The context, or `null` if the actor has never been supervised.
 
-```csharp
-public void ResetContext()
-```
+### `Dictionary<Guid, SupervisionContext> GetAllContexts()`
 
-Resets the current `SupervisionContext` to its default state. This is typically invoked after a failure has been fully handled and the actor has resumed normal operation, ensuring that stale directives do not affect subsequent failure handling.
+Returns a copy of all supervision contexts, keyed by actor ID. Changes to the returned dictionary do not affect the service. The context objects are shared, so changes to their counters are visible to the service.
 
-- **Exceptions**: None.
+### `SupervisionStatistics GetStatistics()`
 
----
+Returns aggregate counters across all contexts.
 
-### GetStatistics
+- **Returns**
+  - A `SupervisionStatistics` with `TotalActorsSupervised` (number of contexts), `TotalFailures` (sum of `FailureCount`), `TotalRestarts` (sum of `RestartCount`), and `AverageFailuresPerActor` (`TotalFailures` divided by the number of contexts, or `0` when there are none).
 
-```csharp
-public SupervisionStatistics GetStatistics()
-```
+### `void ResetContext(Guid actorId)`
 
-Returns a snapshot of the current supervision statistics for the bound actor and the global aggregates. The returned `SupervisionStatistics` object includes per-actor counts (`FailureCount`, `RestartCount`, `LastFailureTime`) and global aggregates (`TotalActorsSupervised`, `TotalFailures`, `TotalRestarts`, `AverageFailuresPerActor`).
+Resets the counters of one actor's context by calling `SupervisionContext.ResetFailures()`. Does nothing if the actor has no context.
 
-- **Returns**: A populated `SupervisionStatistics` instance.
-- **Exceptions**: None.
+- **Notes**
+  - Contexts are never removed. `ResetContext` clears the counters but keeps the entry, so `TotalActorsSupervised` does not decrease.
+  - `Restart` counts `RestartCount` cumulatively. Without a reset, an actor that has been restarted six times escalates on every later restart request, so call `ResetContext` after recovery if that is not what you want.
 
----
+## `SupervisionContext`
 
-### ActorId
+Per-actor counters. The service creates these; you read them through `GetContext` or `GetAllContexts`.
 
-```csharp
-public Guid ActorId { get; }
-```
+| Member | Type | Description |
+|--------|------|-------------|
+| `ActorId` | `Guid` | The supervised actor's ID. Set by the constructor. |
+| `FailureCount` | `int` | Backoff failures recorded for the actor. Incremented only by `Backoff`. |
+| `RestartCount` | `int` | Restarts requested for the actor. Incremented only by `Restart`. |
+| `LastFailureTime` | `DateTime` | UTC time at which the context was created. The service never updates it when a failure occurs. |
 
-Gets the unique identifier of the actor this supervision service is bound to. This value is set at construction and remains immutable for the lifetime of the service.
+- `public SupervisionContext(Guid actorId)`: Creates a context with zero counters and `LastFailureTime` set to `DateTime.UtcNow`.
+- `public void ResetFailures()`: Sets `FailureCount` and `RestartCount` to zero. `LastFailureTime` is not changed.
+- `public TimeSpan GetTimeSinceLastFailure()`: Returns `DateTime.UtcNow - LastFailureTime`. Because `LastFailureTime` is set only at construction, this is the time since the context was created, not since the last failure.
 
----
+## `SupervisionStatistics`
 
-### FailureCount
+Aggregate counters returned by `GetStatistics()`.
 
-```csharp
-public int FailureCount { get; }
-```
+| Property | Type | Description |
+|----------|------|-------------|
+| `TotalActorsSupervised` | `int` | Number of supervision contexts. |
+| `TotalFailures` | `long` | Sum of `FailureCount` across contexts. |
+| `TotalRestarts` | `long` | Sum of `RestartCount` across contexts. |
+| `AverageFailuresPerActor` | `double` | `TotalFailures` divided by `TotalActorsSupervised`, or `0` when there are none. |
 
-Gets the number of failures recorded for the bound actor since the last reset or construction. Incremented by `HandleFailureAsync`.
+## Thread safety
 
----
+Reads and writes of the context dictionary are serialized on an internal lock, so `GetContext`, `GetAllContexts`, `GetStatistics`, and `ResetContext` are safe to call concurrently. Counter updates in `HandleFailureAsync` (`RestartCount++`, `FailureCount++`) happen outside that lock. Two failures of the same actor handled at the same moment can therefore lose an increment.
 
-### RestartCount
+## Usage example
 
-```csharp
-public int RestartCount { get; }
-```
-
-Gets the number of times the bound actor has been restarted as a result of supervision decisions. Incremented when `HandleFailureAsync` applies a restart directive.
-
----
-
-### LastFailureTime
-
-```csharp
-public DateTime LastFailureTime { get; }
-```
-
-Gets the timestamp of the most recent failure handled by this service. Returns `DateTime.MinValue` if no failure has been recorded.
-
----
-
-### SupervisionContext
-
-```csharp
-public SupervisionContext SupervisionContext { get; }
-```
-
-Gets the current supervision context, which holds the directive and any metadata for the next failure handling cycle. This context can be modified by external supervision strategies and is reset by `ResetContext`.
-
----
-
-### ResetFailures
+The example wires the service by hand, because `AddActorFramework` does not register `ActorSystem`, which the dispatcher needs. It was compiled and run against this repository.
 
 ```csharp
-public void ResetFailures()
-```
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Enums;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
 
-Resets the per-actor `FailureCount` and `RestartCount` to zero, and sets `LastFailureTime` to `DateTime.MinValue`. Global aggregate counters (`TotalFailures`, `TotalRestarts`, `TotalActorsSupervised`) are not affected by this method.
+var options = ActorSystemOptions.CreateDefault();
+var registry = new ActorRegistry();
+var mailboxes = new MailboxService(options);
+var system = new ActorSystem("supervision-demo", options: options);
+var dispatcher = new MessageDispatcher(mailboxes, registry, system);
+var supervision = new SupervisionService(registry, dispatcher);
 
-- **Exceptions**: None.
+// The actor needs an initialized state and a mailbox before it can receive control messages.
+var worker = new WorkerActor(ActorPath.Parse("/app/worker"));
+await worker.InitializeAsync();
+mailboxes.CreateMailbox(worker.Id, options.DefaultMailboxCapacity);
+registry.Register(worker.Ref);
 
----
+var error = new InvalidOperationException("database timeout");
 
-### GetTimeSinceLastFailure
+// Sends the "restart" control message and increments RestartCount.
+await supervision.HandleFailureAsync(worker.Ref, error, SupervisionStrategy.Restart);
 
-```csharp
-public TimeSpan GetTimeSinceLastFailure()
-```
+// Waits about 100 ms, increments FailureCount, then sends the "resume" control message.
+await supervision.HandleFailureAsync(worker.Ref, error, SupervisionStrategy.Backoff);
 
-Calculates the elapsed time since the last recorded failure. If no failure has been recorded (`LastFailureTime` is `DateTime.MinValue`), the returned `TimeSpan` represents the time since `DateTime.MinValue`, which callers should interpret as "no failure recorded."
+var context = supervision.GetContext(worker.Id);
+Console.WriteLine($"Restarts: {context?.RestartCount}, failures: {context?.FailureCount}");
+// Output: Restarts: 1, failures: 1
 
-- **Returns**: A `TimeSpan` representing the duration since `LastFailureTime`.
-- **Exceptions**: None.
+var stats = supervision.GetStatistics();
+Console.WriteLine($"Supervised: {stats.TotalActorsSupervised}, failures: {stats.TotalFailures}, restarts: {stats.TotalRestarts}");
+// Output: Supervised: 1, failures: 1, restarts: 1
 
----
+supervision.ResetContext(worker.Id);
 
-### TotalActorsSupervised
-
-```csharp
-public int TotalActorsSupervised { get; }
-```
-
-Gets the total number of actors that have been supervised across all instances of `SupervisionService` in the current process. This is a static or shared aggregate counter.
-
----
-
-### TotalFailures
-
-```csharp
-public long TotalFailures { get; }
-```
-
-Gets the total number of failures recorded across all supervised actors. Incremented each time any `SupervisionService` instance processes a failure via `HandleFailureAsync`.
-
----
-
-### TotalRestarts
-
-```csharp
-public long TotalRestarts { get; }
-```
-
-Gets the total number of actor restarts triggered across all supervised actors. Incremented when any `HandleFailureAsync` invocation results in a restart directive.
-
----
-
-### AverageFailuresPerActor
-
-```csharp
-public double AverageFailuresPerActor { get; }
-```
-
-Gets the average number of failures per supervised actor, calculated as `TotalFailures / TotalActorsSupervised`. Returns `0.0` if `TotalActorsSupervised` is zero.
-
-## Usage
-
-### Example 1: Basic Supervision with Restart
-
-```csharp
-var service = new SupervisionService(actor.Id);
-
-try
+public class WorkerActor : Actor
 {
-    await actor.ProcessMessageAsync(message);
-}
-catch (Exception ex)
-{
-    var context = new SupervisionContext
-    {
-        Directive = SupervisionDirective.Restart,
-        Reason = ex.Message
-    };
+    public WorkerActor(ActorPath path) : base(path) { }
 
-    await service.HandleFailureAsync(ex, context);
-
-    // After handling, reset context for next cycle
-    service.ResetContext();
-
-    Console.WriteLine($"Actor {service.ActorId} failures: {service.FailureCount}, restarts: {service.RestartCount}");
+    protected override Task OnReceiveAsync(Message message) => Task.CompletedTask;
 }
 ```
 
-### Example 2: Monitoring and Statistics Reporting
+## See also
 
-```csharp
-var service = new SupervisionService(actor.Id);
-
-// Simulate failures over time
-for (int i = 0; i < 3; i++)
-{
-    try { throw new InvalidOperationException("Simulated failure"); }
-    catch (Exception ex)
-    {
-        await service.HandleFailureAsync(ex, new SupervisionContext
-        {
-            Directive = SupervisionDirective.Restart
-        });
-    }
-}
-
-var stats = service.GetStatistics();
-var timeSinceLast = service.GetTimeSinceLastFailure();
-
-Console.WriteLine($"Per-actor failures: {stats.FailureCount}");
-Console.WriteLine($"Global total failures: {stats.TotalFailures}");
-Console.WriteLine($"Average failures per actor: {stats.AverageFailuresPerActor:F2}");
-Console.WriteLine($"Time since last failure: {timeSinceLast.TotalSeconds:F1}s");
-
-// Reset per-actor counters after a successful recovery window
-if (timeSinceLast.TotalMinutes > 5)
-{
-    service.ResetFailures();
-}
-```
-
-## Notes
-
-- **Thread Safety**: `HandleFailureAsync`, `ResetFailures`, and `ResetContext` are designed to be safe for concurrent access from the actor’s message-processing pipeline. The aggregate counters (`TotalFailures`, `TotalRestarts`, `TotalActorsSupervised`) rely on atomic operations or locking to ensure consistency across multiple `SupervisionService` instances. `GetStatistics` returns a point-in-time snapshot and may reflect values that change immediately after the call.
-- **Edge Cases**:
-  - Calling `ResetFailures` does not affect global aggregates; per-actor and global counters can diverge after a reset.
-  - `GetTimeSinceLastFailure` returns a large `TimeSpan` when no failure has occurred (`LastFailureTime` is `DateTime.MinValue`). Callers should check `FailureCount > 0` before interpreting this value as meaningful.
-  - `AverageFailuresPerActor` returns `0.0` when `TotalActorsSupervised` is zero, avoiding division-by-zero exceptions.
-  - `HandleFailureAsync` with a `SupervisionContext` carrying a `Stop` or `Escalate` directive does not increment `RestartCount` or `TotalRestarts`.
-- **Lifecycle**: The service is intended to be long-lived and bound to a single actor. Reusing a `SupervisionService` instance across multiple actors is not supported and will produce misleading per-actor statistics.
+- [SupervisionServiceExtensions](SupervisionServiceExtensions.md): Helper methods built on `GetContext` and `GetAllContexts`.
+- [ActorRegistry](ActorRegistry.md): Source of the `ActorRef` lookups used for parent resolution.
+- [supervision-guide](supervision-guide.md): Higher-level guide to supervision in the framework.
