@@ -99,7 +99,8 @@ public class BoundedMailbox : IMailbox
             throw new MailboxConfigurationException("Mailbox capacity must be greater than zero.");
 
         if (highWatermarkThreshold < MinThresholdPercent || highWatermarkThreshold > MaxThresholdPercent)
-            throw new MailboxConfigurationException("High watermark threshold must be between 0 and 100.");
+            throw new MailboxConfigurationException(
+                $"High watermark threshold must be between {MinThresholdPercent} and {MaxThresholdPercent}.");
 
         ActorId = actorId;
         _capacity = capacity;
@@ -358,7 +359,8 @@ public class BoundedPriorityMailbox : IMailbox
             throw new MailboxConfigurationException("Mailbox capacity must be greater than zero.");
 
         if (highWatermarkThreshold < MinThresholdPercent || highWatermarkThreshold > MaxThresholdPercent)
-            throw new MailboxConfigurationException("High watermark threshold must be between 0 and 100.");
+            throw new MailboxConfigurationException(
+                $"High watermark threshold must be between {MinThresholdPercent} and {MaxThresholdPercent}.");
 
         ActorId = actorId;
         _capacity = capacity;
@@ -539,6 +541,9 @@ public class BoundedPriorityMailbox : IMailbox
 /// </summary>
 internal class PrioritizedEnvelope : IComparable<PrioritizedEnvelope>
 {
+    /// <summary>The comparison result meaning this envelope sorts after a null envelope.</summary>
+    private const int SortsAfterNull = 1;
+
     /// <summary>
     /// Gets the wrapped message envelope.
     /// </summary>
@@ -567,7 +572,7 @@ internal class PrioritizedEnvelope : IComparable<PrioritizedEnvelope>
     /// <returns>A negative value, zero, or a positive value, following the <see cref="IComparable{T}"/> contract.</returns>
     public int CompareTo(PrioritizedEnvelope? other)
     {
-        if (other == null) return 1;
+        if (other == null) return SortsAfterNull;
         // Higher priority values come first (lower numerical value in priority queue)
         return other.Priority.CompareTo(Priority);
     }
