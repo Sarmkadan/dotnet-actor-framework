@@ -60,6 +60,9 @@ public abstract record Message
     {
         CorrelationId = correlationId;
     }
+
+    /// <summary>Returns a short summary of the message's runtime type and <see cref="MessageId"/>.</summary>
+    public override string ToString() => $"{GetType().Name} {{ MessageId = {MessageId} }}";
 }
 
 /// <summary>
