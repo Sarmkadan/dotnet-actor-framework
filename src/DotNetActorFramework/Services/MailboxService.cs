@@ -33,6 +33,12 @@ public class MailboxService
         _defaultCapacity = _options.DefaultMailboxCapacity;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MailboxService"/> class.
+    /// </summary>
+    /// <param name="options">The actor system options used to configure mailboxes.</param>
+    /// <param name="logger">Optional logger for mailbox diagnostics.</param>
+    /// <exception cref="ArgumentNullException">Thrown when options is null.</exception>
     public MailboxService(ActorSystemOptions options, ILogger<MailboxService>? logger = null) // Injected options
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -266,11 +272,31 @@ public class Mailbox : IMailbox
     private readonly int _highWatermarkThreshold;
     private readonly ILogger<Mailbox>? _logger;
     private bool _highWatermarkWarningIssued = false;
+
+    /// <summary>
+    /// Gets the ID of the actor that owns this mailbox.
+    /// </summary>
     public Guid ActorId { get; }
+
+    /// <summary>
+    /// Gets the maximum number of messages this mailbox can hold.
+    /// </summary>
     public int Capacity { get; }
+
+    /// <summary>
+    /// Gets the load percentage (0-100) at which a high watermark warning is logged.
+    /// </summary>
     public int HighWatermarkWarningThreshold { get; }
     private bool _disposed = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Mailbox"/> class.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor that owns this mailbox.</param>
+    /// <param name="capacity">The maximum number of messages the mailbox can hold. Must be greater than zero.</param>
+    /// <param name="highWatermarkThreshold">The load percentage (0-100) at which a warning is logged. Defaults to 80.</param>
+    /// <param name="logger">Optional logger for mailbox diagnostics.</param>
+    /// <exception cref="ArgumentException">Thrown when actorId is empty, capacity is not positive, or the threshold is outside 0-100.</exception>
     public Mailbox(Guid actorId, int capacity, int highWatermarkThreshold = 80, ILogger<Mailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
@@ -393,11 +419,31 @@ public class PriorityMailbox : IMailbox
     private readonly int _highWatermarkThreshold;
     private readonly ILogger<PriorityMailbox>? _logger;
     private bool _highWatermarkWarningIssued = false;
+
+    /// <summary>
+    /// Gets the ID of the actor that owns this priority mailbox.
+    /// </summary>
     public Guid ActorId { get; }
+
+    /// <summary>
+    /// Gets the maximum number of messages this priority mailbox can hold.
+    /// </summary>
     public int Capacity { get; }
+
+    /// <summary>
+    /// Gets the load percentage (0-100) at which a high watermark warning is logged.
+    /// </summary>
     public int HighWatermarkWarningThreshold { get; }
     private bool _disposed = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PriorityMailbox"/> class.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor that owns this priority mailbox.</param>
+    /// <param name="capacity">The maximum number of messages the mailbox can hold. Must be greater than zero.</param>
+    /// <param name="highWatermarkThreshold">The load percentage (0-100) at which a warning is logged. Defaults to 80.</param>
+    /// <param name="logger">Optional logger for mailbox diagnostics.</param>
+    /// <exception cref="ArgumentException">Thrown when actorId is empty, capacity is not positive, or the threshold is outside 0-100.</exception>
     public PriorityMailbox(Guid actorId, int capacity, int highWatermarkThreshold = 80, ILogger<PriorityMailbox>? logger = null)
     {
         if (actorId == Guid.Empty)
@@ -531,9 +577,28 @@ public class PriorityMailbox : IMailbox
 /// </summary>
 public class MailboxStatistics
 {
+    /// <summary>
+    /// Gets or sets the total number of mailboxes.
+    /// </summary>
     public int TotalMailboxes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages queued across all mailboxes.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sum of the capacities of all mailboxes.
+    /// </summary>
     public long TotalCapacity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of mailboxes that are full.
+    /// </summary>
     public int FullMailboxes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average load factor (0-1) across all mailboxes.
+    /// </summary>
     public double AverageLoadFactor { get; set; }
 }
