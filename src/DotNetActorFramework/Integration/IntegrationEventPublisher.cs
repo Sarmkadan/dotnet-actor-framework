@@ -19,6 +19,10 @@ public class IntegrationEventPublisher : IDisposable
     private readonly Timer _processingTimer;
     private volatile bool _isProcessing = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntegrationEventPublisher"/> class and starts the background processing timer.
+    /// </summary>
+    /// <param name="webhookDispatcher">The dispatcher used to deliver queued events to external endpoints.</param>
     public IntegrationEventPublisher(WebhookDispatcher webhookDispatcher)
     {
         ArgumentNullException.ThrowIfNull(webhookDispatcher);
@@ -88,6 +92,9 @@ public class IntegrationEventPublisher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the background processing timer. Events still in the queue are not delivered.
+    /// </summary>
     public void Dispose()
     {
         _processingTimer?.Dispose();
@@ -116,6 +123,11 @@ public class DuplicateEventFilteringPublisher
     private readonly object _lockObject = new();
     private readonly TimeSpan _deduplicationWindow;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DuplicateEventFilteringPublisher"/> class.
+    /// </summary>
+    /// <param name="eventBus">The event bus that receives events that pass the deduplication filter.</param>
+    /// <param name="deduplicationWindow">How long processed event IDs are remembered. Defaults to 5 minutes when <c>null</c>.</param>
     public DuplicateEventFilteringPublisher(EventBus eventBus, TimeSpan? deduplicationWindow = null)
     {
         ArgumentNullException.ThrowIfNull(eventBus);
