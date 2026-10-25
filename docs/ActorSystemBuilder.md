@@ -1,116 +1,135 @@
 # ActorSystemBuilder
 
-Fluent builder used to configure and instantiate an `ActorSystem` together with its optional middleware pipelines, background workers, and shared services.
+`ActorSystemBuilder` is a fluent builder for assembling an `ActorSystem` together with its middleware pipeline, background workers, and shared services (event bus, cache, metrics). It lives in the `DotNetActorFramework.Configuration` namespace.
 
-## API
+The builder only records configuration. Services are created when the corresponding `With*` method is called, and `Build*` methods assemble the final objects from what was recorded.
 
-### `public ActorSystemBuilder()`
-Creates a new builder instance with default settings. No parameters. Throws no exceptions.
+## Constructor
 
-### `public ActorSystemBuilder WithLogging()`
-Enables logging for the actor system. Returns the same builder instance to allow chaining. Throws `ArgumentNullException` if a logging provider is null when internally accessed; throws `InvalidOperationException` if called after `Build`.
+### `public ActorSystemBuilder(string systemName)`
+Creates a builder for an actor system with the given name.
 
-### `public ActorSystemBuilder WithErrorHandling()`
-Configures global error handling middleware. Returns the builder for further configuration. Throws `ArgumentNullException` if the supplied error handler is null; throws `InvalidOperationException` if called after `Build`.
+- `systemName`: the name passed to the `ActorSystem` created by `Build()`.
+- Throws `ArgumentException` if `systemName` is `null`, empty, or whitespace.
 
-### `public ActorSystemBuilder WithRateLimiting()`
-Adds rate‑limiting middleware to the pipeline. Returns the builder. Throws `ArgumentOutOfRangeException` if limit values are invalid; throws `InvalidOperationException` if called after `Build`.
+## Fluent configuration methods
 
-### `public ActorSystemBuilder WithMetrics()`
-Enables collection and reporting of metrics. Returns the builder. Throws `ArgumentNullException` if a metrics collector is null when accessed; throws `InvalidOperationException` if called after `Build`.
+Every method below returns the same builder instance, so calls can be chained.
 
-### `public ActorSystemBuilder WithAuthentication()`
-Adds authentication middleware to the pipeline. Returns the builder. Throws `ArgumentNullException` if an authentication scheme is null; throws `InvalidOperationException` if called after `Build`.
+| Method | Effect |
+|---|---|
+| `WithLogging()` | Adds a `LoggingMiddleware` to the pipeline. It is wired to an internal `NullLogger`, so it currently produces no output. |
+| `WithErrorHandling(ErrorHandlingStrategy strategy)` | Adds an `ErrorHandlingMiddleware` that uses `strategy`. Throws `ArgumentNullException` if `strategy` is `null`. |
+| `WithRateLimiting(int tokensPerSecond = 1000)` | Adds a `RateLimitingMiddleware` backed by a new `RateLimiter(tokensPerSecond)`. |
+| `WithMetrics()` | Adds a `MetricsCollectionMiddleware` that shares one `MetricsCollector`. The collector is created on the first call and reused by later calls. |
+| `WithAuthentication(IAuthenticationProvider authProvider)` | Adds an `AuthenticationMiddleware` that uses `authProvider`. Throws `ArgumentNullException` if `authProvider` is `null`. |
+| `WithCaching(int maxCapacity = 1000)` | Creates an `ActorCacheService(maxCapacity)`. Calling it again replaces the previous service. |
+| `WithEventBus()` | Creates an `EventBus`. Calling it again replaces the previous bus. |
+| `AddBackgroundWorker(IBackgroundWorker worker)` | Queues `worker` for `BuildBackgroundWorkers()`. A `null` argument is ignored silently. |
+| `WithMailboxCapacity(int capacity)` | Stores the default mailbox capacity in the builder's internal `ActorSystemOptions`. See the note on `Build()` below. |
+| `WithMailboxOverflowPolicy(MailboxOverflowPolicy policy)` | Stores the default overflow policy in the builder's internal `ActorSystemOptions`. See the note on `Build()` below. |
 
-### `public ActorSystemBuilder WithCaching()`
-Configures an actor‑level cache service. Returns the builder. Throws `ArgumentNullException` if a cache implementation is null; throws `InvalidOperationException` if called after `Build`.
+Middleware is ordered by each middleware's `Order` value when the pipeline is built, not by the order of the calls:
 
-### `public ActorSystemBuilder WithEventBus()`
-Attaches an event bus for inter‑actor communication. Returns the builder. Throws `ArgumentNullException` if the event bus is null; throws `InvalidOperationException` if called after `Build`.
+| Middleware | `Order` |
+|---|---|
+| `LoggingMiddleware` | 0 |
+| `AuthenticationMiddleware` | 10 |
+| `RateLimitingMiddleware` | 50 |
+| `ErrorHandlingMiddleware` | 100 |
+| `MetricsCollectionMiddleware` | 200 |
 
-### `public ActorSystemBuilder AddBackgroundWorker()`
-Registers a background worker service with the system. Returns the builder. Throws `ArgumentNullException` if the worker delegate is null; throws `InvalidOperationException` if called after `Build`.
+### Error handling strategies
 
-### `public ActorSystemBuilder WithMailboxCapacity()`
-Sets the default mailbox capacity for actors created by the system. Returns the builder. Throws `ArgumentOutOfRangeException` if the capacity is less than or equal to zero; throws `InvalidOperationException` if called after `Build`.
+`WithErrorHandling` takes an `ErrorHandlingStrategy`, which is an abstract class. The framework provides these implementations:
+
+- `SuppressErrorStrategy`: swallows the error.
+- `RetryErrorStrategy(int maxRetries = 3, TimeSpan? initialDelay = null, double backoffMultiplier = 2.0)`: retries with exponential backoff. The default initial delay is 100 ms.
+- `FailFastErrorStrategy`: throws an `InvalidOperationException` that wraps the original error.
+
+## Build methods
 
 ### `public ActorSystem Build()`
-Creates an immutable `ActorSystem` instance based on the configuration accumulated in the builder. Returns the new `ActorSystem`. Throws `InvalidOperationException` if required services (e.g., logging when `WithLogging` was called) have not been properly configured.
+Creates a new `ActorSystem` with the builder's name. The builder registers the shared services on it as properties, which can be read with `GetProperty` (see below):
+
+- `"EventBus"`, if `WithEventBus()` was called.
+- `"CacheService"`, if `WithCaching()` was called.
+- `"MetricsCollector"`, if `WithMetrics()` was called.
+
+Each call creates a new `ActorSystem`, but the event bus, cache, and metrics collector are the same instances across calls.
+
+> **Note:** `Build()` does not pass the builder's internal `ActorSystemOptions` to the `ActorSystem`. Values set by `WithMailboxCapacity` and `WithMailboxOverflowPolicy` are therefore not applied by `Build()` in the current version.
 
 ### `public MiddlewarePipeline BuildMiddlewarePipeline()`
-Constructs the middleware pipeline from the enabled features (logging, error handling, rate limiting, metrics, authentication, caching, event bus). Returns a `MiddlewarePipeline` ready for use. Throws `InvalidOperationException` if called before any pipeline‑affecting method has been invoked.
+Creates a new `MiddlewarePipeline` from the recorded middleware, sorted by `Order`. Each call creates a new pipeline, but the middleware instances are shared.
 
 ### `public BackgroundWorkerService BuildBackgroundWorkers()`
-Instantiates a container for all background workers added via `AddBackgroundWorker`. Returns a `BackgroundWorkerService`. Throws `InvalidOperationException` if no workers have been added.
+Creates a new `BackgroundWorkerService` and registers every worker added with `AddBackgroundWorker`, in the order they were added.
 
-### `public MetricsCollector? GetMetricsCollector()`
-Retrieves the metrics collector if `WithMetrics` was previously called; otherwise returns `null`. No parameters. Throws no exceptions.
+## Accessors
 
-### `public EventBus? GetEventBus()`
-Retrieves the event bus if `WithEventBus` was previously called; otherwise returns `null`. No parameters. Throws no exceptions.
+These methods return the services created by the corresponding `With*` call, or `null` if that call was not made.
 
-### `public ActorCacheService? GetCacheService()`
-Retrieves the actor cache service if `WithCaching` was previously called; otherwise returns `null`. No parameters. Throws no exceptions.
+| Method | Returns |
+|---|---|
+| `MetricsCollector? GetMetricsCollector()` | The collector created by `WithMetrics()`. |
+| `EventBus? GetEventBus()` | The bus created by `WithEventBus()`. |
+| `ActorCacheService? GetCacheService()` | The service created by `WithCaching()`. |
 
-### `public void Log<TState>()`
-Writes a log entry using the configured logging infrastructure. The generic `TState` allows state‑rich logging without boxing. Returns `void`. Throws `ObjectDisposedException` if the underlying logger has been disposed; throws `InvalidOperationException` if logging was not enabled.
+## Actor system properties
 
-### `public bool IsEnabled`
-Indicates whether the builder (or the built system) has logging enabled. Read‑only property. Returns `true` when logging is active; otherwise `false`. No exceptions.
+`ActorSystemExtensions` (in the same file) provides per-instance property storage for `ActorSystem`. Properties are held in a `ConditionalWeakTable`, so they are released when the system is garbage collected.
 
-### `public IDisposable? BeginScope<TState>()`
-Begins a logical operation scope for logging, returning an `IDisposable` that ends the scope when disposed. Returns `null` if logging is disabled. Throws `ArgumentNullException` if the state argument is null.
-
-### `public static void SetProperty()`
-Sets a static property on the builder type (e.g., a global configuration flag). Returns `void`. Throws `ArgumentException` if the property name is unknown or the value is invalid; throws `NotSupportedException` if the property is read‑only.
+- `public static void SetProperty(this ActorSystem system, string key, object value)`: stores a value. Does nothing if `system` is `null` or `key` is empty or whitespace.
+- `public static object? GetProperty(this ActorSystem system, string key)`: returns the stored value, or `null` if the key is not set.
 
 ## Usage
 
-### Basic actor system with logging and metrics
+### Basic setup with metrics and an event bus
+
 ```csharp
-using DotNetActorFramework;
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Middleware;
 
-var builder = new ActorSystemBuilder()
+var builder = new ActorSystemBuilder("orders")
     .WithLogging()
-    .WithMetrics();
-
-var system = builder.Build();
-
-// Use the system...
-var metrics = builder.GetMetricsCollector();
-metrics?.Record("ActorSystem.Started");
-```
-
-### Advanced configuration with background workers and custom mailbox size
-```csharp
-using DotNetActorFramework;
-using System.Threading;
-
-var builder = new ActorSystemBuilder()
-    .WithLogging()
-    .WithErrorHandling()
-    .WithRateLimiting()
-    .WithAuthentication()
-    .WithCaching()
+    .WithErrorHandling(new RetryErrorStrategy(maxRetries: 5))
+    .WithRateLimiting(tokensPerSecond: 500)
+    .WithMetrics()
     .WithEventBus()
-    .AddBackgroundWorker(() =>
-    {
-        // Worker logic
-        Thread.Sleep(Timeout.Infinite);
-    })
-    .WithMailboxCapacity(1024);
+    .WithCaching(maxCapacity: 2048);
 
 var system = builder.Build();
-
 var pipeline = builder.BuildMiddlewarePipeline();
-var workers  = builder.BuildBackgroundWorkers();
-var bus      = builder.GetEventBus();   // non‑null because WithEventBus was called
+
+var metrics = builder.GetMetricsCollector(); // non-null: WithMetrics() was called
+var bus = builder.GetEventBus();             // non-null: WithEventBus() was called
+var cache = builder.GetCacheService();       // non-null: WithCaching() was called
 ```
+
+### Authentication and a background worker
+
+```csharp
+using DotNetActorFramework.BackgroundWorkers;
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Middleware;
+
+var builder = new ActorSystemBuilder("payments")
+    .WithAuthentication(new TokenAuthProvider())
+    .WithErrorHandling(new FailFastErrorStrategy())
+    .AddBackgroundWorker(new HeartbeatWorker());
+
+var system = builder.Build();
+var workers = builder.BuildBackgroundWorkers();
+```
+
+The provider and worker types used above are your own implementations of `IAuthenticationProvider` and `IBackgroundWorker`.
 
 ## Notes
 
-- The builder is **not thread‑safe**. All configuration methods should be invoked from a single thread before calling `Build`. Concurrent calls to configuration methods may result in undefined state.
-- Once `Build` has been invoked, the builder instance enters an immutable state; further calls to any `With*` or `Add*` method will throw `InvalidOperationException`.
-- Services retrieved via `GetMetricsCollector`, `GetEventBus`, or `GetCacheService` return `null` when the corresponding feature was not enabled. Consumers must check for `null` before use.
-- The `Log<TState>` method and `BeginScope<TState>` are no‑ops when logging is disabled (`IsEnabled` returns `false`). They are safe to call on a built system; however, invoking them after the logger has been disposed will throw `ObjectDisposedException`.
-- The static `SetProperty` method modifies global state that affects all subsequently created builder instances. It should be used only during application start‑up and is not thread‑safe; external synchronization is required if called from multiple threads.
+- **Not thread-safe.** The builder has no internal synchronization. Call its methods from one thread, before `Build*` is called.
+- **Repeated calls.** Calling `WithMetrics()` twice adds two middleware instances that share one collector. Calling `WithRateLimiting()` twice adds two limiters. Calling `WithCaching()` or `WithEventBus()` again replaces the earlier service, so systems built before the second call keep the old instance.
+- **Services are null when not configured.** Check the result of `GetMetricsCollector`, `GetEventBus`, and `GetCacheService` before use.
+- **Mailbox settings are not applied.** See the note on `Build()`. Until `Build()` passes `ActorSystemOptions` through, `WithMailboxCapacity` and `WithMailboxOverflowPolicy` have no effect on the built system.
+- **Logging is a no-op.** `WithLogging()` uses `NullLogger<T>`, which discards all entries and reports every level as disabled.
+- **Background workers passed as `null`** are dropped without an error.
