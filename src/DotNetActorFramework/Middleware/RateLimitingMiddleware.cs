@@ -41,7 +41,9 @@ public class RateLimitingMiddleware : IActorMiddleware
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="rateLimiter"/> is <c>null</c>.</exception>
     public RateLimitingMiddleware(RateLimiter rateLimiter)
     {
-        _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
+        ArgumentNullException.ThrowIfNull(rateLimiter);
+
+        _rateLimiter = rateLimiter;
     }
 
     /// <summary>
@@ -54,8 +56,8 @@ public class RateLimitingMiddleware : IActorMiddleware
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is <c>null</c>.</exception>
     public async Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)
     {
-        if (envelope == null)
-            throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(next);
 
         // Check if the actor has rate limit tokens available
         if (!_rateLimiter.TryConsumeToken(envelope.Recipient.Path))
