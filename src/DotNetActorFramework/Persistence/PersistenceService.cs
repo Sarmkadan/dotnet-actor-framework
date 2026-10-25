@@ -54,6 +54,8 @@ public class PersistenceService
     /// </summary>
     public async Task SaveSnapshotAsync(Guid actorId, ActorPath actorPath, object state, long sequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         try
         {
             _logger?.LogInformation("Entering SaveSnapshotAsync for actor {ActorPath} at sequence {SequenceNr}", actorPath, sequenceNr);
@@ -74,6 +76,8 @@ public class PersistenceService
     /// </summary>
     public async Task<ActorSnapshot?> LoadLatestSnapshotAsync(Guid actorId, ActorPath actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Loading latest snapshot for actor {ActorPath}", actorPath);
         return await _snapshotStore.LoadLatestSnapshotAsync(actorId, actorPath.ToString());
     }
@@ -83,6 +87,8 @@ public class PersistenceService
     /// </summary>
     public async Task DeleteSnapshotsAsync(Guid actorId, ActorPath actorPath, long maxSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Deleting snapshots for actor {ActorPath} up to sequence {SequenceNr}", actorPath, maxSequenceNr);
         await _snapshotStore.DeleteSnapshotsAsync(actorId, actorPath.ToString(), maxSequenceNr);
     }
@@ -92,6 +98,8 @@ public class PersistenceService
     /// </summary>
     public async Task DeleteAllSnapshotsAsync(Guid actorId, ActorPath actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Deleting all snapshots for actor {ActorPath}", actorPath);
         await _snapshotStore.DeleteAllSnapshotsAsync(actorId, actorPath.ToString());
     }
@@ -105,6 +113,9 @@ public class PersistenceService
     /// </summary>
     public async Task AppendEventsAsync(Guid actorId, ActorPath actorPath, IEnumerable<ActorEvent> events)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+        ArgumentNullException.ThrowIfNull(events);
+
         _logger?.LogDebug("Appending {EventCount} events for actor {ActorPath}", events.Count(), actorPath);
         await _eventJournal.AppendEventsAsync(actorId, actorPath.ToString(), events);
 
@@ -130,6 +141,8 @@ public class PersistenceService
     /// </summary>
     public async Task<IEnumerable<ActorEvent>> ReadEventsAsync(Guid actorId, ActorPath actorPath, long fromSequenceNr, long toSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Reading events for actor {ActorPath} from {From} to {To}", actorPath, fromSequenceNr, toSequenceNr);
         return await _eventJournal.ReadEventsAsync(actorId, actorPath.ToString(), fromSequenceNr, toSequenceNr);
     }
@@ -139,6 +152,8 @@ public class PersistenceService
     /// </summary>
     public async Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync(Guid actorId, ActorPath actorPath, long fromSequenceNr, long toSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Reading events backward for actor {ActorPath} from {From} to {To}", actorPath, fromSequenceNr, toSequenceNr);
         return await _eventJournal.ReadEventsBackwardAsync(actorId, actorPath.ToString(), fromSequenceNr, toSequenceNr);
     }
@@ -148,6 +163,8 @@ public class PersistenceService
     /// </summary>
     public async Task DeleteEventsAsync(Guid actorId, ActorPath actorPath, long maxSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Deleting events for actor {ActorPath} up to sequence {SequenceNr}", actorPath, maxSequenceNr);
         await _eventJournal.DeleteEventsAsync(actorId, actorPath.ToString(), maxSequenceNr);
     }
@@ -157,6 +174,8 @@ public class PersistenceService
     /// </summary>
     public async Task DeleteAllEventsAsync(Guid actorId, ActorPath actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _logger?.LogDebug("Deleting all events for actor {ActorPath}", actorPath);
         await _eventJournal.DeleteAllEventsAsync(actorId, actorPath.ToString());
     }
