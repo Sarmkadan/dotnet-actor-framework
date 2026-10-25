@@ -62,6 +62,14 @@ public static class DateTimeExtensions
         => dateTime > DateTime.UtcNow;
 
     /// <summary>
+    /// Determines if this datetime falls on a Saturday or Sunday.
+    /// </summary>
+    /// <param name="dateTime">The datetime to check.</param>
+    /// <returns><see langword="true"/> if the datetime is on a weekend; otherwise, <see langword="false"/>.</returns>
+    public static bool IsWeekend(this DateTime dateTime)
+        => dateTime.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+
+    /// <summary>
     /// Gets a human-readable description of how long ago this datetime was.
     /// Examples: "2 seconds ago", "5 minutes ago", "3 hours ago", "2 days ago"
     /// </summary>
