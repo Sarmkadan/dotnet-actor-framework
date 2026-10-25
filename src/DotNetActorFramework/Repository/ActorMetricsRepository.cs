@@ -22,11 +22,20 @@ public class ActorMetricsRepository
         _connectionManager = null!;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorMetricsRepository"/> class.
+    /// </summary>
+    /// <param name="connectionManager">The connection manager used by the repository.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionManager"/> is null.</exception>
     public ActorMetricsRepository(ConnectionManager connectionManager)
     {
         _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
     }
 
+    /// <summary>
+    /// Returns a string representation of the repository.
+    /// </summary>
+    /// <returns>A string that identifies the repository type.</returns>
     public override string ToString() => $"ActorMetricsRepository {{ ActorId = Guid.Empty, ActorPath = string.Empty, MessageCount = 0L, ProcessedCount = 0L, ErrorCount = 0L, ErrorRate = 0.0 }}";
 
     /// <summary>
@@ -227,14 +236,49 @@ public class ActorMetricsRepository
 /// </summary>
 public class MetricsSnapshot
 {
+    /// <summary>
+    /// Gets or sets the identifier of the actor the snapshot belongs to.
+    /// </summary>
     public Guid ActorId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the path of the actor the snapshot belongs to.
+    /// </summary>
     public string ActorPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the total number of messages received by the actor.
+    /// </summary>
     public long MessageCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages processed by the actor.
+    /// </summary>
     public long ProcessedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of errors raised by the actor.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ratio of errors to processed messages.
+    /// </summary>
     public double ErrorRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ratio of successfully processed messages.
+    /// </summary>
     public double SuccessRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average time taken to process a message, in milliseconds.
+    /// </summary>
     public double AverageProcessingTimeMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the snapshot was recorded.
+    /// </summary>
     public DateTime RecordedAt { get; set; }
 }
 
@@ -243,14 +287,45 @@ public class MetricsSnapshot
 /// </summary>
 public class AggregateMetrics
 {
+    /// <summary>
+    /// Gets or sets the number of actors that have recorded metrics.
+    /// </summary>
     public int TotalActorsTracked { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of stored metrics snapshots across all actors.
+    /// </summary>
     public int TotalSnapshots { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages across the latest snapshot of each actor.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of errors across the latest snapshot of each actor.
+    /// </summary>
     public long TotalErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average error rate across the latest snapshot of each actor.
+    /// </summary>
     public double AverageErrorRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average processing time, in milliseconds, across the latest snapshot of each actor.
+    /// </summary>
     public double AverageProcessingTimeMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the aggregate was computed.
+    /// </summary>
     public DateTime RecordedAt { get; set; }
 
+    /// <summary>
+    /// Calculates a health score from the average error rate.
+    /// </summary>
+    /// <returns>A value from 0 to 100, where 100 means no errors.</returns>
     public double GetHealthScore()
     {
         return Math.Max(0, 100 - AverageErrorRate);
