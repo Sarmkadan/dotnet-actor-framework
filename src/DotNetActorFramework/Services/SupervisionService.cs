@@ -26,6 +26,12 @@ public class SupervisionService
         _dispatcher = null!;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SupervisionService"/> class.
+    /// </summary>
+    /// <param name="registry">The actor registry used to look up supervised actors.</param>
+    /// <param name="dispatcher">The message dispatcher used to deliver control and failure messages.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="registry"/> or <paramref name="dispatcher"/> is null.</exception>
     public SupervisionService(ActorRegistry registry, MessageDispatcher dispatcher)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -245,11 +251,30 @@ public class SupervisionService
 /// </summary>
 public class SupervisionContext
 {
+    /// <summary>
+    /// Gets the ID of the supervised actor.
+    /// </summary>
     public Guid ActorId { get; }
+
+    /// <summary>
+    /// Gets or sets the number of failures recorded for the actor.
+    /// </summary>
     public int FailureCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of restarts performed for the actor.
+    /// </summary>
     public int RestartCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time of the most recent failure.
+    /// </summary>
     public DateTime LastFailureTime { get; set; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SupervisionContext"/> class for the specified actor.
+    /// </summary>
+    /// <param name="actorId">The ID of the supervised actor.</param>
     public SupervisionContext(Guid actorId)
     {
         ActorId = actorId;
@@ -258,12 +283,19 @@ public class SupervisionContext
         LastFailureTime = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Resets the failure and restart counters to zero.
+    /// </summary>
     public void ResetFailures()
     {
         FailureCount = 0;
         RestartCount = 0;
     }
 
+    /// <summary>
+    /// Gets the time elapsed since the most recent failure.
+    /// </summary>
+    /// <returns>The elapsed time between <see cref="LastFailureTime"/> and the current UTC time.</returns>
     public TimeSpan GetTimeSinceLastFailure() => DateTime.UtcNow - LastFailureTime;
 }
 
@@ -272,8 +304,23 @@ public class SupervisionContext
 /// </summary>
 public class SupervisionStatistics
 {
+    /// <summary>
+    /// Gets or sets the number of actors that have a supervision context.
+    /// </summary>
     public int TotalActorsSupervised { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of failures across all supervised actors.
+    /// </summary>
     public long TotalFailures { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of restarts across all supervised actors.
+    /// </summary>
     public long TotalRestarts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average number of failures per supervised actor.
+    /// </summary>
     public double AverageFailuresPerActor { get; set; }
 }
