@@ -13,8 +13,19 @@ namespace DotNetActorFramework.Events;
 /// </summary>
 public interface IDomainEvent
 {
+    /// <summary>
+    /// Gets the unique identifier of this event instance.
+    /// </summary>
     Guid EventId { get; }
+
+    /// <summary>
+    /// Gets the UTC timestamp at which the event occurred.
+    /// </summary>
     DateTime OccurredAt { get; }
+
+    /// <summary>
+    /// Gets the logical type name of the event (for example, <c>actor.created</c>).
+    /// </summary>
     string EventType { get; }
 }
 
@@ -23,10 +34,24 @@ public interface IDomainEvent
 /// </summary>
 public abstract class DomainEvent : IDomainEvent
 {
+    /// <summary>
+    /// Gets the unique identifier of this event instance.
+    /// </summary>
     public Guid EventId { get; }
+
+    /// <summary>
+    /// Gets the UTC timestamp at which the event was created.
+    /// </summary>
     public DateTime OccurredAt { get; }
+
+    /// <summary>
+    /// Gets the logical type name of the event.
+    /// </summary>
     public abstract string EventType { get; }
 
+    /// <summary>
+    /// Initializes a new instance with a new <see cref="EventId"/> and the current UTC time.
+    /// </summary>
     protected DomainEvent()
     {
         EventId = Guid.NewGuid();
@@ -234,7 +259,14 @@ public class EventBus
 /// </summary>
 public abstract class ActorSystemEvent : DomainEvent
 {
+    /// <summary>
+    /// Gets or sets the name of the actor system that raised the event.
+    /// </summary>
     public string SystemName { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the actor system that raised the event.
+    /// </summary>
     public Guid SystemId { get; set; }
 }
 
@@ -243,8 +275,19 @@ public abstract class ActorSystemEvent : DomainEvent
 /// </summary>
 public class ActorCreatedEvent : ActorSystemEvent
 {
+    /// <summary>
+    /// Gets the event type name, <c>actor.created</c>.
+    /// </summary>
     public override string EventType => "actor.created";
+
+    /// <summary>
+    /// Gets or sets the path of the created actor.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the created actor.
+    /// </summary>
     public Guid ActorId { get; set; }
 }
 
@@ -253,8 +296,19 @@ public class ActorCreatedEvent : ActorSystemEvent
 /// </summary>
 public class ActorTerminatedEvent : ActorSystemEvent
 {
+    /// <summary>
+    /// Gets the event type name, <c>actor.terminated</c>.
+    /// </summary>
     public override string EventType => "actor.terminated";
+
+    /// <summary>
+    /// Gets or sets the path of the terminated actor.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the terminated actor.
+    /// </summary>
     public Guid ActorId { get; set; }
 }
 
@@ -263,10 +317,29 @@ public class ActorTerminatedEvent : ActorSystemEvent
 /// </summary>
 public class ActorErrorEvent : ActorSystemEvent
 {
+    /// <summary>
+    /// Gets the event type name, <c>actor.error</c>.
+    /// </summary>
     public override string EventType => "actor.error";
+
+    /// <summary>
+    /// Gets or sets the path of the actor that encountered the error.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the actor that encountered the error.
+    /// </summary>
     public Guid ActorId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message of the error that occurred.
+    /// </summary>
     public string ErrorMessage { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the stack trace of the error that occurred.
+    /// </summary>
     public string StackTrace { get; set; } = null!;
 }
 
@@ -275,9 +348,28 @@ public class ActorErrorEvent : ActorSystemEvent
 /// </summary>
 public class MessageProcessedEvent : ActorSystemEvent
 {
+    /// <summary>
+    /// Gets the event type name, <c>message.processed</c>.
+    /// </summary>
     public override string EventType => "message.processed";
+
+    /// <summary>
+    /// Gets or sets the path of the actor that processed the message.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the processed message.
+    /// </summary>
     public Guid MessageId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type name of the processed message.
+    /// </summary>
     public string MessageType { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the time taken to process the message, in milliseconds.
+    /// </summary>
     public long ElapsedMilliseconds { get; set; }
 }
