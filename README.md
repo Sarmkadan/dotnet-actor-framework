@@ -646,6 +646,61 @@ await system.ShutdownAsync();
 
 > **Note:** `RetryCount` and `IsDelivered` are public fields, so code can assign them directly. Prefer `IncrementRetryCount()` and `MarkAsDelivered()`, which express the intent and keep the call sites consistent.
 
+## Mailboxes
+
+`MailboxService` (`src/DotNetActorFramework/Services/MailboxService.cs`) owns one mailbox per actor. `CreateMailbox` builds the mailbox, `EnqueueAsync` and `DequeueAsync` move envelopes in and out, and `GetMailboxSize` / `IsMailboxFull` / `GetStatistics` report load. Each actor can have only one mailbox; creating a second one for the same actor throws `InvalidOperationException`.
+
+### Mailbox types
+
+The `MailboxType` enum selects the queueing discipline:
+
+| Type | Behaviour |
+|------|-----------|
+| `MailboxType.FIFO` (default) | Messages are dequeued in arrival order. Backed by `BoundedMailbox`. |
+| `MailboxType.Priority` | Messages are dequeued by `Envelope.Message.Priority`, highest first. Backed by `BoundedPriorityMailbox`. |
+
+Both types are bounded. Capacity comes from the `capacity` argument of `CreateMailbox`, or from `ActorSystemOptions.DefaultMailboxCapacity` when the argument is `0`. The default is 1000 (`ActorConstants.DefaultMailboxCapacity`). Negative capacities are rejected.
+
+### Overflow policy
+
+The `MailboxOverflowPolicy` enum decides what happens when a mailbox already holds `Capacity` messages. It is set per mailbox through `CreateMailbox(..., overflowPolicy)`, or through `ActorSystemOptions.DefaultMailboxOverflowPolicy` (default `DropNewest`).
+
+| Policy | What happens when the mailbox is full |
+|--------|---------------------------------------|
+| `DropNewest` (default) | The incoming message is discarded. The enqueue call still reports success, so the sender gets no signal. |
+| `DropOldest` | The oldest queued message is evicted to make room for the incoming one. The enqueue call still reports success. |
+| `Fail` | The enqueue is rejected with `MailboxFullException`. `MailboxService.EnqueueAsync` wraps it in a `MailboxException` whose `InnerException` is the `MailboxFullException`. |
+| `Wait` | The sender waits asynchronously until a slot frees up. There is no timeout. |
+
+Choose `Fail` when the sender should handle overload itself, and `Wait` when losing messages is unacceptable and the consumer is known to keep up. `DropNewest` and `DropOldest` are for high-throughput paths where a lost message is tolerable.
+
+### High watermark warning
+
+When load reaches `HighWatermarkWarningThreshold` percent of capacity (default 80, set through `ActorSystemOptions`), the mailbox logs a warning on each enqueue while the load stays at or above that level. This is diagnostic only and does not change the overflow policy.
+
+### Example
+
+```csharp
+var options = new ActorSystemOptions
+{
+    DefaultMailboxCapacity = 500,
+    DefaultMailboxType = MailboxType.Priority,
+    DefaultMailboxOverflowPolicy = MailboxOverflowPolicy.Fail
+};
+
+var mailboxes = new MailboxService(options);
+var mailbox = mailboxes.CreateMailbox(actor.Id);
+
+try
+{
+    await mailboxes.EnqueueAsync(actor.Id, envelope);
+}
+catch (MailboxException ex) when (ex.InnerException is MailboxFullException)
+{
+    // The mailbox is full and the policy is Fail: back off, retry later, or shed load.
+}
+```
+
 ## Routing with LoadBasedRouter
 
 `LoadBasedRouter` (in `DotNetActorFramework.Routing`, source in `src/DotNetActorFramework/Routing/LoadBasedRouter.cs`) delivers an `Envelope` to one actor from a pool of actors that share a capability. The pool is resolved through `ActorDiscoveryService.Discover(capability)`, so only live actors registered with that capability take part. Capability names are matched case-insensitively. The router offers two strategies, and each one is a separate method:
