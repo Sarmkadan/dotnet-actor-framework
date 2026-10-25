@@ -31,6 +31,9 @@ public class MessageDispatcher
         _actorSystem = null!;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageDispatcher"/> class.
+    /// </summary>
     public MessageDispatcher(MailboxService mailboxService, ActorRegistry registry, ActorSystem actorSystem)
     {
         _mailboxService = mailboxService ?? throw new ArgumentNullException(nameof(mailboxService));
@@ -321,9 +324,28 @@ public class MessageDispatcher
 /// </summary>
 public class DispatcherStatistics
 {
+    /// <summary>
+    /// Gets or sets the number of messages successfully delivered.
+    /// </summary>
     public long TotalDelivered { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages that failed to be delivered.
+    /// </summary>
     public long TotalFailed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages processed (delivered plus failed).
+    /// </summary>
     public long TotalProcessed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages currently held in the dead letter queue.
+    /// </summary>
     public int DeadLetterCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delivery success rate as a percentage (0-100).
+    /// </summary>
     public double SuccessRate { get; set; }
 }
