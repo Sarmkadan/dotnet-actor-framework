@@ -16,6 +16,12 @@ public class InMemorySnapshotStore : ISnapshotStore
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<long, ActorSnapshot>> _snapshots = new();
 
+    /// <summary>
+    /// Saves an actor snapshot, keeping only the most recent snapshot for the actor.
+    /// </summary>
+    /// <param name="snapshot">The actor snapshot to save.</param>
+    /// <returns>A completed task once the snapshot has been stored.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshot"/> is null.</exception>
     public Task SaveSnapshotAsync(ActorSnapshot snapshot)
     {
         if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
@@ -33,6 +39,12 @@ public class InMemorySnapshotStore : ISnapshotStore
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Loads the latest snapshot (highest sequence number) for a given actor.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <returns>A task whose result is the latest <see cref="ActorSnapshot"/>, or null if none is stored.</returns>
     public Task<ActorSnapshot?> LoadLatestSnapshotAsync(Guid actorId, string actorPath)
     {
         var actorSnapshots = _snapshots.GetValueOrDefault(GetActorKey(actorId, actorPath));
@@ -45,6 +57,13 @@ public class InMemorySnapshotStore : ISnapshotStore
         return Task.FromResult(latestSnapshot);
     }
 
+    /// <summary>
+    /// Deletes snapshots for a given actor with a sequence number up to and including <paramref name="maxSequenceNr"/>.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="maxSequenceNr">The maximum sequence number of snapshots to delete (inclusive).</param>
+    /// <returns>A completed task once the matching snapshots have been removed.</returns>
     public Task DeleteSnapshotsAsync(Guid actorId, string actorPath, long maxSequenceNr)
     {
         var actorKey = GetActorKey(actorId, actorPath);
@@ -58,6 +77,12 @@ public class InMemorySnapshotStore : ISnapshotStore
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Deletes all snapshots stored for a given actor.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <returns>A completed task once all of the actor's snapshots have been removed.</returns>
     public Task DeleteAllSnapshotsAsync(Guid actorId, string actorPath)
     {
         _snapshots.TryRemove(GetActorKey(actorId, actorPath), out _);
