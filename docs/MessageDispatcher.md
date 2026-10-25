@@ -1,177 +1,155 @@
 # MessageDispatcher
 
-`MessageDispatcher` is the central message routing and delivery component in the `dotnet-actor-framework`. It manages the lifecycle of message delivery to actors, handling asynchronous dispatch, broadcasting, control messages, dead letter collection, and operational statistics. It serves as the backbone for reliable intra-actor communication, ensuring messages are delivered, failures are tracked, and undeliverable messages are quarantined for inspection.
+`MessageDispatcher` (`src/DotNetActorFramework/Services/MessageDispatcher.cs`) is the component that delivers `Envelope`s to actor mailboxes. It checks that the recipient is registered, enqueues the envelope with retries, routes replies to pending `Ask` calls, keeps a bounded dead letter queue for undeliverable envelopes, and keeps delivery counters.
 
-## API
+It does not run actors. Actors pull their own messages back out with `GetNextMessageAsync`.
 
-### public MessageDispatcher
+## Responsibilities
 
-The default constructor. Initializes a new instance of the dispatcher with empty dead letter storage and zeroed statistics. No configuration or external dependencies are required.
+- **Delivery:** `DispatchAsync` is the single delivery path. All send helpers route through it.
+- **Recipient check:** It rejects envelopes whose recipient is not in the `ActorRegistry`.
+- **Retry with backoff:** Mailbox enqueue failures are retried with exponential backoff.
+- **Ask correlation:** `ResponseMessage` and `FailureMessage` that answer a pending `Ask` are completed in `AskRegistry` and are not enqueued.
+- **Dead letters:** Undeliverable envelopes go to the dispatcher's own bounded queue and to the owning `ActorSystem`'s dead letter handler.
+- **Statistics:** It counts delivered and failed envelopes.
+- **Typed replies:** `ReplyAsync` and `ReplyWithFailureAsync` correlate responses to a request by `MessageId`.
 
-### public async Task<bool> DispatchAsync
+## Construction
 
-Attempts to deliver a single envelope to its intended recipient.
+```csharp
+public MessageDispatcher(MailboxService mailboxService, ActorRegistry registry, ActorSystem actorSystem)
+```
 
-**Parameters:**
-- `Envelope envelope` — The message envelope containing the target actor reference, payload, and metadata.
+All three arguments are required; `null` throws `ArgumentNullException`.
 
-**Returns:**
-- `Task<bool>` — `true` if the message was successfully delivered and processed by the target actor; `false` if delivery failed or the actor rejected the message.
+A `protected` parameterless constructor also exists for derived types. It leaves all dependencies `null`, so it is not usable on its own.
 
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `envelope` is `null`.
-- `ObjectDisposedException` — Thrown if the dispatcher has been disposed.
+## Public API
 
-### public async Task SendAsync
+### `Task<bool> DispatchAsync(Envelope envelope)`
 
-Sends a message to a specific actor by its identifier. This overload accepts a raw payload and constructs the envelope internally.
+Delivers one envelope. Steps, in order:
 
-**Parameters:**
-- `ActorId target` — The unique identifier of the target actor.
-- `object message` — The payload to deliver.
+1. Throws `ArgumentNullException` if `envelope` is `null`.
+2. If the message is a `ResponseMessage` or `FailureMessage` that completes a pending `Ask`, marks the envelope delivered, counts it as delivered, and returns `true`.
+3. If `envelope.Recipient.Path` is not in the registry, the envelope is dead-lettered and `MessageDispatchException` is thrown with the `ActorNotFoundException` as its inner exception.
+4. Otherwise it calls `MailboxService.EnqueueAsync(recipient.Id, envelope)`. On `MailboxException` or any other exception, it increments the envelope's retry count, waits, and tries again, up to `ActorConstants.MaxMessageRetries` (3) retries. The wait starts at `InitialBackoffDelayMs` (100 ms) and grows by `BackoffMultiplier` (1.5) per retry, capped at `MaxBackoffDelayMs` (30 000 ms).
+5. On success, marks the envelope delivered, counts it, and returns `true`.
+6. If every attempt fails, the envelope is counted as failed, passed to the `ActorSystem` dead letter handler, added to the dispatcher's dead letter queue, and `false` is returned. No exception is thrown.
 
-**Returns:**
-- `Task` — Completes when the send operation has been handed off. Does not indicate delivery success; use `DispatchAsync` for confirmed delivery.
+Unexpected errors in steps 1–5 that are not handled above are also dead-lettered and rethrown as `MessageDispatchException`.
 
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `target` or `message` is `null`.
-- `ActorNotFoundException` — Thrown when no actor matching `target` is registered in the current actor system.
+| Outcome | Result |
+|---|---|
+| Ask reply consumed | `true` |
+| Enqueued | `true` |
+| Recipient not registered | `MessageDispatchException` (inner: `ActorNotFoundException`) |
+| Enqueue failed after all retries | `false` |
+| Other unexpected error | `MessageDispatchException` |
 
-### public async Task SendAsync
+### `Task SendAsync(ActorRef sender, ActorRef recipient, Message message)`
 
-Sends a pre-constructed envelope directly. This overload bypasses internal envelope creation.
+Wraps `message` in an `Envelope` with the given sender and calls `DispatchAsync`. The result of `DispatchAsync` is discarded. Only the `MessageDispatchException` path surfaces to the caller.
 
-**Parameters:**
-- `Envelope envelope` — The fully constructed message envelope.
+### `Task SendAsync(ActorRef recipient, Message message)`
 
-**Returns:**
-- `Task` — Completes when the send operation has been handed off.
+Same as above, with no sender.
 
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `envelope` is `null`.
+### `Task BroadcastAsync(IEnumerable<ActorRef> recipients, Message message, ActorRef? sender = null)`
 
-### public async Task BroadcastAsync
+Creates one envelope per recipient and dispatches them concurrently with `Task.WhenAll`. All dispatches run to completion even if one fails; the first exception is then rethrown. Each dispatch result is discarded, as in `SendAsync`.
 
-Delivers a single message to all actors currently registered in the system.
+### `Task PublishControlAsync(ActorRef recipient, string command, Dictionary<string, object>? parameters = null)`
 
-**Parameters:**
-- `object message` — The payload to broadcast.
-- `BroadcastStrategy strategy` — Specifies how the broadcast is executed (e.g., parallel, sequential, fire-and-forget).
+Sends a `ControlMessage` with the given command name and optional parameters (an empty dictionary when `null`). Throws `ArgumentException` if `command` is null, empty, or whitespace.
 
-**Returns:**
-- `Task` — Completes when the broadcast operation has been initiated according to the chosen strategy.
+### `Task ReplyAsync<T>(ActorRef recipient, T response, Message request, ActorRef? sender = null) where T : class`
 
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `message` or `strategy` is `null`.
+Sends `response` as a `ResponseMessage<T>` whose correlation ID is `request.MessageId`. Throws `ArgumentNullException` if `recipient`, `response`, or `request` is `null`.
 
-### public async Task PublishControlAsync
+### `Task ReplyWithFailureAsync(ActorRef recipient, string reason, Exception exception, Message request, ActorRef? sender = null)`
 
-Publishes a system-level control message to the actor system's control channel. Control messages are used for lifecycle management, supervision commands, and system-wide signals.
+Sends a `FailureMessage` with `reason` and `exception`, correlated to `request.MessageId`. Throws `ArgumentNullException` if `recipient`, `exception`, or `request` is `null`, and `ArgumentException` if `reason` is null, empty, or whitespace.
 
-**Parameters:**
-- `ControlMessage message` — The control payload (e.g., restart, stop, poison pill).
+### `Task<Envelope?> GetNextMessageAsync(Guid actorId)`
 
-**Returns:**
-- `Task` — Completes when the control message has been published to the control channel.
+Returns the result of `MailboxService.DequeueAsync(actorId)`, which is the next envelope in that actor's mailbox. Throws `ArgumentException` if `actorId` is `Guid.Empty`.
 
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `message` is `null`.
-- `InvalidOperationException` — Thrown when the control channel is unavailable or the dispatcher is in a state that cannot accept control messages.
+### `IReadOnlyList<Envelope> GetDeadLetters()`
 
-### public async Task<Envelope?> GetNextMessageAsync
+Returns a snapshot copy of the dispatcher's dead letter queue, oldest first.
 
-Retrieves the next pending message from the dispatcher's internal queue. Used by actors that pull messages rather than having them pushed.
+### `DispatcherStatistics GetStatistics()`
 
-**Parameters:**
-- `CancellationToken cancellationToken` — Allows cancellation of the wait operation.
+Returns a snapshot of the counters:
 
-**Returns:**
-- `Task<Envelope?>` — The next available envelope, or `null` if the queue is empty and the cancellation token is signaled or the dispatcher is drained.
-
-**Exceptions:**
-- `OperationCanceledException` — Thrown when `cancellationToken` is canceled.
-- `ObjectDisposedException` — Thrown if the dispatcher has been disposed.
-
-### public IReadOnlyList<Envelope> GetDeadLetters
-
-Returns a snapshot of all messages that could not be delivered and were moved to the dead letter queue.
-
-**Returns:**
-- `IReadOnlyList<Envelope>` — An immutable list of dead letter envelopes. Returns an empty list if no failures have occurred.
-
-### public DispatcherStatistics GetStatistics
-
-Returns a snapshot of the dispatcher's current operational statistics.
-
-**Returns:**
-- `DispatcherStatistics` — A structure containing aggregated metrics including total delivered, failed, processed counts, dead letter count, and success rate.
-
-### public long TotalDelivered
-
-Gets the cumulative count of messages successfully delivered since the dispatcher was initialized.
-
-### public long TotalFailed
-
-Gets the cumulative count of messages that failed delivery since the dispatcher was initialized.
-
-### public long TotalProcessed
-
-Gets the cumulative count of messages that have been processed (delivered or explicitly failed) since initialization. This equals `TotalDelivered + TotalFailed`.
-
-### public int DeadLetterCount
-
-Gets the current number of messages residing in the dead letter queue.
-
-### public double SuccessRate
-
-Gets the ratio of successful deliveries to total processed messages, expressed as a value between `0.0` and `1.0`. Returns `1.0` if no messages have been processed yet.
+| Property | Type | Meaning |
+|---|---|---|
+| `TotalDelivered` | `long` | Envelopes delivered, including Ask replies. |
+| `TotalFailed` | `long` | Envelopes that were dead-lettered. |
+| `TotalProcessed` | `long` | `TotalDelivered + TotalFailed`. |
+| `DeadLetterCount` | `int` | Current size of the dead letter queue. |
+| `SuccessRate` | `double` | Percentage from 0 to 100. `0` when nothing has been processed yet. |
 
 ## Usage
 
-### Example 1: Dispatching with Confirmation and Dead Letter Inspection
+### Setting up and draining a mailbox
+
+This follows the pattern in the project `README.md`. `WorkerActor` stands in for your own `Actor` subclass.
 
 ```csharp
-var dispatcher = new MessageDispatcher();
-var envelope = new Envelope(targetActorId, new GreetingMessage("Hello"));
+using DotNetActorFramework.Configuration;
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
 
-bool delivered = await dispatcher.DispatchAsync(envelope);
+var system = new ActorSystem("demo");
+var mailboxes = new MailboxService(new ActorSystemOptions());
+var registry = new ActorRegistry();
+var dispatcher = new MessageDispatcher(mailboxes, registry, system);
 
-if (!delivered)
-{
-    var deadLetters = dispatcher.GetDeadLetters();
-    foreach (var dead in deadLetters)
-    {
-        Console.WriteLine($"Undelivered to {dead.Target}: {dead.Payload}");
-    }
-}
+var worker = new WorkerActor(new ActorPath("/user/worker"));
+await worker.InitializeAsync();
+mailboxes.CreateMailbox(worker.Id);
+registry.Register(worker.Ref);
 
-Console.WriteLine($"Success rate: {dispatcher.SuccessRate:P}");
+await dispatcher.SendAsync(worker.Ref, new ControlMessage("ping"));
+await dispatcher.PublishControlAsync(worker.Ref, "stop");
+
+// Drain the mailbox; the actor processes messages one at a time
+while (await dispatcher.GetNextMessageAsync(worker.Id) is { } envelope)
+    await worker.ProcessMessageAsync(envelope.Message);
 ```
 
-### Example 2: Broadcasting and Monitoring Statistics
+### Replying to a request and checking health
 
 ```csharp
-var dispatcher = new MessageDispatcher();
-var announcement = new SystemAnnouncement("Maintenance window starting");
+using DotNetActorFramework.Models;
+using DotNetActorFramework.Services;
 
-await dispatcher.BroadcastAsync(announcement, BroadcastStrategy.Parallel);
+// request arrived in the worker's mailbox; reply to its sender
+await dispatcher.ReplyAsync(caller.Ref, "pong", request, sender: worker.Ref);
+
+// report a failure instead of a result
+await dispatcher.ReplyWithFailureAsync(
+    caller.Ref,
+    "Work item could not be processed",
+    new InvalidOperationException("Queue is full"),
+    request,
+    sender: worker.Ref);
 
 var stats = dispatcher.GetStatistics();
-Console.WriteLine($"Total delivered: {stats.TotalDelivered}");
-Console.WriteLine($"Total failed: {stats.TotalFailed}");
-Console.WriteLine($"Dead letters: {stats.DeadLetterCount}");
+Console.WriteLine($"Delivered: {stats.TotalDelivered}, failed: {stats.TotalFailed}");
+Console.WriteLine($"Success rate: {stats.SuccessRate:F1}%");
 
-if (stats.SuccessRate < 0.95)
-{
-    await dispatcher.PublishControlAsync(new AlertControlMessage("Low delivery success rate"));
-}
+foreach (var dead in dispatcher.GetDeadLetters())
+    Console.WriteLine($"Dead letter for {dead.Recipient.Path}: {dead.Message.GetType().Name}");
 ```
 
 ## Notes
 
-- **Thread Safety:** All public methods are thread-safe and may be called concurrently from multiple actors or system components. Internal state transitions and queue operations are synchronized.
-- **Dead Letter Accumulation:** Dead letters are retained until explicitly cleared through the actor system's maintenance cycle. Long-running systems should periodically drain or archive dead letters to prevent unbounded memory growth.
-- **`GetNextMessageAsync` and Queue Drain:** When the dispatcher is drained (no more messages expected), `GetNextMessageAsync` returns `null` rather than blocking indefinitely. Callers should handle the `null` case to exit their message processing loops gracefully.
-- **`SuccessRate` Edge Case:** When `TotalProcessed` is zero, `SuccessRate` returns `1.0` to avoid division by zero. This represents a pristine state rather than perfect delivery.
-- **`DispatchAsync` vs `SendAsync`:** `DispatchAsync` provides delivery confirmation and is suitable for request-response patterns. `SendAsync` is fire-and-forget and should be used when delivery acknowledgment is not required.
-- **Control Message Ordering:** `PublishControlAsync` guarantees ordering of control messages relative to each other but not relative to standard messages dispatched concurrently. System components relying on causal ordering should implement their own sequencing.
+- **Failures are silent through `SendAsync` and `BroadcastAsync`.** An enqueue that fails after all retries returns `false` to `DispatchAsync`, but the send helpers discard that value. To detect these failures, call `DispatchAsync` directly, or check `GetStatistics()` and `GetDeadLetters()`.
+- **Two dead letter stores.** `MessageDispatcher` keeps its own queue, capped at `MessageConstants.MaxDeadLetterQueueSize` (10 000). When full, the oldest entry is dropped. Each dead letter is also added to `ActorSystem.DeadLetters` and passed to the handler set with `ActorSystem.SetDeadLetterHandler`. The two stores are independent.
+- **Retry timing.** A send that fails every attempt waits roughly 100 + 150 + 225 ms (about 0.5 s) before it is dead-lettered. Backoff is bounded by the 30 s cap.
+- **Ask replies skip the mailbox.** A `ResponseMessage` or `FailureMessage` whose `MessageId` matches a pending `Ask` completes that `Ask` and is never enqueued, so the recipient's mailbox does not see it.
+- **Thread safety.** The counters and the dead letter queue are guarded by a lock. Dispatch itself is not serialized, so concurrent calls are allowed.
+- **Dependencies are not validated after construction.** Only the constructor checks for `null`. A `MessageDispatcher` created through the `protected` constructor will throw `NullReferenceException` if used.
