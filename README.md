@@ -490,6 +490,71 @@ var parent = created.GetParent();
 await system.ShutdownAsync();
 ```
 
+## Envelope
+
+`Envelope` (in `DotNetActorFramework.Models`, source in `src/DotNetActorFramework/Models/Envelope.cs`) is the wrapper that travels through the mailbox layer. It pairs a `Message` with its routing information: the `Recipient` it is addressed to and the optional `Sender` that produced it. It also stamps the send time and a unique identifier, and carries the delivery-tracking state (retry count and delivered flag) that the dispatcher needs to decide what to do with a message.
+
+`Envelope` is a class, not a struct, so it lives on the heap and can be passed by reference between the dispatcher, mailboxes, and dead-letter handling without copying.
+
+### Structure
+
+| Member | Kind | Description |
+|---|---|---|
+| `Message` | `readonly` field | The payload being delivered. |
+| `Sender` | `readonly` field, `ActorRef?` | The actor that sent the message, or `null` for system messages. |
+| `Recipient` | `readonly` field, `ActorRef` | The actor the message is addressed to. |
+| `SentAt` | `readonly` field, `DateTime` | UTC timestamp taken when the envelope was created. |
+| `EnvelopeId` | `readonly` field, `Guid` | Unique identifier for this envelope. |
+| `RetryCount` | public field, `int` | Number of failed delivery attempts. Starts at `0`. |
+| `IsDelivered` | public field, `bool` | Whether delivery succeeded. Starts as `false`. |
+
+The constructor `Envelope(Message message, ActorRef recipient, ActorRef? sender = null)` throws `ArgumentNullException` if `message` or `recipient` is `null`. It sets `SentAt` to `DateTime.UtcNow` and generates a new `EnvelopeId`.
+
+The state-changing and query methods are:
+
+| Method | Description |
+|---|---|
+| `MarkAsDelivered()` | Sets `IsDelivered` to `true`. |
+| `IncrementRetryCount()` | Adds one to `RetryCount`. |
+| `HasExceededRetryLimit(maxRetries = 3)` | Returns `true` when `RetryCount` is greater than `maxRetries`. |
+| `GetElapsedTime()` | Returns the time since `SentAt`. |
+| `GetDeliveryPriority()` | Returns `Message.Priority * 100` plus the elapsed time in whole seconds. Higher values sort as more urgent. |
+| `ToString()` | Returns a diagnostic string in the form `[<EnvelopeId:N>] <sender or System> -> <recipient name>: <message type name>`. |
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Models;
+
+var system = new ActorSystem("my-system");
+var worker = await system.CreateActorAsync(new ActorPath("/user/worker"));
+var client = await system.CreateActorAsync(new ActorPath("/user/client"));
+
+var envelope = new Envelope(new ControlMessage { Command = "start" }, worker, client);
+
+Console.WriteLine(envelope);                 // "[<guid without dashes>] client -> worker: ControlMessage"
+Console.WriteLine(envelope.IsDelivered);     // False
+
+// A system message has no sender.
+var systemEnvelope = new Envelope(new ControlMessage { Command = "shutdown" }, worker);
+Console.WriteLine(systemEnvelope.Sender is null); // True
+
+// Delivery bookkeeping.
+envelope.IncrementRetryCount();
+if (envelope.HasExceededRetryLimit())
+{
+    Console.WriteLine("Giving up after too many attempts.");
+}
+else
+{
+    envelope.MarkAsDelivered();
+}
+
+await system.ShutdownAsync();
+```
+
+> **Note:** `RetryCount` and `IsDelivered` are public fields, so code can assign them directly. Prefer `IncrementRetryCount()` and `MarkAsDelivered()`, which express the intent and keep the call sites consistent.
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
