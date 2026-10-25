@@ -27,6 +27,14 @@ public class PersistenceService
     private readonly int _snapshotIntervalEvents;
     private readonly ConcurrentDictionary<string, int> _eventCounters = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PersistenceService"/> class.
+    /// </summary>
+    /// <param name="snapshotStore">The store used for saving and loading actor snapshots.</param>
+    /// <param name="eventJournal">The journal used for appending and reading actor events.</param>
+    /// <param name="logger">An optional logger for persistence operations.</param>
+    /// <param name="snapshotIntervalEvents">The number of events after which an automatic snapshot is created.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshotStore"/> or <paramref name="eventJournal"/> is <c>null</c>.</exception>
     public PersistenceService(
         ISnapshotStore snapshotStore,
         IEventJournal eventJournal,
