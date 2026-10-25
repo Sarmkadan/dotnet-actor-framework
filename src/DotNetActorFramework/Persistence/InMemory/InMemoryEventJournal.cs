@@ -32,7 +32,8 @@ public class InMemoryEventJournal : IEventJournal
     /// <exception cref="InvalidOperationException">Thrown when an event's sequence number already exists for the actor.</exception>
     public Task AppendEventsAsync(Guid actorId, string actorPath, IEnumerable<ActorEvent> events)
     {
-        if (events == null) throw new ArgumentNullException(nameof(events));
+        ArgumentNullException.ThrowIfNull(actorPath);
+        ArgumentNullException.ThrowIfNull(events);
 
         var actorKey = GetActorKey(actorId, actorPath);
         var eventList = events.ToList();
@@ -76,6 +77,8 @@ public class InMemoryEventJournal : IEventJournal
     /// returning an enumerable of ActorEvent in ascending sequence order.</returns>
     public Task<IEnumerable<ActorEvent>> ReadEventsAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         var actorEvents = _events.GetValueOrDefault(GetActorKey(actorId, actorPath));
         if (actorEvents == null || actorEvents.IsEmpty)
         {
@@ -101,6 +104,8 @@ public class InMemoryEventJournal : IEventJournal
     /// returning an enumerable of ActorEvent in reverse chronological order.</returns>
     public Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         var actorEvents = _events.GetValueOrDefault(GetActorKey(actorId, actorPath));
         if (actorEvents == null || actorEvents.IsEmpty)
         {
@@ -124,6 +129,8 @@ public class InMemoryEventJournal : IEventJournal
     /// <returns>A completed task once the events have been deleted.</returns>
     public Task DeleteEventsAsync(Guid actorId, string actorPath, long maxSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         var actorKey = GetActorKey(actorId, actorPath);
         if (_events.TryGetValue(actorKey, out var actorEvents))
         {
@@ -143,6 +150,8 @@ public class InMemoryEventJournal : IEventJournal
     /// <returns>A completed task once the events have been deleted.</returns>
     public Task DeleteAllEventsAsync(Guid actorId, string actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _events.TryRemove(GetActorKey(actorId, actorPath), out _);
         return Task.CompletedTask;
     }
