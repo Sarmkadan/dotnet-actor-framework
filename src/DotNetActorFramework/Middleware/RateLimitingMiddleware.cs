@@ -29,7 +29,14 @@ namespace DotNetActorFramework.Middleware;
 /// </remarks>
 public class RateLimitingMiddleware : IActorMiddleware
 {
+    /// <summary>
+    /// Gets the unique name identifying this middleware in the pipeline.
+    /// </summary>
     public string Name => "RateLimitingMiddleware";
+
+    /// <summary>
+    /// Gets the execution order of this middleware within the pipeline. Lower values run first.
+    /// </summary>
     public int Order => 50; // Run after logging but before main processing
 
     private readonly RateLimiter _rateLimiter;
@@ -149,6 +156,9 @@ public class RateLimiter : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the background refill timer and releases its resources.
+    /// </summary>
     public void Dispose()
     {
         _refillTimer?.Dispose();
@@ -164,6 +174,11 @@ public class TokenBucket
     private readonly int _capacity;
     private readonly object _lock = new();
 
+    /// <summary>
+    /// Initializes a new <see cref="TokenBucket"/> that starts full.
+    /// </summary>
+    /// <param name="capacity">Maximum number of tokens the bucket can hold. Must be positive.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="capacity"/> is not positive.</exception>
     public TokenBucket(int capacity)
     {
         if (capacity <= 0)
@@ -173,6 +188,9 @@ public class TokenBucket
         _tokens = capacity; // Start with full capacity
     }
 
+    /// <summary>
+    /// Gets the number of whole tokens currently available in the bucket.
+    /// </summary>
     public int CurrentTokens
     {
         get
@@ -184,8 +202,15 @@ public class TokenBucket
         }
     }
 
+    /// <summary>
+    /// Gets the maximum number of tokens the bucket can hold.
+    /// </summary>
     public int Capacity => _capacity;
 
+    /// <summary>
+    /// Attempts to take one token from the bucket.
+    /// </summary>
+    /// <returns><c>true</c> when a token was consumed; <c>false</c> when fewer than one token is available.</returns>
     public bool TryConsumeToken()
     {
         lock (_lock)
@@ -199,6 +224,10 @@ public class TokenBucket
         }
     }
 
+    /// <summary>
+    /// Adds tokens to the bucket, capped at <see cref="Capacity"/>.
+    /// </summary>
+    /// <param name="amount">The number of tokens to add.</param>
     public void AddTokens(double amount)
     {
         lock (_lock)
@@ -213,7 +242,18 @@ public class TokenBucket
 /// </summary>
 public class RateLimitStatus
 {
+    /// <summary>
+    /// Gets or sets the number of whole tokens currently available.
+    /// </summary>
     public int CurrentTokens { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of tokens the actor's bucket can hold.
+    /// </summary>
     public int Capacity { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the actor currently has no tokens available.
+    /// </summary>
     public bool IsLimited { get; set; }
 }
