@@ -20,6 +20,12 @@ public class ActorStateRepository
         _persistenceService = null!;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorStateRepository"/> class.
+    /// </summary>
+    /// <param name="persistenceService">The persistence service used to store and load snapshots.</param>
+    /// <param name="logger">Optional logger for diagnostic output.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="persistenceService"/> is null.</exception>
     public ActorStateRepository(PersistenceService persistenceService, ILogger<ActorStateRepository>? logger = null)
     {
         _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
@@ -209,13 +215,45 @@ public class ActorStateRepository
 /// </summary>
 public class ActorStateSnapshot
 {
+    /// <summary>
+    /// Gets the ID of the actor this snapshot belongs to.
+    /// </summary>
     public Guid ActorId { get; }
+
+    /// <summary>
+    /// Gets the path of the actor this snapshot belongs to.
+    /// </summary>
     public ActorPath ActorPath { get; }
+
+    /// <summary>
+    /// Gets the deserialized actor state.
+    /// </summary>
     public object State { get; } // Changed to object to hold deserialized state
+
+    /// <summary>
+    /// Gets the timestamp when the snapshot was saved.
+    /// </summary>
     public DateTime SavedAt { get; }
+
+    /// <summary>
+    /// Gets the sequence number of the snapshot.
+    /// </summary>
     public long SequenceNr { get; } // Added SequenceNr
+
+    /// <summary>
+    /// Gets the version number of the snapshot metadata.
+    /// </summary>
     public int Version { get; } // Kept for metadata
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorStateSnapshot"/> class.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="state">The deserialized actor state.</param>
+    /// <param name="sequenceNr">The sequence number of the snapshot.</param>
+    /// <param name="savedAt">The timestamp when the snapshot was saved.</param>
+    /// <param name="version">The version number of the snapshot metadata. Defaults to 1.</param>
     public ActorStateSnapshot(Guid actorId, ActorPath actorPath, object state, long sequenceNr, DateTime savedAt, int version = 1)
     {
         ActorId = actorId;
