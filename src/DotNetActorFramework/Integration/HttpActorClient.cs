@@ -22,13 +22,41 @@ public class HttpActorClient : IDisposable
     private readonly string _baseUrl;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>
+    /// Path of the actor this client last reported on.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Unique identifier of the actor this client last reported on.
+    /// </summary>
     public Guid ActorId { get; set; }
+
+    /// <summary>
+    /// Current lifecycle state of the actor.
+    /// </summary>
     public string State { get; set; } = null!;
+
+    /// <summary>
+    /// Total number of messages processed by the actor.
+    /// </summary>
     public long MessageCount { get; set; }
+
+    /// <summary>
+    /// Total number of errors raised by the actor.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Ratio of errors to messages processed by the actor.
+    /// </summary>
     public double ErrorRate { get; set; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpActorClient"/> class for the given base URL.
+    /// </summary>
+    /// <param name="baseUrl">Base URL of the actor HTTP endpoint; trailing slashes are removed.</param>
+    /// <exception cref="ArgumentException">Thrown when baseUrl is null, empty, or whitespace.</exception>
     public HttpActorClient(string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -170,6 +198,9 @@ public class HttpActorClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases the underlying <see cref="HttpClient"/> resources.
+    /// </summary>
     public void Dispose()
     {
         _httpClient?.Dispose();
@@ -181,12 +212,39 @@ public class HttpActorClient : IDisposable
 /// </summary>
 public class ActorHealthStatus
 {
+    /// <summary>
+    /// Path of the actor.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Unique identifier of the actor.
+    /// </summary>
     public Guid ActorId { get; set; }
+
+    /// <summary>
+    /// Current lifecycle state of the actor.
+    /// </summary>
     public string State { get; set; } = null!;
+
+    /// <summary>
+    /// Total number of messages processed by the actor.
+    /// </summary>
     public long MessageCount { get; set; }
+
+    /// <summary>
+    /// Total number of errors raised by the actor.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Ratio of errors to messages processed by the actor.
+    /// </summary>
     public double ErrorRate { get; set; }
+
+    /// <summary>
+    /// Indicates whether the actor is considered healthy.
+    /// </summary>
     public bool IsHealthy { get; set; }
 }
 
@@ -195,13 +253,48 @@ public class ActorHealthStatus
 /// </summary>
 public class SystemHealthStatus
 {
+    /// <summary>
+    /// Name of the actor system.
+    /// </summary>
     public string SystemName { get; set; } = null!;
+
+    /// <summary>
+    /// Unique identifier of the actor system.
+    /// </summary>
     public Guid SystemId { get; set; }
+
+    /// <summary>
+    /// Total number of actors in the system.
+    /// </summary>
     public int TotalActors { get; set; }
+
+    /// <summary>
+    /// Number of actors currently considered healthy.
+    /// </summary>
     public int HealthyActors { get; set; }
+
+    /// <summary>
+    /// Number of actors currently considered unhealthy.
+    /// </summary>
     public int UnhealthyActors { get; set; }
+
+    /// <summary>
+    /// Total number of messages processed by all actors in the system.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Total number of errors raised by all actors in the system.
+    /// </summary>
     public long TotalErrors { get; set; }
+
+    /// <summary>
+    /// Ratio of errors to messages across the system.
+    /// </summary>
     public double ErrorRate { get; set; }
+
+    /// <summary>
+    /// Indicates whether the system is considered healthy.
+    /// </summary>
     public bool IsHealthy { get; set; }
 }
