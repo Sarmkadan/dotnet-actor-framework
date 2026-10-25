@@ -23,6 +23,11 @@ public class ActorSystemDiagnostics
     private readonly List<PerformanceSnapshot> _snapshots = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemDiagnostics"/> class for the specified actor system.
+    /// </summary>
+    /// <param name="actorSystem">The actor system to diagnose.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorSystem"/> is <c>null</c>.</exception>
     public ActorSystemDiagnostics(ActorSystem actorSystem)
     {
         _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
@@ -219,10 +224,29 @@ public class ActorSystemDiagnostics
 /// </summary>
 public class DiagnosticsExportDto
 {
+    /// <summary>
+    /// Gets or sets the performance snapshot taken at export time.
+    /// </summary>
     public PerformanceSnapshot Snapshot { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the memory statistics of the running process.
+    /// </summary>
     public MemoryStatistics Memory { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the garbage collection statistics.
+    /// </summary>
     public GcStatistics Gc { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the analysis of the actor hierarchy.
+    /// </summary>
     public ActorPathAnalysis Hierarchy { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the actors with the highest load.
+    /// </summary>
     public List<ActorLoadInfo> HeaviestActors { get; set; } = null!;
 }
 
@@ -231,13 +255,44 @@ public class DiagnosticsExportDto
 /// </summary>
 public class PerformanceSnapshot
 {
+    /// <summary>
+    /// Gets or sets the UTC time at which the snapshot was taken.
+    /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of actors in the system.
+    /// </summary>
     public int TotalActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors that are healthy.
+    /// </summary>
     public int HealthyActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors in an error state.
+    /// </summary>
     public int ErrorActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages processed by the system.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of errors recorded by the system.
+    /// </summary>
     public long TotalErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the process working set in megabytes.
+    /// </summary>
     public long MemoryUsageMb { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CPU usage percentage. Not collected on this platform, so it is currently always <c>0</c>.
+    /// </summary>
     public double CpuUsagePercent { get; set; }
 }
 
@@ -246,9 +301,24 @@ public class PerformanceSnapshot
 /// </summary>
 public class MemoryStatistics
 {
+    /// <summary>
+    /// Gets or sets the process working set in megabytes.
+    /// </summary>
     public long WorkingSetMb { get; set; }
+
+    /// <summary>
+    /// Gets or sets the private memory size of the process in megabytes.
+    /// </summary>
     public long PrivateMemoryMb { get; set; }
+
+    /// <summary>
+    /// Gets or sets the managed heap size in megabytes.
+    /// </summary>
     public long ManagedHeapMb { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the statistics were collected.
+    /// </summary>
     public DateTime Timestamp { get; set; }
 }
 
@@ -257,10 +327,29 @@ public class MemoryStatistics
 /// </summary>
 public class GcStatistics
 {
+    /// <summary>
+    /// Gets or sets the number of generation 0 garbage collections.
+    /// </summary>
     public int Gen0Collections { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of generation 1 garbage collections.
+    /// </summary>
     public int Gen1Collections { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of generation 2 garbage collections.
+    /// </summary>
     public int Gen2Collections { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total bytes of memory currently allocated by the garbage collector.
+    /// </summary>
     public long TotalMemoryBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the statistics were collected.
+    /// </summary>
     public DateTime Timestamp { get; set; }
 }
 
@@ -269,9 +358,24 @@ public class GcStatistics
 /// </summary>
 public class ActorPathAnalysis
 {
+    /// <summary>
+    /// Gets or sets the total number of actors analyzed.
+    /// </summary>
     public int TotalActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum depth of any actor path in the hierarchy.
+    /// </summary>
     public int MaxDepth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average number of child actors per parent path.
+    /// </summary>
     public double AverageChildrenPerParent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of child actors keyed by parent path.
+    /// </summary>
     public Dictionary<string, int> ChildCountByParent { get; set; } = [];
 }
 
@@ -280,7 +384,18 @@ public class ActorPathAnalysis
 /// </summary>
 public class ActorLoadInfo
 {
+    /// <summary>
+    /// Gets or sets the string representation of the actor's path.
+    /// </summary>
     public string Path { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the number of messages processed by the actor.
+    /// </summary>
     public long MessageCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of errors raised by the actor.
+    /// </summary>
     public long ErrorCount { get; set; }
 }
