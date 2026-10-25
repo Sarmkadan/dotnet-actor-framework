@@ -24,7 +24,7 @@ public class InMemorySnapshotStore : ISnapshotStore
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshot"/> is null.</exception>
     public Task SaveSnapshotAsync(ActorSnapshot snapshot)
     {
-        if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+        ArgumentNullException.ThrowIfNull(snapshot);
 
         var actorSnapshots = _snapshots.GetOrAdd(GetActorKey(snapshot.ActorId, snapshot.ActorPath), _ => new ConcurrentDictionary<long, ActorSnapshot>());
         actorSnapshots[snapshot.SequenceNr] = snapshot;
@@ -45,8 +45,11 @@ public class InMemorySnapshotStore : ISnapshotStore
     /// <param name="actorId">The ID of the actor.</param>
     /// <param name="actorPath">The path of the actor.</param>
     /// <returns>A task whose result is the latest <see cref="ActorSnapshot"/>, or null if none is stored.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorPath"/> is null.</exception>
     public Task<ActorSnapshot?> LoadLatestSnapshotAsync(Guid actorId, string actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         var actorSnapshots = _snapshots.GetValueOrDefault(GetActorKey(actorId, actorPath));
         if (actorSnapshots == null || actorSnapshots.IsEmpty)
         {
@@ -64,8 +67,11 @@ public class InMemorySnapshotStore : ISnapshotStore
     /// <param name="actorPath">The path of the actor.</param>
     /// <param name="maxSequenceNr">The maximum sequence number of snapshots to delete (inclusive).</param>
     /// <returns>A completed task once the matching snapshots have been removed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorPath"/> is null.</exception>
     public Task DeleteSnapshotsAsync(Guid actorId, string actorPath, long maxSequenceNr)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         var actorKey = GetActorKey(actorId, actorPath);
         if (_snapshots.TryGetValue(actorKey, out var actorSnapshots))
         {
@@ -83,8 +89,11 @@ public class InMemorySnapshotStore : ISnapshotStore
     /// <param name="actorId">The ID of the actor.</param>
     /// <param name="actorPath">The path of the actor.</param>
     /// <returns>A completed task once all of the actor's snapshots have been removed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorPath"/> is null.</exception>
     public Task DeleteAllSnapshotsAsync(Guid actorId, string actorPath)
     {
+        ArgumentNullException.ThrowIfNull(actorPath);
+
         _snapshots.TryRemove(GetActorKey(actorId, actorPath), out _);
         return Task.CompletedTask;
     }
