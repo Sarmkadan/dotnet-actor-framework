@@ -78,6 +78,13 @@ public class Actor
     private readonly Dictionary<string, object> _state = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Creates a new actor in the <see cref="ActorState.Created"/> state with a fresh <see cref="Id"/>.
+    /// The actor does not start processing messages until <see cref="InitializeAsync"/> is called.
+    /// </summary>
+    /// <param name="path">The hierarchical address of the actor. Must not be <c>null</c>.</param>
+    /// <param name="supervisor">Optional reference to the supervising actor.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <c>null</c>.</exception>
     public Actor(ActorPath path, ActorRef? supervisor = null)
     {
         ArgumentNullException.ThrowIfNull(path);
@@ -248,5 +255,9 @@ public class Actor
     /// </summary>
     protected virtual Task OnStopAsync() => Task.CompletedTask;
 
+    /// <summary>
+    /// Returns a string representation of this actor in the form <c>Actor(path)</c>.
+    /// </summary>
+    /// <returns>A string containing the actor's <see cref="Path"/>.</returns>
     public override string ToString() => $"Actor({Path})";
 }
