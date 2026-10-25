@@ -326,6 +326,10 @@ public class ActorSystem
         }
     }
 
+    /// <summary>
+    /// Returns a string that represents the actor system, containing its name and identifier.
+    /// </summary>
+    /// <returns>A string in the form <c>ActorSystem({Name}, {Id})</c>.</returns>
     public override string ToString() => $"ActorSystem({Name}, {Id:N})";
 }
 
@@ -334,27 +338,49 @@ public class ActorSystem
 /// </summary>
 public class SystemHealthSummary
 {
+    /// <summary>Gets or sets the unique identifier of the actor system the summary was taken from.</summary>
     public Guid SystemId { get; set; }
+    /// <summary>Gets or sets the name of the actor system the summary was taken from.</summary>
     public string SystemName { get; set; } = null!;
+    /// <summary>Gets or sets the UTC timestamp when the actor system was initialized.</summary>
     public DateTime CreatedAt { get; set; }
+    /// <summary>Gets or sets the total number of actors registered in the system.</summary>
     public int TotalActors { get; set; }
+    /// <summary>Gets or sets the number of actors that are not reporting an unhealthy state.</summary>
     public int HealthyActors { get; set; }
+    /// <summary>Gets or sets the number of actors that are reporting an unhealthy state.</summary>
     public int UnhealthyActors { get; set; }
+    /// <summary>Gets or sets the number of actors currently in an error state.</summary>
     public int ErrorActors { get; set; }
+    /// <summary>Gets or sets the total number of messages processed by all actors.</summary>
     public long TotalMessages { get; set; }
+    /// <summary>Gets or sets the total number of errors recorded by all actors.</summary>
     public long TotalErrors { get; set; }
 
+    /// <summary>
+    /// Calculates the percentage of actors that are healthy.
+    /// </summary>
+    /// <returns>
+    /// The percentage of healthy actors from 0 to 100, or <c>100</c> when no actors are registered.
+    /// </returns>
     public double GetHealthPercentage()
     {
         if (TotalActors == 0) return 100;
         return (double)HealthyActors / TotalActors * 100;
     }
 
+    /// <summary>
+    /// Calculates the percentage of messages that resulted in an error.
+    /// </summary>
+    /// <returns>The error rate as a percentage, or <c>0</c> when no messages have been processed.</returns>
     public double GetErrorRate()
     {
         if (TotalMessages == 0) return 0;
         return (double)TotalErrors / TotalMessages * 100;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the actor system is healthy, meaning no actor is unhealthy or in an error state.
+    /// </summary>
     public bool IsHealthy => UnhealthyActors == 0 && ErrorActors == 0;
 }
