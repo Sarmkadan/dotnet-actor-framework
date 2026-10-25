@@ -14,53 +14,131 @@ namespace DotNetActorFramework.Configuration;
 /// </summary>
 public class ActorSystemOptions
 {
+    /// <summary>
+    /// Gets or sets the name that identifies this actor system. Must not be null, empty, or whitespace.
+    /// </summary>
     public string SystemName { get; set; } = "DefaultActorSystem";
 
+    /// <summary>
+    /// Gets or sets the maximum number of messages a newly created mailbox can hold before the overflow policy applies.
+    /// Defaults to 1000.
+    /// </summary>
     public int DefaultMailboxCapacity { get; set; } = ActorConstants.DefaultMailboxCapacity;
 
+    /// <summary>
+    /// Gets or sets the ordering strategy used for newly created mailboxes. Defaults to <see cref="MailboxType.FIFO"/>.
+    /// </summary>
     public MailboxType DefaultMailboxType { get; set; } = MailboxType.FIFO;
 
-public MailboxOverflowPolicy DefaultMailboxOverflowPolicy { get; set; } = MailboxOverflowPolicy.DropNewest;
+    /// <summary>
+    /// Gets or sets the action taken when a mailbox is full. Defaults to <see cref="MailboxOverflowPolicy.DropNewest"/>.
+    /// </summary>
+    public MailboxOverflowPolicy DefaultMailboxOverflowPolicy { get; set; } = MailboxOverflowPolicy.DropNewest;
 
+    /// <summary>
+    /// Gets or sets the default timeout, in seconds, for actor operations. Must be greater than zero. Defaults to 30.
+    /// </summary>
     public int DefaultTimeoutSeconds { get; set; } = ActorConstants.DefaultTimeoutSeconds;
 
+    /// <summary>
+    /// Gets or sets the maximum number of times a failed message is retried. Cannot be negative. Defaults to 3.
+    /// </summary>
     public int MaxMessageRetries { get; set; } = ActorConstants.MaxMessageRetries;
 
+    /// <summary>
+    /// Gets or sets the maximum depth of the actor supervision hierarchy. Must be greater than zero. Defaults to 10.
+    /// </summary>
     public int MaxActorDepth { get; set; } = ActorConstants.DefaultMaxActorDepth;
 
+    /// <summary>
+    /// Gets or sets the strategy applied when an actor fails. Defaults to <see cref="SupervisionStrategy.Restart"/>.
+    /// </summary>
     public SupervisionStrategy DefaultSupervisionStrategy { get; set; } = SupervisionStrategy.Restart;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether messages are persisted. Defaults to true.
+    /// </summary>
     public bool EnableMessagePersistence { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether runtime metrics are collected. Defaults to true.
+    /// </summary>
     public bool EnableMetricsCollection { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether actor state is periodically snapshotted. Defaults to true.
+    /// </summary>
     public bool EnableActorStateSnapshotting { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the interval, in seconds, between actor state snapshots. Must be greater than zero. Defaults to 300.
+    /// </summary>
     public int SnapshotIntervalSeconds { get; set; } = 300;
 
+    /// <summary>
+    /// Gets or sets the storage backend used for persistence. Defaults to <see cref="PersistenceBackend.InMemory"/>.
+    /// </summary>
     public PersistenceBackend DefaultPersistenceBackend { get; set; } = PersistenceBackend.InMemory;
 
+    /// <summary>
+    /// Gets or sets the connection string for the database backend, if one is used. Null by default.
+    /// </summary>
     public string? DatabaseConnectionString { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether clustering is enabled. Defaults to false.
+    /// </summary>
     public bool EnableClusterMode { get; set; } = false;
 
+    /// <summary>
+    /// Gets or sets the address of this node in cluster mode, in <c>host:port</c> form. Defaults to <c>127.0.0.1:8080</c>.
+    /// </summary>
     public string ClusterAddress { get; set; } = "127.0.0.1:8080";
 
+    /// <summary>
+    /// Gets or sets the maximum number of nodes allowed in the cluster. Defaults to 10.
+    /// </summary>
     public int MaxClusterNodes { get; set; } = 10;
 
+    /// <summary>
+    /// Gets or sets the error rate, as a fraction from 0 to 1, above which an actor is considered unhealthy.
+    /// Must be less than <see cref="CriticalErrorRateThreshold"/>. Defaults to 0.25.
+    /// </summary>
     public double UnhealthyErrorRateThreshold { get; set; } = ActorConstants.UnhealthyErrorRateThreshold;
 
+    /// <summary>
+    /// Gets or sets the error rate, as a fraction from 0 to 1, at which an actor is considered critical.
+    /// Must be greater than <see cref="UnhealthyErrorRateThreshold"/>. Defaults to 0.75.
+    /// </summary>
     public double CriticalErrorRateThreshold { get; set; } = ActorConstants.CriticalErrorRateThreshold;
 
+    /// <summary>
+    /// Gets or sets the delay, in milliseconds, before the first retry under backoff. Must be greater than zero.
+    /// Defaults to 100.
+    /// </summary>
     public int InitialBackoffDelayMs { get; set; } = ActorConstants.InitialBackoffDelayMs;
 
+    /// <summary>
+    /// Gets or sets the upper bound, in milliseconds, on the backoff delay. Must be greater than
+    /// <see cref="InitialBackoffDelayMs"/>. Defaults to 30000.
+    /// </summary>
     public int MaxBackoffDelayMs { get; set; } = ActorConstants.MaxBackoffDelayMs;
 
+    /// <summary>
+    /// Gets or sets the factor by which the backoff delay grows after each attempt. Must be greater than 1.
+    /// Defaults to 1.5.
+    /// </summary>
     public double BackoffMultiplier { get; set; } = ActorConstants.BackoffMultiplier;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether verbose diagnostic logging is enabled. Defaults to false.
+    /// </summary>
     public bool EnableDetailedLogging { get; set; } = false;
 
-public int HighWatermarkWarningThreshold { get; set; } = 80;
+    /// <summary>
+    /// Gets or sets the mailbox load percentage (0-100) above which a warning is logged. Defaults to 80.
+    /// </summary>
+    public int HighWatermarkWarningThreshold { get; set; } = 80;
 
     /// <summary>
     /// Validates the configuration options. Every violated rule is collected before anything is thrown,
@@ -166,6 +244,10 @@ public int HighWatermarkWarningThreshold { get; set; } = 80;
         DefaultSupervisionStrategy = SupervisionStrategy.Escalate
     };
 
+    /// <summary>
+    /// Returns a string representation of the key options, intended for diagnostics.
+    /// </summary>
+    /// <returns>A string containing the system name, mailbox, timeout, retry, and depth settings.</returns>
     public override string ToString()
     {
         return $"ActorSystemOptions {{ SystemName = {SystemName}, DefaultMailboxCapacity = {DefaultMailboxCapacity}, DefaultMailboxType = {DefaultMailboxType}, DefaultTimeoutSeconds = {DefaultTimeoutSeconds}, MaxMessageRetries = {MaxMessageRetries}, MaxActorDepth = {MaxActorDepth} }}";
