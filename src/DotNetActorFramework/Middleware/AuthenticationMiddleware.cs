@@ -29,7 +29,14 @@ namespace DotNetActorFramework.Middleware;
 /// </remarks>
 public class AuthenticationMiddleware : IActorMiddleware
 {
+    /// <summary>
+    /// Gets the display name of this middleware.
+    /// </summary>
     public string Name => "AuthenticationMiddleware";
+
+    /// <summary>
+    /// Gets the execution order of this middleware; lower values run earlier in the pipeline.
+    /// </summary>
     public int Order => 10; // Run early in the pipeline
 
     private readonly IAuthenticationProvider _authProvider;
@@ -97,6 +104,11 @@ public class TokenAuthenticationProvider : IAuthenticationProvider
     private readonly Dictionary<string, string> _senderTokens = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="TokenAuthenticationProvider"/> with the set of valid tokens.
+    /// </summary>
+    /// <param name="validTokens">The tokens considered valid. At least one must be provided.</param>
+    /// <exception cref="ArgumentException">Thrown when no tokens are provided.</exception>
     public TokenAuthenticationProvider(params string[] validTokens)
     {
         if (validTokens == null || validTokens.Length == 0)
@@ -119,6 +131,11 @@ public class TokenAuthenticationProvider : IAuthenticationProvider
         }
     }
 
+    /// <summary>
+    /// Authenticates a sender by checking that its registered token is still valid.
+    /// </summary>
+    /// <param name="senderId">The sender identifier to authenticate.</param>
+    /// <returns><c>true</c> when the sender has a registered, valid token; <c>false</c> otherwise.</returns>
     public Task<bool> AuthenticateAsync(string senderId)
     {
         if (string.IsNullOrWhiteSpace(senderId))
@@ -133,6 +150,11 @@ public class TokenAuthenticationProvider : IAuthenticationProvider
         return Task.FromResult(false);
     }
 
+    /// <summary>
+    /// Checks whether the given token is among the configured valid tokens.
+    /// </summary>
+    /// <param name="token">The token to validate.</param>
+    /// <returns><c>true</c> when the token is valid; <c>false</c> otherwise.</returns>
     public Task<bool> ValidateTokenAsync(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -151,6 +173,11 @@ public class WhitelistAuthenticationProvider : IAuthenticationProvider
     private readonly HashSet<string> _whitelist;
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="WhitelistAuthenticationProvider"/> with the allowed senders.
+    /// </summary>
+    /// <param name="allowedSenders">The sender identifiers to allow. At least one must be provided.</param>
+    /// <exception cref="ArgumentException">Thrown when no senders are provided.</exception>
     public WhitelistAuthenticationProvider(params string[] allowedSenders)
     {
         if (allowedSenders == null || allowedSenders.Length == 0)
@@ -184,6 +211,11 @@ public class WhitelistAuthenticationProvider : IAuthenticationProvider
         }
     }
 
+    /// <summary>
+    /// Authenticates a sender by checking whether it is on the whitelist.
+    /// </summary>
+    /// <param name="senderId">The sender identifier to authenticate.</param>
+    /// <returns><c>true</c> when the sender is whitelisted; <c>false</c> otherwise.</returns>
     public Task<bool> AuthenticateAsync(string senderId)
     {
         if (string.IsNullOrWhiteSpace(senderId))
@@ -195,6 +227,11 @@ public class WhitelistAuthenticationProvider : IAuthenticationProvider
         }
     }
 
+    /// <summary>
+    /// Always returns <c>false</c>; token validation is not used by this provider.
+    /// </summary>
+    /// <param name="token">The token to validate (ignored).</param>
+    /// <returns>Always <c>false</c>.</returns>
     public Task<bool> ValidateTokenAsync(string token)
     {
         // Not used by whitelist provider
@@ -208,11 +245,21 @@ public class WhitelistAuthenticationProvider : IAuthenticationProvider
 /// </summary>
 public class NoOpAuthenticationProvider : IAuthenticationProvider
 {
+    /// <summary>
+    /// Always succeeds, regardless of the sender identifier.
+    /// </summary>
+    /// <param name="senderId">The sender identifier (ignored).</param>
+    /// <returns>Always <c>true</c>.</returns>
     public Task<bool> AuthenticateAsync(string senderId)
     {
         return Task.FromResult(true);
     }
 
+    /// <summary>
+    /// Always succeeds, regardless of the token.
+    /// </summary>
+    /// <param name="token">The token to validate (ignored).</param>
+    /// <returns>Always <c>true</c>.</returns>
     public Task<bool> ValidateTokenAsync(string token)
     {
         return Task.FromResult(true);
