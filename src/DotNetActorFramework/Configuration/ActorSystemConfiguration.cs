@@ -29,6 +29,20 @@ public class ActorSystemConfiguration
     private readonly ILogger<ActorSystemConfiguration>? _logger;
     private ActorSystem? _actorSystem;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemConfiguration"/> class.
+    /// </summary>
+    /// <param name="options">The actor system options. Validated on construction.</param>
+    /// <param name="registry">The registry where created actors are registered.</param>
+    /// <param name="mailboxService">The service that creates and manages actor mailboxes.</param>
+    /// <param name="dispatcher">The dispatcher used to deliver messages between actors.</param>
+    /// <param name="supervisionService">The service that supervises actor failures.</param>
+    /// <param name="stateRepository">The repository for persisted actor state.</param>
+    /// <param name="messageRepository">The repository for persisted messages.</param>
+    /// <param name="metricsRepository">The repository for actor metrics.</param>
+    /// <param name="connectionManager">The manager for the database connection.</param>
+    /// <param name="logger">Optional logger. When <c>null</c>, logging is skipped.</param>
+    /// <exception cref="ArgumentNullException">A required dependency is <c>null</c>.</exception>
     public ActorSystemConfiguration(
         ActorSystemOptions options,
         ActorRegistry registry,
@@ -55,6 +69,10 @@ public class ActorSystemConfiguration
         _options.Validate();
     }
 
+    /// <summary>
+    /// Returns a string summarizing the options, health, and component statistics of this configuration.
+    /// </summary>
+    /// <returns>A human-readable summary of the configuration state.</returns>
     public override string ToString() => $"ActorSystemConfiguration {{ Options = {_options}, Health = {_actorSystem?.GetHealthSummary()}, MailboxStats = {_mailboxService.GetStatistics()}, DispatcherStats = {_dispatcher.GetStatistics()}, SupervisionStats = {_supervisionService.GetStatistics()}, PersistenceStats = {_messageRepository.GetStatistics()} }}";
 
     /// <summary>
@@ -234,12 +252,43 @@ public class ActorSystemConfiguration
 /// </summary>
 public class SystemStatistics
 {
+    /// <summary>
+    /// Gets or sets the actor system options in effect when the statistics were collected.
+    /// </summary>
     public ActorSystemOptions? Options { get; set; }
+
+    /// <summary>
+    /// Gets or sets the health summary of the actor system, or <c>null</c> if it is not initialized.
+    /// </summary>
     public SystemHealthSummary? Health { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mailbox statistics.
+    /// </summary>
     public MailboxStatistics? MailboxStats { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message dispatcher statistics.
+    /// </summary>
     public DispatcherStatistics? DispatcherStats { get; set; }
+
+    /// <summary>
+    /// Gets or sets the supervision statistics.
+    /// </summary>
     public SupervisionStatistics? SupervisionStats { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message persistence statistics.
+    /// </summary>
     public PersistenceStatistics? PersistenceStats { get; set; }
+
+    /// <summary>
+    /// Gets or sets the database connection statistics.
+    /// </summary>
     public ConnectionStatistics? ConnectionStats { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the statistics were collected.
+    /// </summary>
     public DateTime CollectedAt { get; set; }
 }
