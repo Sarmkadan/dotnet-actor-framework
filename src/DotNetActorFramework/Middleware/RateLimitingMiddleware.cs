@@ -87,6 +87,21 @@ public class RateLimitingMiddleware : IActorMiddleware
 /// </remarks>
 public class RateLimiter : IDisposable
 {
+    /// <summary>The default maximum number of messages allowed per actor per second.</summary>
+    private const int DefaultTokensPerSecond = 1000;
+
+    /// <summary>The number of seconds of traffic the default bucket capacity absorbs as a burst.</summary>
+    private const int DefaultBurstSeconds = 10;
+
+    /// <summary>The interval between bucket refills, in milliseconds.</summary>
+    private const int RefillIntervalMilliseconds = 100;
+
+    /// <summary>The number of milliseconds in one second.</summary>
+    private const int MillisecondsPerSecond = 1000;
+
+    /// <summary>The number of refills performed each second.</summary>
+    private const int RefillsPerSecond = MillisecondsPerSecond / RefillIntervalMilliseconds;
+
     private readonly ConcurrentDictionary<string, TokenBucket> _buckets;
     private readonly int _tokensPerSecond;
     private readonly int _bucketCapacity;
@@ -104,17 +119,21 @@ public class RateLimiter : IDisposable
     /// <c>tokensPerSecond × 10</c>, allowing up to 10 seconds worth of burst.
     /// </param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="tokensPerSecond"/> is not positive.</exception>
-    public RateLimiter(int tokensPerSecond = 1000, int? bucketCapacity = null)
+    public RateLimiter(int tokensPerSecond = DefaultTokensPerSecond, int? bucketCapacity = null)
     {
         if (tokensPerSecond <= 0)
             throw new ArgumentException("Tokens per second must be positive.", nameof(tokensPerSecond));
 
         _tokensPerSecond = tokensPerSecond;
-        _bucketCapacity = bucketCapacity ?? tokensPerSecond * 10;
+        _bucketCapacity = bucketCapacity ?? tokensPerSecond * DefaultBurstSeconds;
         _buckets = new ConcurrentDictionary<string, TokenBucket>();
 
-        // Refill tokens every 100ms for smoother distribution
-        _refillTimer = new Timer(_ => RefillBuckets(), null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+        // Refill tokens every RefillIntervalMilliseconds for smoother distribution
+        _refillTimer = new Timer(
+            _ => RefillBuckets(),
+            null,
+            TimeSpan.FromMilliseconds(RefillIntervalMilliseconds),
+            TimeSpan.FromMilliseconds(RefillIntervalMilliseconds));
     }
 
     /// <summary>
@@ -149,7 +168,7 @@ public class RateLimiter : IDisposable
 
     private void RefillBuckets()
     {
-        var tokensToAdd = (double)_tokensPerSecond / 10; // Refill 100ms worth
+        var tokensToAdd = (double)_tokensPerSecond / RefillsPerSecond; // Refill one interval's worth
         foreach (var bucket in _buckets.Values)
         {
             bucket.AddTokens(tokensToAdd);
