@@ -19,6 +19,10 @@ public class ClusterActorRegistry
     private readonly ConcurrentDictionary<string, ConcurrentBag<ActorRef>> _nodeActors = new();
     private readonly ILogger<ClusterActorRegistry>? _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClusterActorRegistry"/> class.
+    /// </summary>
+    /// <param name="logger">Optional logger for registry diagnostics. When null, no log output is produced.</param>
     public ClusterActorRegistry(ILogger<ClusterActorRegistry>? logger = null)
     {
         _logger = logger;
