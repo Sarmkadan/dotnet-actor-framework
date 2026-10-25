@@ -206,6 +206,9 @@ public class ActorSystemBuilder
 /// </summary>
 public class NullLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
 {
+    /// <summary>
+    /// Discards the log entry. This method performs no operation.
+    /// </summary>
     public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel,
         Microsoft.Extensions.Logging.EventId eventId,
         TState state,
@@ -215,8 +218,19 @@ public class NullLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
         // No-op
     }
 
+    /// <summary>
+    /// Always returns <c>false</c>, so no log entries are produced for any level.
+    /// </summary>
+    /// <param name="logLevel">The level to check.</param>
+    /// <returns><c>false</c> for every log level.</returns>
     public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
 
+    /// <summary>
+    /// Returns no scope. The provided state is ignored.
+    /// </summary>
+    /// <typeparam name="TState">The type of the scope state.</typeparam>
+    /// <param name="state">The scope state, which is ignored.</param>
+    /// <returns><c>null</c>, indicating that no scope was created.</returns>
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 }
 
