@@ -18,6 +18,15 @@ public class ActorManagementApi
     private readonly ActorSystem _actorSystem;
     private readonly MailboxService? _mailboxService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorManagementApi"/> class.
+    /// </summary>
+    /// <param name="actorSystem">The actor system whose actors are queried and managed. Must not be <c>null</c>.</param>
+    /// <param name="mailboxService">
+    /// Optional mailbox service used to report live mailbox depth in <see cref="GetActorMetrics"/>.
+    /// When <c>null</c>, the mailbox depth is not overridden.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorSystem"/> is <c>null</c>.</exception>
     public ActorManagementApi(ActorSystem actorSystem, MailboxService? mailboxService = null)
     {
         _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
@@ -191,8 +200,19 @@ public class ActorManagementApi
 /// </summary>
 public class ApiResponse
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the operation completed successfully.
+    /// </summary>
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets a human-readable message describing the outcome of the operation.
+    /// </summary>
     public string Message { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets optional payload data associated with the response. <c>null</c> when no data is returned.
+    /// </summary>
     public object? Data { get; set; }
 }
 
@@ -201,9 +221,25 @@ public class ApiResponse
 /// </summary>
 public class ActorInfo
 {
+    /// <summary>
+    /// Gets or sets the actor's path (e.g. <c>/user/orders/processor</c>).
+    /// </summary>
     public string Path { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the unique identifier of the actor.
+    /// </summary>
     public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the actor is currently alive.
+    /// </summary>
     public bool IsAlive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp associated with the actor information.
+    /// Set to the time of the query by <see cref="ActorManagementApi.GetActor"/>; not populated by the list methods.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
 }
 
@@ -212,8 +248,24 @@ public class ActorInfo
 /// </summary>
 public class ActorListResponse
 {
+    /// <summary>
+    /// Gets or sets the actors included in this response.
+    /// </summary>
     public List<ActorInfo> Actors { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the total number of matching actors. For <see cref="ActorManagementApi.ListActors"/>
+    /// this is the number of all actors in the system, not just the returned page.
+    /// </summary>
     public int Total { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of actors requested for the page. Set only by <see cref="ActorManagementApi.ListActors"/>.
+    /// </summary>
     public int Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors skipped before the page. Set only by <see cref="ActorManagementApi.ListActors"/>.
+    /// </summary>
     public int Offset { get; set; }
 }
