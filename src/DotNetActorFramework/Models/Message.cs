@@ -81,6 +81,11 @@ public record Message<T> : Message where T : class
     /// <summary>The typed payload carried by this message.</summary>
     public T Payload { get; init; }
 
+    /// <summary>
+    /// Initializes a new <see cref="Message{T}"/> carrying <paramref name="payload"/>.
+    /// </summary>
+    /// <param name="payload">The payload to carry. Must not be <c>null</c>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> is <c>null</c>.</exception>
     public Message(T payload)
     {
         Payload = payload ?? throw new ArgumentNullException(nameof(payload));
@@ -108,6 +113,11 @@ public record ControlMessage : Message
     /// <summary>Optional key/value parameters associated with the command.</summary>
     public Dictionary<string, object> Parameters { get; init; } = [];
 
+    /// <summary>
+    /// Initializes a new <see cref="ControlMessage"/> with the given command and no parameters.
+    /// </summary>
+    /// <param name="command">The command verb. Must not be null, empty, or whitespace.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="command"/> is null, empty, or whitespace.</exception>
     public ControlMessage(string command)
     {
         if (string.IsNullOrWhiteSpace(command))
@@ -116,6 +126,12 @@ public record ControlMessage : Message
         Command = command;
     }
 
+    /// <summary>
+    /// Initializes a new <see cref="ControlMessage"/> with the given command and parameters.
+    /// </summary>
+    /// <param name="command">The command verb. Must not be null, empty, or whitespace.</param>
+    /// <param name="parameters">Key/value parameters for the command. A <c>null</c> value is replaced with an empty dictionary.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="command"/> is null, empty, or whitespace.</exception>
     public ControlMessage(string command, Dictionary<string, object> parameters)
         : this(command)
     {
