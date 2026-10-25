@@ -13,14 +13,26 @@ namespace DotNetActorFramework.Exceptions;
 /// </summary>
 public class ActorException : DotnetActorFrameworkException
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorException"/> class.
+    /// </summary>
     public ActorException()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public ActorException(string? message) : base(message)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorException"/> class with a message and inner exception.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public ActorException(string? message, Exception? innerException)
         : base(message, innerException)
     {
@@ -48,8 +60,15 @@ public class ActorException : DotnetActorFrameworkException
 /// </summary>
 public class ActorNotFoundException : ActorException
 {
+    /// <summary>
+    /// Gets the path of the actor that could not be found.
+    /// </summary>
     public string ActorPath { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorNotFoundException"/> class for the specified actor path.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor that could not be found.</param>
     public ActorNotFoundException(string actorPath)
         : base($"Actor not found: {actorPath}")
     {
@@ -57,6 +76,12 @@ public class ActorNotFoundException : ActorException
         ActorPath = actorPath;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorNotFoundException"/> class for the specified actor path
+    /// and inner exception.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor that could not be found.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public ActorNotFoundException(string actorPath, Exception? innerException)
         : base($"Actor not found: {actorPath}", innerException)
     {
@@ -70,22 +95,46 @@ public class ActorNotFoundException : ActorException
 /// </summary>
 public class MailboxException : ActorException
 {
+    /// <summary>
+    /// Gets the identifier of the actor whose mailbox operation failed.
+    /// </summary>
     public Guid ActorId { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MailboxException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public MailboxException(string? message) : base(message)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MailboxException"/> class with a message and inner exception.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public MailboxException(string? message, Exception? innerException)
         : base(message, innerException)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MailboxException"/> class for the specified actor with a message.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor whose mailbox operation failed.</param>
+    /// <param name="message">The message that describes the error.</param>
     public MailboxException(Guid actorId, string? message) : base(message)
     {
         ActorId = actorId;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MailboxException"/> class for the specified actor with a message
+    /// and inner exception.
+    /// </summary>
+    /// <param name="actorId">The identifier of the actor whose mailbox operation failed.</param>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public MailboxException(Guid actorId, string? message, Exception? innerException)
         : base(message, innerException)
     {
@@ -98,10 +147,19 @@ public class MailboxException : ActorException
 /// </summary>
 public class SupervisionException : ActorException
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SupervisionException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public SupervisionException(string? message) : base(message)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SupervisionException"/> class with a message and inner exception.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public SupervisionException(string? message, Exception? innerException)
         : base(message, innerException)
     {
@@ -113,10 +171,19 @@ public class SupervisionException : ActorException
 /// </summary>
 public class ActorSystemException : ActorException
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public ActorSystemException(string? message) : base(message)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActorSystemException"/> class with a message and inner exception.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public ActorSystemException(string? message, Exception? innerException)
         : base(message, innerException)
     {
@@ -128,18 +195,41 @@ public class ActorSystemException : ActorException
 /// </summary>
 public class HttpActorCommunicationException : ActorException
 {
+    /// <summary>
+    /// Gets the HTTP status code returned by the actor endpoint, if one was received.
+    /// </summary>
     public HttpStatusCode? StatusCode { get; }
+
+    /// <summary>
+    /// Gets the URL of the request that failed, if known.
+    /// </summary>
     public string? RequestUrl { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpActorCommunicationException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public HttpActorCommunicationException(string? message) : base(message)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpActorCommunicationException"/> class with a message and
+    /// inner exception.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public HttpActorCommunicationException(string? message, Exception? innerException)
         : base(message, innerException)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpActorCommunicationException"/> class for a failed request.
+    /// </summary>
+    /// <param name="requestUrl">The URL of the request that failed.</param>
+    /// <param name="statusCode">The HTTP status code returned by the endpoint.</param>
+    /// <param name="responseContent">The response body, truncated in the message if long.</param>
     public HttpActorCommunicationException(string requestUrl, HttpStatusCode statusCode, string? responseContent)
         : base($"HTTP communication failed for {requestUrl}. Status: {statusCode}, Response: {responseContent?.Truncate(200)}")
     {
@@ -148,6 +238,14 @@ public class HttpActorCommunicationException : ActorException
         StatusCode = statusCode;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpActorCommunicationException"/> class for a failed request
+    /// with an inner exception.
+    /// </summary>
+    /// <param name="requestUrl">The URL of the request that failed.</param>
+    /// <param name="statusCode">The HTTP status code returned by the endpoint.</param>
+    /// <param name="responseContent">The response body, truncated in the message if long.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public HttpActorCommunicationException(string requestUrl, HttpStatusCode statusCode, string? responseContent, Exception? innerException)
         : base($"HTTP communication failed for {requestUrl}. Status: {statusCode}, Response: {responseContent?.Truncate(200)}", innerException)
     {
@@ -162,9 +260,22 @@ public class HttpActorCommunicationException : ActorException
 /// </summary>
 public class ExternalServiceException : ActorException
 {
+    /// <summary>
+    /// Gets the name of the external service that failed.
+    /// </summary>
     public string ServiceName { get; }
+
+    /// <summary>
+    /// Gets the endpoint of the external service that failed.
+    /// </summary>
     public string Endpoint { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExternalServiceException"/> class for the specified service and endpoint.
+    /// </summary>
+    /// <param name="serviceName">The name of the external service that failed.</param>
+    /// <param name="endpoint">The endpoint of the external service that failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
     public ExternalServiceException(string serviceName, string endpoint, string? message)
         : base(message ?? $"External service '{serviceName}' failed at endpoint '{endpoint}'")
     {
@@ -174,6 +285,14 @@ public class ExternalServiceException : ActorException
         Endpoint = endpoint;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExternalServiceException"/> class for the specified service and
+    /// endpoint with an inner exception.
+    /// </summary>
+    /// <param name="serviceName">The name of the external service that failed.</param>
+    /// <param name="endpoint">The endpoint of the external service that failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public ExternalServiceException(string serviceName, string endpoint, string? message, Exception? innerException)
         : base(message ?? $"External service '{serviceName}' failed at endpoint '{endpoint}'", innerException)
     {
@@ -189,14 +308,29 @@ public class ExternalServiceException : ActorException
 /// </summary>
 public class SerializationException : ActorException
 {
+    /// <summary>
+    /// Gets the content type that failed to serialize or deserialize.
+    /// </summary>
     public string ContentType { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerializationException"/> class for the specified content type.
+    /// </summary>
+    /// <param name="contentType">The content type that failed to serialize or deserialize.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
     public SerializationException(string contentType, string? message) : base(message ?? $"Serialization failed for content type: {contentType}")
     {
         ArgumentNullException.ThrowIfNull(contentType);
         ContentType = contentType;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerializationException"/> class for the specified content type
+    /// with an inner exception.
+    /// </summary>
+    /// <param name="contentType">The content type that failed to serialize or deserialize.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public SerializationException(string contentType, string? message, Exception? innerException)
         : base(message ?? $"Serialization failed for content type: {contentType}", innerException)
     {
@@ -210,14 +344,29 @@ public class SerializationException : ActorException
 /// </summary>
 public class PersistenceException : ActorException
 {
+    /// <summary>
+    /// Gets the path of the actor whose persistence operation failed.
+    /// </summary>
     public string ActorPath { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PersistenceException"/> class for the specified actor path.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor whose persistence operation failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
     public PersistenceException(string actorPath, string? message) : base(message ?? $"Persistence operation failed for actor: {actorPath}")
     {
         ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PersistenceException"/> class for the specified actor path
+    /// with an inner exception.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor whose persistence operation failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public PersistenceException(string actorPath, string? message, Exception? innerException)
         : base(message ?? $"Persistence operation failed for actor: {actorPath}", innerException)
     {
@@ -231,14 +380,29 @@ public class PersistenceException : ActorException
 /// </summary>
 public class ClusterException : ActorException
 {
+    /// <summary>
+    /// Gets the address of the cluster node that failed.
+    /// </summary>
     public string NodeAddress { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClusterException"/> class for the specified node address.
+    /// </summary>
+    /// <param name="nodeAddress">The address of the cluster node that failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
     public ClusterException(string nodeAddress, string? message) : base(message ?? $"Cluster operation failed for node: {nodeAddress}")
     {
         ArgumentNullException.ThrowIfNull(nodeAddress);
         NodeAddress = nodeAddress;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClusterException"/> class for the specified node address
+    /// with an inner exception.
+    /// </summary>
+    /// <param name="nodeAddress">The address of the cluster node that failed.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public ClusterException(string nodeAddress, string? message, Exception? innerException)
         : base(message ?? $"Cluster operation failed for node: {nodeAddress}", innerException)
     {
@@ -252,14 +416,29 @@ public class ClusterException : ActorException
 /// </summary>
 public class MessageDispatchException : ActorException
 {
+    /// <summary>
+    /// Gets the path of the actor the message could not be dispatched to.
+    /// </summary>
     public string ActorPath { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageDispatchException"/> class for the specified actor path.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor the message could not be dispatched to.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
     public MessageDispatchException(string actorPath, string? message) : base(message ?? $"Failed to dispatch message to actor: {actorPath}")
     {
         ArgumentNullException.ThrowIfNull(actorPath);
         ActorPath = actorPath;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageDispatchException"/> class for the specified actor path
+    /// with an inner exception.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor the message could not be dispatched to.</param>
+    /// <param name="message">The message that describes the error. A default message is used when <c>null</c>.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public MessageDispatchException(string actorPath, string? message, Exception? innerException)
         : base(message ?? $"Failed to dispatch message to actor: {actorPath}", innerException)
     {
