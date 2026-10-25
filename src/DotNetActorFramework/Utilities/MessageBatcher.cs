@@ -27,6 +27,12 @@ public class MessageBatcher : IDisposable
     /// </summary>
     public event Action<string, IReadOnlyList<Message>>? BatchExpired;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageBatcher"/> class.
+    /// </summary>
+    /// <param name="batchSize">The number of messages that fills a batch. Must be positive.</param>
+    /// <param name="batchTimeout">How long a batch may stay open before it expires. Defaults to 5 seconds. Must be positive when specified.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="batchSize"/> or <paramref name="batchTimeout"/> is not positive.</exception>
     public MessageBatcher(int batchSize = 100, TimeSpan? batchTimeout = null)
     {
         if (batchSize <= 0)
@@ -149,6 +155,10 @@ public class MessageBatcher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the background flush timer and marks the batcher as disposed.
+    /// Subsequent calls to <see cref="AddMessage"/> and <see cref="FlushBatch"/> throw <see cref="ObjectDisposedException"/>.
+    /// </summary>
     public void Dispose()
     {
         _disposed = true;
@@ -216,6 +226,11 @@ public class MessageThrottler
     private DateTime _nextAllowedTime = DateTime.UtcNow;
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageThrottler"/> class.
+    /// </summary>
+    /// <param name="messagesPerSecond">The maximum number of messages allowed per second. Must be positive.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="messagesPerSecond"/> is not positive.</exception>
     public MessageThrottler(int messagesPerSecond)
     {
         if (messagesPerSecond <= 0)
@@ -280,6 +295,12 @@ public class MessageDeduplicator
     private readonly List<(Guid id, DateTime timestamp)> _timestampedIds = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageDeduplicator"/> class.
+    /// </summary>
+    /// <param name="maxCapacity">The maximum number of message IDs retained. Must be positive.</param>
+    /// <param name="deduplicationWindow">How long a message ID is remembered. Defaults to 5 minutes. Must be positive when specified.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxCapacity"/> or <paramref name="deduplicationWindow"/> is not positive.</exception>
     public MessageDeduplicator(int maxCapacity = 10000, TimeSpan? deduplicationWindow = null)
     {
         if (maxCapacity <= 0)
