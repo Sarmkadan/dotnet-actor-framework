@@ -55,9 +55,13 @@ public sealed class LoadBasedRouter : IRouter
         MessageDispatcher dispatcher,
         ILogger<LoadBasedRouter>? logger = null)
     {
-        _discovery = discovery ?? throw new ArgumentNullException(nameof(discovery));
-        _mailbox = mailbox ?? throw new ArgumentNullException(nameof(mailbox));
-        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        ArgumentNullException.ThrowIfNull(discovery);
+        ArgumentNullException.ThrowIfNull(mailbox);
+        ArgumentNullException.ThrowIfNull(dispatcher);
+
+        _discovery = discovery;
+        _mailbox = mailbox;
+        _dispatcher = dispatcher;
         _logger = logger;
     }
 
@@ -83,7 +87,7 @@ public sealed class LoadBasedRouter : IRouter
     {
         if (string.IsNullOrWhiteSpace(capability))
             throw new ArgumentException("Capability must not be empty.", nameof(capability));
-        if (envelope == null) throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -148,7 +152,7 @@ public sealed class LoadBasedRouter : IRouter
     {
         if (string.IsNullOrWhiteSpace(capability))
             throw new ArgumentException("Capability must not be empty.", nameof(capability));
-        if (envelope == null) throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
 
         cancellationToken.ThrowIfCancellationRequested();
 
