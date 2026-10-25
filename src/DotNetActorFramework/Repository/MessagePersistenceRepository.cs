@@ -23,6 +23,10 @@ public class MessagePersistenceRepository
         _connectionManager = null!;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessagePersistenceRepository"/> class.
+    /// </summary>
+    /// <param name="connectionManager">The connection manager used by the repository.</param>
     public MessagePersistenceRepository(ConnectionManager connectionManager)
     {
         _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
@@ -226,12 +230,39 @@ public class MessagePersistenceRepository
 /// </summary>
 public class PersistedMessage
 {
+    /// <summary>
+    /// Gets or sets the identifier of the persisted envelope.
+    /// </summary>
     public Guid EnvelopeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the full name of the message type.
+    /// </summary>
     public string MessageType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the identifier of the sender, if any.
+    /// </summary>
     public Guid? SenderId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the recipient actor.
+    /// </summary>
     public Guid RecipientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the message was persisted.
+    /// </summary>
     public DateTime PersistedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the message has been delivered.
+    /// </summary>
     public bool IsDelivered { get; set; }
+
+    /// <summary>
+    /// Gets or sets the monotonically increasing sequence number of the message.
+    /// </summary>
     public long SequenceNumber { get; set; }
 }
 
@@ -240,13 +271,40 @@ public class PersistedMessage
 /// </summary>
 public class PersistenceStatistics
 {
+    /// <summary>
+    /// Gets or sets the total number of persisted messages.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of delivered messages.
+    /// </summary>
     public long DeliveredMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of undelivered messages.
+    /// </summary>
     public long UndeliveredMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current sequence number.
+    /// </summary>
     public long CurrentSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the persistence time of the oldest retained message, if any.
+    /// </summary>
     public DateTime? OldestMessageTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the persistence time of the newest retained message, if any.
+    /// </summary>
     public DateTime? NewestMessageTime { get; set; }
 
+    /// <summary>
+    /// Gets the delivery rate as a percentage of total messages.
+    /// </summary>
+    /// <returns>The percentage of delivered messages, or 0 when there are no messages.</returns>
     public double GetDeliveryRate()
     {
         if (TotalMessages == 0) return 0;
