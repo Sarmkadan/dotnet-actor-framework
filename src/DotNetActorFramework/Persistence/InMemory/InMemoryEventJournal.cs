@@ -21,6 +21,15 @@ public class InMemoryEventJournal : IEventJournal
     // journal with a partially-applied, non-monotonic batch instead of an all-or-nothing append.
     private readonly ConcurrentDictionary<string, object> _actorLocks = new();
 
+    /// <summary>
+    /// Appends events to an actor's event journal atomically; either all events in the batch are stored or none are.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="events">The events to append.</param>
+    /// <returns>A completed task once the events have been appended.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="events"/> is <c>null</c>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an event's sequence number already exists for the actor.</exception>
     public Task AppendEventsAsync(Guid actorId, string actorPath, IEnumerable<ActorEvent> events)
     {
         if (events == null) throw new ArgumentNullException(nameof(events));
@@ -56,6 +65,15 @@ public class InMemoryEventJournal : IEventJournal
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Reads events for a given actor within the specified sequence number range, in ascending order.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="fromSequenceNr">The starting sequence number (inclusive).</param>
+    /// <param name="toSequenceNr">The ending sequence number (inclusive).</param>
+    /// <returns>A task that represents the asynchronous read operation,
+    /// returning an enumerable of ActorEvent in ascending sequence order.</returns>
     public Task<IEnumerable<ActorEvent>> ReadEventsAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
         var actorEvents = _events.GetValueOrDefault(GetActorKey(actorId, actorPath));
@@ -72,6 +90,15 @@ public class InMemoryEventJournal : IEventJournal
         return Task.FromResult<IEnumerable<ActorEvent>>(result);
     }
 
+    /// <summary>
+    /// Reads events for a given actor within the specified sequence number range, in descending order.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="fromSequenceNr">The starting sequence number (inclusive).</param>
+    /// <param name="toSequenceNr">The ending sequence number (inclusive).</param>
+    /// <returns>A task that represents the asynchronous read operation,
+    /// returning an enumerable of ActorEvent in reverse chronological order.</returns>
     public Task<IEnumerable<ActorEvent>> ReadEventsBackwardAsync(Guid actorId, string actorPath, long fromSequenceNr, long toSequenceNr)
     {
         var actorEvents = _events.GetValueOrDefault(GetActorKey(actorId, actorPath));
@@ -88,6 +115,13 @@ public class InMemoryEventJournal : IEventJournal
         return Task.FromResult<IEnumerable<ActorEvent>>(result);
     }
 
+    /// <summary>
+    /// Deletes events for a given actor up to a specified sequence number.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <param name="maxSequenceNr">The maximum sequence number of events to delete (inclusive).</param>
+    /// <returns>A completed task once the events have been deleted.</returns>
     public Task DeleteEventsAsync(Guid actorId, string actorPath, long maxSequenceNr)
     {
         var actorKey = GetActorKey(actorId, actorPath);
@@ -101,6 +135,12 @@ public class InMemoryEventJournal : IEventJournal
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Deletes all events for a given actor.
+    /// </summary>
+    /// <param name="actorId">The ID of the actor.</param>
+    /// <param name="actorPath">The path of the actor.</param>
+    /// <returns>A completed task once the events have been deleted.</returns>
     public Task DeleteAllEventsAsync(Guid actorId, string actorPath)
     {
         _events.TryRemove(GetActorKey(actorId, actorPath), out _);
