@@ -14,14 +14,45 @@ namespace DotNetActorFramework.Integration;
 /// </summary>
 public class WebhookConfig
 {
+    /// <summary>
+    /// Unique identifier of the webhook, used to unregister it.
+    /// </summary>
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Endpoint URL that receives the event payloads.
+    /// </summary>
     public string Url { get; set; } = null!;
+
+    /// <summary>
+    /// Event type to match, e.g., "actor.error"; use "*" to match all events.
+    /// </summary>
     public string EventType { get; set; } = null!; // e.g., "actor.error", "*" for all
+
+    /// <summary>
+    /// Whether the webhook is currently eligible to receive events.
+    /// </summary>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// UTC timestamp at which the webhook configuration was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Maximum number of delivery attempts for a single event. When null, only one attempt is made.
+    /// </summary>
     public int? MaxRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Delay between delivery attempts. When null, a 1-second delay is used.
+    /// </summary>
     public TimeSpan? RetryDelay { get; set; } = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Returns a string representation of the webhook configuration.
+    /// </summary>
+    /// <returns>A formatted string containing the key configuration values.</returns>
     public override string ToString()
     {
         return $"WebhookConfig {{ Id = {Id}, Url = {Url}, EventType = {EventType}, IsActive = {IsActive}, CreatedAt = {CreatedAt}, MaxRetries = {MaxRetries} }}";
@@ -38,6 +69,9 @@ public class WebhookDispatcher : IDisposable
     private readonly HttpClient _httpClient;
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WebhookDispatcher"/> class with its own <see cref="HttpClient"/>.
+    /// </summary>
     public WebhookDispatcher()
     {
         _httpClient = new HttpClient();
@@ -138,6 +172,9 @@ public class WebhookDispatcher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases the <see cref="HttpClient"/> used to send webhook requests.
+    /// </summary>
     public void Dispose()
     {
         _httpClient?.Dispose();
