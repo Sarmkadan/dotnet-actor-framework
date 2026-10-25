@@ -31,7 +31,9 @@ public class ErrorHandlingMiddleware : IActorMiddleware
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strategy"/> is null.</exception>
     public ErrorHandlingMiddleware(ErrorHandlingStrategy strategy)
     {
-        _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+        ArgumentNullException.ThrowIfNull(strategy);
+
+        _strategy = strategy;
     }
 
     /// <summary>
@@ -41,11 +43,11 @@ public class ErrorHandlingMiddleware : IActorMiddleware
     /// <param name="envelope">The message envelope being processed.</param>
     /// <param name="next">The next handler in the middleware pipeline.</param>
     /// <returns><c>true</c> if the message was processed successfully or the error was handled; otherwise <c>false</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="envelope"/> or <paramref name="next"/> is null.</exception>
     public async Task<bool> InvokeAsync(Envelope envelope, Func<Envelope, Task> next)
     {
-        if (envelope == null)
-            throw new ArgumentNullException(nameof(envelope));
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(next);
 
         try
         {
