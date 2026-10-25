@@ -29,13 +29,13 @@ using DotNetActorFramework.Constants;
 /// </remarks>
 public class ActorRef : IEquatable<ActorRef>
 {
-    /// <summary>Gets the <see cref="ActorPath"/> of the referenced actor.</summary>
     /// <summary>
-/// Gets the <see cref="ActorPath"/> of the referenced actor. This path uniquely identifies the actor
-/// within the actor system hierarchy.
-/// </summary>
-/// <seealso cref="ActorPath"/>
-public ActorPath Path { get; }
+    /// Gets the <see cref="ActorPath"/> of the referenced actor. This path uniquely identifies the actor
+    /// within the actor system hierarchy.
+    /// </summary>
+    /// <seealso cref="ActorPath"/>
+    public ActorPath Path { get; }
+
     /// <summary>Gets the unique identifier of the referenced actor.</summary>
     public Guid Id { get; }
     /// <summary>Gets a value indicating whether the referenced actor is currently alive and able to process messages.</summary>
@@ -182,21 +182,47 @@ public ActorPath Path { get; }
     /// <returns>A string representation of the actor reference.</returns>
     public override string ToString() => $"{Path} ({Id:N})";
 
+    /// <summary>
+    /// Determines whether the specified object is an <see cref="ActorRef"/> equal to this instance.
+    /// </summary>
+    /// <param name="obj">The object to compare with the current instance.</param>
+    /// <returns><c>true</c> if the object is an <see cref="ActorRef"/> with the same <see cref="Path"/> and <see cref="Id"/>; otherwise, <c>false</c>.</returns>
     public override bool Equals(object? obj) => Equals(obj as ActorRef);
 
+    /// <summary>
+    /// Determines whether the specified <see cref="ActorRef"/> has the same <see cref="Path"/> and <see cref="Id"/> as this instance.
+    /// </summary>
+    /// <param name="other">The actor reference to compare with the current instance.</param>
+    /// <returns><c>true</c> if both references have the same <see cref="Path"/> and <see cref="Id"/>; otherwise, <c>false</c>.</returns>
     public bool Equals(ActorRef? other)
     {
         if (other is null) return false;
         return Id == other.Id && Path == other.Path;
     }
 
+    /// <summary>
+    /// Returns a hash code for this actor reference, based on <see cref="Path"/> and <see cref="Id"/>.
+    /// </summary>
+    /// <returns>A hash code for the current instance.</returns>
     public override int GetHashCode() => HashCode.Combine(Path, Id);
 
+    /// <summary>
+    /// Determines whether two <see cref="ActorRef"/> instances are equal.
+    /// </summary>
+    /// <param name="left">The first actor reference to compare, or <c>null</c>.</param>
+    /// <param name="right">The second actor reference to compare, or <c>null</c>.</param>
+    /// <returns><c>true</c> if both references are equal or both are <c>null</c>; otherwise, <c>false</c>.</returns>
     public static bool operator ==(ActorRef? left, ActorRef? right)
     {
         if (left is null) return right is null;
         return left.Equals(right);
     }
 
+    /// <summary>
+    /// Determines whether two <see cref="ActorRef"/> instances are not equal.
+    /// </summary>
+    /// <param name="left">The first actor reference to compare, or <c>null</c>.</param>
+    /// <param name="right">The second actor reference to compare, or <c>null</c>.</param>
+    /// <returns><c>true</c> if the references are not equal; otherwise, <c>false</c>.</returns>
     public static bool operator !=(ActorRef? left, ActorRef? right) => !(left == right);
 }
