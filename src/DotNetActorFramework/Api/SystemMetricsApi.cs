@@ -17,6 +17,12 @@ public class SystemMetricsApi
     private readonly ActorSystem _actorSystem;
     private readonly MetricsCollector _metricsCollector;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemMetricsApi"/> class.
+    /// </summary>
+    /// <param name="actorSystem">The actor system to report health for.</param>
+    /// <param name="metricsCollector">The collector that supplies performance metrics.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorSystem"/> or <paramref name="metricsCollector"/> is null.</exception>
     public SystemMetricsApi(ActorSystem actorSystem, MetricsCollector metricsCollector)
     {
         _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
@@ -180,18 +186,69 @@ public class SystemMetricsApi
 /// </summary>
 public class HealthSummary
 {
+    /// <summary>
+    /// Gets or sets the name of the actor system.
+    /// </summary>
     public string SystemName { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the unique identifier of the actor system.
+    /// </summary>
     public Guid SystemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the system is healthy.
+    /// </summary>
     public bool IsHealthy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of actors in the system.
+    /// </summary>
     public int TotalActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors in a healthy state.
+    /// </summary>
     public int HealthyActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors in an unhealthy state.
+    /// </summary>
     public int UnhealthyActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of actors that are in an error state.
+    /// </summary>
     public int ErrorActors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of messages processed by the system.
+    /// </summary>
     public long TotalMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of errors recorded by the system.
+    /// </summary>
     public long TotalErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ratio of errors to processed messages.
+    /// </summary>
     public double ErrorRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percentage of actors that are healthy.
+    /// </summary>
     public double HealthPercentage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average message processing latency in milliseconds.
+    /// </summary>
     public double AverageLatencyMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which the summary was generated.
+    /// </summary>
     public DateTime Timestamp { get; set; }
 }
 
@@ -200,10 +257,29 @@ public class HealthSummary
 /// </summary>
 public class MessageTypeMetricsInfo
 {
+    /// <summary>
+    /// Gets or sets the name of the message type.
+    /// </summary>
     public string MessageType { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the number of messages of this type that were processed.
+    /// </summary>
     public long ProcessedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of errors raised while processing this message type.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average processing latency in milliseconds.
+    /// </summary>
     public double AverageLatencyMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ratio of errors to processed messages for this message type.
+    /// </summary>
     public double ErrorRate { get; set; }
 }
 
@@ -212,9 +288,28 @@ public class MessageTypeMetricsInfo
 /// </summary>
 public class ActorMetricsInfo
 {
+    /// <summary>
+    /// Gets or sets the path of the actor.
+    /// </summary>
     public string ActorPath { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the number of messages processed by the actor.
+    /// </summary>
     public long ProcessedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of errors raised by the actor.
+    /// </summary>
     public long ErrorCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average message processing latency of the actor in milliseconds.
+    /// </summary>
     public double AverageLatencyMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ratio of errors to processed messages for the actor.
+    /// </summary>
     public double ErrorRate { get; set; }
 }
