@@ -256,8 +256,9 @@ public class Actor
     protected virtual Task OnStopAsync() => Task.CompletedTask;
 
     /// <summary>
-    /// Returns a string representation of this actor in the form <c>Actor(path)</c>.
+    /// Returns a string representation of this actor in the form <c>Actor(name, state)</c>,
+    /// where <c>name</c> is the last segment of <see cref="Path"/> and <c>state</c> is <see cref="State"/>.
     /// </summary>
-    /// <returns>A string containing the actor's <see cref="Path"/>.</returns>
-    public override string ToString() => $"Actor({Path})";
+    /// <returns>A string summarizing the actor's name and current state.</returns>
+    public override string ToString() => $"Actor({Path.Name}, {State})";
 }
