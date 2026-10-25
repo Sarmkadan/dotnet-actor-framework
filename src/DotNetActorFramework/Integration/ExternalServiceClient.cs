@@ -21,6 +21,13 @@ public class ExternalServiceClient : IDisposable
     private readonly int _maxRetries;
     private readonly TimeSpan _retryDelay;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExternalServiceClient"/> class.
+    /// </summary>
+    /// <param name="baseUrl">Base URL of the external service. Trailing slashes are removed.</param>
+    /// <param name="maxRetries">Maximum number of attempts for a request. Values less than or equal to zero are treated as 1.</param>
+    /// <param name="retryDelay">Delay between retry attempts. Defaults to 500 milliseconds when <c>null</c>.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="baseUrl"/> is null, empty, or whitespace.</exception>
     public ExternalServiceClient(string baseUrl, int maxRetries = 3, TimeSpan? retryDelay = null)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -182,6 +189,9 @@ public class ExternalServiceClient : IDisposable
         return $"{_baseUrl}/{endpoint}";
     }
 
+    /// <summary>
+    /// Releases the underlying <see cref="HttpClient"/> resources.
+    /// </summary>
     public void Dispose()
     {
         _httpClient?.Dispose();
