@@ -433,6 +433,63 @@ Console.WriteLine($"Shut down at {system.ShutdownAt}");
 | `DeadLetters` | Bounded `DeadLetterQueue` holding undeliverable envelopes (oldest evicted when full). Use `Subscribe(handler)` to observe them. |
 | `ShutdownAsync()` | Terminates all actors and marks the system as stopped. |
 
+## ActorRef
+
+`ActorRef` (in `DotNetActorFramework.Models`) is an immutable, thread-safe handle to a single actor. Callers use it instead of the actor itself, so they can send messages and check liveness without touching the actor's internal state. An `ActorRef` is never constructed directly: you get one from `ActorSystem.CreateActorAsync` or `ActorSystem.GetActorRef`.
+
+Each reference exposes the actor's `Path` (an `ActorPath` that identifies it in the hierarchy), its `Id` (a `Guid`), its `CreatedAt` timestamp (UTC), and an `IsAlive` flag. `IsAlive` starts as `true` and is set to `false` when the actor is terminated, after which sending operations throw `InvalidOperationException`.
+
+Its messaging methods are:
+
+| Method | Description |
+|---|---|
+| `SendAsync(message)` | Sends a message to the actor. Throws `ArgumentNullException` for a null message and `InvalidOperationException` if the actor is not alive. |
+| `AskAsync(message, timeout)` | Request-reply without a result type. Returns `null` once the timeout elapses. |
+| `AskAsync<T>(message, timeout)` | Request-reply with a typed result. Throws `TimeoutException` if the actor does not respond in time. |
+| `AskAsync<T>(message)` | Same as above, using the default timeout (30 seconds). |
+| `GetParent()` | Returns an `ActorRef` for the parent path, or `null` for a root actor. |
+
+Equality is value-based: two references are equal when they have the same `Path` and `Id`. `ActorRef` implements `IEquatable<ActorRef>`, overloads `==` and `!=`, and `ToString()` returns `"{Path} ({Id:N})"`.
+
+> **Note:** the messaging methods are still being wired to the mailbox layer. In the current code, `SendAsync` validates its arguments and returns without delivering the message, and the `AskAsync` overloads wait for the timeout without receiving a reply. Treat the examples below as the intended API shape until delivery is implemented.
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Models;
+
+var system = new ActorSystem("my-system");
+
+// Obtain references from the system; ActorRef cannot be constructed directly.
+var created = await system.CreateActorAsync(new ActorPath("/user/worker"));
+
+// The same actor can be looked up later by path.
+var found = system.GetActorRef(new ActorPath("/user/worker"));
+
+Console.WriteLine(created == found);          // True: same Path and Id
+Console.WriteLine(created);                   // "/user/worker (<guid without dashes>)"
+Console.WriteLine($"Created at {created.CreatedAt:O}, alive: {created.IsAlive}");
+
+// Fire-and-forget send (see the note above about current delivery behavior).
+await created.SendAsync("hello");
+
+// Request-reply with a typed response and a 5-second timeout.
+try
+{
+    var reply = await created.AskAsync<string>("ping", TimeSpan.FromSeconds(5));
+    Console.WriteLine(reply);
+}
+catch (TimeoutException ex)
+{
+    Console.WriteLine(ex.Message);
+}
+
+// Walk up the hierarchy; null for a root actor.
+var parent = created.GetParent();
+
+await system.ShutdownAsync();
+```
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
