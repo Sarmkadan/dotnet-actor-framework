@@ -30,8 +30,11 @@ public class MetricsCollectorWorker : IBackgroundWorker
         MetricsCollector metricsCollector,
         MetricsCollectorOptions? options = null)
     {
-        _actorSystem = actorSystem ?? throw new ArgumentNullException(nameof(actorSystem));
-        _metricsCollector = metricsCollector ?? throw new ArgumentNullException(nameof(metricsCollector));
+        ArgumentNullException.ThrowIfNull(actorSystem);
+        ArgumentNullException.ThrowIfNull(metricsCollector);
+
+        _actorSystem = actorSystem;
+        _metricsCollector = metricsCollector;
 
         // If no options are supplied, fall back to defaults.
         _options = options ?? new MetricsCollectorOptions();
@@ -104,7 +107,9 @@ public class DeadLetterQueueWorker : IBackgroundWorker
 
     public DeadLetterQueueWorker(DeadLetterQueue deadLetterQueue, int maxQueueSize = 10000)
     {
-        _deadLetterQueue = deadLetterQueue ?? throw new ArgumentNullException(nameof(deadLetterQueue));
+        ArgumentNullException.ThrowIfNull(deadLetterQueue);
+
+        _deadLetterQueue = deadLetterQueue;
         _maxQueueSize = maxQueueSize;
     }
 
