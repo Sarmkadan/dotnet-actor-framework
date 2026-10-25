@@ -19,9 +19,21 @@ public class MockActorContext
     private readonly List<Message> _sentMessages = [];
     private readonly object _lockObject = new();
 
+    /// <summary>
+    /// Gets the path of the actor under test.
+    /// </summary>
     public ActorPath ActorPath { get; }
+
+    /// <summary>
+    /// Gets the unique identifier of the mock actor context.
+    /// </summary>
     public Guid ActorId { get; }
 
+    /// <summary>
+    /// Initializes a new mock context for the actor at the specified path.
+    /// </summary>
+    /// <param name="actorPath">The path of the actor under test.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actorPath"/> is null.</exception>
     [JsonConstructor]
     public MockActorContext(ActorPath actorPath)
     {
@@ -155,6 +167,9 @@ public class TestProbe
     private readonly ConcurrentQueue<Envelope> _messages = [];
     private readonly TaskCompletionSource<Envelope> _nextMessage = new();
 
+    /// <summary>
+    /// Gets the unique identifier of the probe.
+    /// </summary>
     public Guid ProbeId { get; } = Guid.NewGuid();
 
     /// <summary>
