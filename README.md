@@ -908,6 +908,84 @@ var persistence = new PersistenceService(mySnapshotStore, resilientJournal);
 
 Create `ResilientEventJournal` directly, as above. `ResilientEventJournalExtensions.AddResilientEventJournal` registers the decorator with `TryAddTransient`, which does nothing if an `IEventJournal` is already registered. It also resolves the inner `IEventJournal` from the same container, so the decorator would wrap itself. Use the direct constructor until that is fixed.
 
+## Webhook dispatcher
+
+`WebhookDispatcher` (in `DotNetActorFramework.Integration`, source in `src/DotNetActorFramework/Integration/WebhookDispatcher.cs`) sends domain events to external HTTP endpoints. You register one or more `WebhookConfig` entries, each with a target URL and an event type filter. When `DispatchEventAsync` is called, every active webhook whose `EventType` matches receives an HTTP `POST` containing the event as JSON.
+
+The dispatcher does not raise events itself. Your code passes it events, for example from an `EventBus` handler (see [EventBus](#eventbus)).
+
+### Configuration
+
+Each webhook is a `WebhookConfig`:
+
+| Property | Default | Description |
+|---|---|---|
+| `Id` | New `Guid` | Identifier used by `UnregisterWebhook`. |
+| `Url` | `null!` | Endpoint that receives the `POST`. `RegisterWebhook` rejects null, empty, and whitespace values. The URL is not checked for absolute form; an invalid URL fails on every attempt and the event is dropped. |
+| `EventType` | `null!` | Exact `EventType` to match, such as `actor.error`. Use `*` to match all events. Not validated on registration; a value that matches no event never delivers. |
+| `IsActive` | `true` | Inactive webhooks are skipped. Changes apply to the next dispatched event. |
+| `CreatedAt` | `DateTime.UtcNow` at creation | Informational only. |
+| `MaxRetries` | `3` | Maximum number of delivery **attempts** per event, including the first. `null` means one attempt. `0` means no attempts, so the event is never sent. |
+| `RetryDelay` | `5` seconds | Wait between attempts. Not applied after the last attempt. `null` means 1 second. |
+
+`WebhookConfigExtensions` provides fluent helpers: `Activate()`, `Deactivate()`, and `WithRetryPolicy(maxRetries, retryDelay)`. `WithRetryPolicy` accepts `0` and rejects negative values.
+
+The dispatcher has no options of its own. Its constructor creates an `HttpClient` with default settings, so there is no custom timeout (the `HttpClient` default of 100 seconds applies), no authentication, and no extra headers. Each request body is the event serialized as UTF-8 JSON with `Content-Type: application/json`.
+
+### Registration
+
+| Member | Description |
+|---|---|
+| `RegisterWebhook(config)` | Adds a webhook. Throws `ArgumentNullException` for null and `ArgumentException` for an empty `Url`. Registering the same instance twice delivers each event twice. |
+| `UnregisterWebhook(webhookId)` | Removes the webhook with that `Id`. Returns `false` if none matches. |
+| `GetWebhooks()` | Returns a snapshot of the registered webhooks. |
+| `DispatchEventAsync(event)` | Sends the event to every matching webhook. A null event is ignored. |
+| `Dispose()` | Disposes the internal `HttpClient`. Dispose the dispatcher when the application shuts down. |
+
+The registry is guarded by a lock, so registration and dispatch can run on different threads. The dispatcher keeps references to your `WebhookConfig` objects, so changing `IsActive` on a registered instance takes effect immediately.
+
+### Delivery behaviour
+
+- **Matching.** A webhook receives an event when it is active and its `EventType` equals the event's `EventType` or is `*`. Matching is evaluated at dispatch time.
+- **Concurrency and awaiting.** Webhooks are delivered in parallel. `DispatchEventAsync` completes only after every delivery has succeeded or run out of attempts, so await it when you need that guarantee. To avoid blocking, start it without awaiting or run it on a background task.
+- **Success.** Any 2xx response counts as success. The response body is not read.
+- **Retries.** Any other status code (including 4xx), any network error, and any other exception counts as a failed attempt and is retried. Only the 5xx and network-error cases are described in the source comment; the code retries every failure.
+- **Dropped events.** After the last failed attempt, the event is discarded for that webhook. There is no queue, persistence, or dead-letter store. Failures are reported only through `System.Diagnostics.Debug.WriteLine`, which is compiled out of Release builds, so in production a failed delivery leaves no trace.
+- **Exceptions.** `DispatchEventAsync` does not throw for delivery failures.
+- **Payload.** The dispatcher serializes the event through the `IDomainEvent` interface, so the body contains only `EventId`, `OccurredAt`, and `EventType`. Event-specific properties such as `ActorPath` or `ErrorMessage` are not sent. For an `ActorErrorEvent`, the body looks like this:
+
+  ```json
+  {"EventId":"7806b9df-8aa0-4085-afcb-12b1f388e5ae","OccurredAt":"2026-10-25T03:46:09.5455218Z","EventType":"actor.error"}
+  ```
+
+### Usage example
+
+```csharp
+using DotNetActorFramework.Events;
+using DotNetActorFramework.Integration;
+
+using var dispatcher = new WebhookDispatcher();
+
+var webhook = new WebhookConfig
+{
+    Url = "https://hooks.example.com/actor-errors",
+    EventType = "actor.error",
+    MaxRetries = 5,
+    RetryDelay = TimeSpan.FromSeconds(2)
+};
+dispatcher.RegisterWebhook(webhook);
+
+await dispatcher.DispatchEventAsync(new ActorErrorEvent
+{
+    SystemName = "orders",
+    ActorPath = "/orders/worker-1",
+    ActorId = Guid.NewGuid(),
+    ErrorMessage = "Payment gateway timeout"
+});
+
+dispatcher.UnregisterWebhook(webhook.Id);
+```
+
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
